@@ -35,7 +35,7 @@ const els = {
   authStatus: document.getElementById('authStatus'),
   loginBtn: document.getElementById('loginBtn'),
   logoutBtn: document.getElementById('logoutBtn'),
-  consolePanels: Array.from(document.querySelectorAll('.control-panel, .metrics, .bark-panel, .logs-panel')),
+  consolePanels: Array.from(document.querySelectorAll('.control-panel, .metrics, .friend-panel, .bark-panel, .logs-panel')),
   accountId: document.getElementById('accountId'),
   logScope: document.getElementById('logScope'),
   sessionList: document.getElementById('sessionList'),
@@ -70,6 +70,7 @@ const els = {
   qrImage: document.getElementById('qrImage'),
   qrLink: document.getElementById('qrLink'),
   refreshQrBtn: document.getElementById('refreshQrBtn'),
+  switchQrBtn: document.getElementById('switchQrBtn'),
   qrAltLinks: document.getElementById('qrAltLinks'),
   qrMessage: document.getElementById('qrMessage'),
   logs: document.getElementById('logs'),
@@ -184,6 +185,7 @@ function createEmptySession(accountId) {
       qrUrl: '',
       backupUrls: [],
       message: '',
+      activeQrIndex: 0,
     },
     bestCrop: null,
     logs: [],
@@ -326,10 +328,34 @@ function renderBestCrop() {
   setText(els.bestCropSource, `来源：${c.source || '-'}`);
 }
 
+function getQrCandidates(qr) {
+  const q = qr || {};
+  const list = [];
+  const seen = new Set();
+  const raw = [q.qrUrl, ...(Array.isArray(q.backupUrls) ? q.backupUrls : [])];
+  for (const item of raw) {
+    const text = String(item || '').trim();
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    list.push(text);
+  }
+  return list;
+}
+
+function getQrCandidateKey(qr) {
+  return getQrCandidates(qr).join('||');
+}
+
 function renderQr() {
   const current = getCurrentSession();
   const currentSession = current.session || {};
   const q = current.qr || {};
+  const qrCandidates = getQrCandidates(q);
+  const activeRaw = Number.parseInt(q.activeQrIndex, 10);
+  const activeIndex = Number.isInteger(activeRaw) && activeRaw >= 0 && activeRaw < qrCandidates.length
+    ? activeRaw
+    : 0;
+  const activeUrl = qrCandidates[activeIndex] || '';
   const qrLoginSuccess = Boolean(q.qrUrl) && currentSession.status === 'running';
   if (qrLoginSuccess) {
     setText(els.qrPhase, '状态：已登录');
@@ -338,18 +364,20 @@ function renderQr() {
     setText(els.qrPhase, `状态：${q.phase || '-'}`);
     setText(els.qrMessage, q.message || '');
   }
-  if (q.qrUrl) {
+  if (activeUrl) {
     els.qrImage.classList.remove('hidden');
-    els.qrImage.src = `/api/qr.svg?text=${encodeURIComponent(q.qrUrl)}&t=${Date.now()}`;
+    els.qrImage.src = `/api/qr.svg?text=${encodeURIComponent(activeUrl)}&t=${Date.now()}`;
     els.qrLink.classList.remove('hidden');
-    els.qrLink.href = q.qrUrl;
-    els.qrLink.textContent = '打开扫码链接';
+    els.qrLink.href = activeUrl;
+    els.qrLink.textContent = qrCandidates.length > 1
+      ? `打开扫码链接 (${activeIndex + 1}/${qrCandidates.length})`
+      : '打开扫码链接';
   } else {
     els.qrImage.classList.add('hidden');
     els.qrLink.classList.add('hidden');
   }
 
-  const backupUrls = Array.isArray(q.backupUrls) ? q.backupUrls : [];
+  const backupUrls = qrCandidates.filter((_, idx) => idx !== activeIndex);
   if (backupUrls.length > 0) {
     const html = backupUrls.slice(0, 3).map((url, idx) => (
       `<a target="_blank" rel="noreferrer" href="${escapeHtml(url)}">备用扫码链接 ${idx + 1}</a>`
@@ -359,9 +387,12 @@ function renderQr() {
     els.qrAltLinks.innerHTML = '';
   }
 
-  const canRefresh = !qrLoginSuccess && Boolean(q.qrUrl || q.phase);
+  const canRefresh = !qrLoginSuccess && Boolean(activeUrl || q.phase);
   els.refreshQrBtn.classList.toggle('hidden', !canRefresh);
   els.refreshQrBtn.disabled = false;
+  const canSwitch = !qrLoginSuccess && qrCandidates.length > 1;
+  els.switchQrBtn.classList.toggle('hidden', !canSwitch);
+  els.switchQrBtn.disabled = !canSwitch;
 }
 
 function formatLogLine(item) {
@@ -752,7 +783,16 @@ function connectEvents() {
 
       if (type === 'qr') {
         const session = ensureSession(accountId);
-        session.qr = { ...(session.qr || {}), ...payload };
+        const previousQr = session.qr || {};
+        const mergedQr = { ...previousQr, ...payload };
+        const beforeKey = getQrCandidateKey(previousQr);
+        const afterKey = getQrCandidateKey(mergedQr);
+        if (beforeKey !== afterKey) {
+          mergedQr.activeQrIndex = 0;
+        } else if (!Number.isInteger(Number.parseInt(mergedQr.activeQrIndex, 10))) {
+          mergedQr.activeQrIndex = 0;
+        }
+        session.qr = mergedQr;
         renderSessionList();
         if (accountId === state.selectedAccountId) {
           renderQr();
@@ -962,6 +1002,24 @@ async function onRefreshQr() {
   }
 }
 
+function onSwitchQr() {
+  const accountId = normalizeAccountId(state.selectedAccountId);
+  const session = ensureSession(accountId);
+  const qr = session.qr || {};
+  const candidates = getQrCandidates(qr);
+  if (candidates.length <= 1) {
+    return;
+  }
+  const current = Number.parseInt(qr.activeQrIndex, 10);
+  const currentIndex = Number.isInteger(current) ? current : 0;
+  const nextIndex = (currentIndex + 1) % candidates.length;
+  session.qr = {
+    ...qr,
+    activeQrIndex: nextIndex,
+  };
+  renderQr();
+}
+
 async function runFriendAction(gid, action) {
   const accountId = normalizeAccountId(state.selectedAccountId);
   const allowBadOps = Boolean(state.ui && state.ui.friendOps && state.ui.friendOps.allowBadOps);
@@ -1141,6 +1199,7 @@ function bindEvents() {
   els.saveFriendUiBtn.addEventListener('click', onSaveFriendUi);
   els.refreshFriendsBtn.addEventListener('click', loadFriends);
   els.refreshQrBtn.addEventListener('click', onRefreshQr);
+  els.switchQrBtn.addEventListener('click', onSwitchQr);
   els.applyLogFiltersBtn.addEventListener('click', onApplyLogFilters);
   els.loadMoreLogsBtn.addEventListener('click', onLoadMoreLogs);
   els.friendList.addEventListener('click', onFriendListClick);

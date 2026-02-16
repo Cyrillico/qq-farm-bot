@@ -26,8 +26,8 @@ function buildFallbackUrls(loginCode) {
     const code = encodeURIComponent(String(loginCode || '').trim());
     if (!code) return [];
     return [
-        `https://q.qq.com/qqq/code/${code}?_proxy=1&from=ide`,
         `https://h5.qzone.qq.com/qqq/code/${code}?_proxy=1&from=ide`,
+        `https://q.qq.com/qqq/code/${code}?_proxy=1&from=ide`,
         `https://q.qq.com/qqq/code/${code}?from=ide`,
     ];
 }
