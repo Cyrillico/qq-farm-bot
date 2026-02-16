@@ -13,7 +13,7 @@
 
 const { CONFIG } = require('./src/config');
 const { loadProto } = require('./src/proto');
-const { connect, cleanup, getWs } = require('./src/network');
+const { connect, cleanup, getWs, markManualClose } = require('./src/network');
 const { startFarmCheckLoop, stopFarmCheckLoop } = require('./src/farm');
 const { startFriendCheckLoop, stopFriendCheckLoop } = require('./src/friend');
 const { initTaskSystem, cleanupTaskSystem } = require('./src/task');
@@ -23,6 +23,7 @@ const { processInviteCodes } = require('./src/invite');
 const { verifyMode, decodeMode } = require('./src/decode');
 const { emitRuntimeHint, sleep } = require('./src/utils');
 const { getQQFarmCodeByScan } = require('./src/qqQrLogin');
+const { pushBark } = require('./src/bark');
 
 // ============ 帮助信息 ============
 function showHelp() {
@@ -92,6 +93,41 @@ function parseArgs(args) {
         }
     }
     return options;
+}
+
+function formatErrorDetail(err) {
+    if (err instanceof Error) {
+        return `${err.name}: ${err.message}`;
+    }
+    if (typeof err === 'string') {
+        return err;
+    }
+    try {
+        return JSON.stringify(err);
+    } catch (e) {
+        return String(err);
+    }
+}
+
+let fatalExitInProgress = false;
+function registerGlobalErrorHandlers() {
+    process.on('unhandledRejection', (reason) => {
+        const detail = formatErrorDetail(reason);
+        console.error('[致命] unhandledRejection:', reason);
+        void pushBark('QQ农场致命异常', `unhandledRejection: ${detail}`, `fatal:unhandledRejection:${detail}`);
+    });
+
+    process.on('uncaughtException', async (err) => {
+        if (fatalExitInProgress) return;
+        fatalExitInProgress = true;
+        const detail = formatErrorDetail(err);
+        console.error('[致命] uncaughtException:', err);
+        try {
+            await pushBark('QQ农场致命异常', `uncaughtException: ${detail}`, `fatal:uncaughtException:${detail}`);
+        } finally {
+            process.exit(1);
+        }
+    });
 }
 
 // ============ 主函数 ============
@@ -174,13 +210,18 @@ async function main() {
         cleanupTaskSystem();
         stopSellLoop();
         cleanup();
+        markManualClose();
         const ws = getWs();
         if (ws) ws.close();
         process.exit(0);
     });
 }
 
-main().catch(err => {
+registerGlobalErrorHandlers();
+
+main().catch(async (err) => {
     console.error('启动失败:', err);
+    const detail = formatErrorDetail(err);
+    await pushBark('QQ农场启动失败', detail, `fatal:startup:${detail}`);
     process.exit(1);
 });

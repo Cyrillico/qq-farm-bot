@@ -29,6 +29,7 @@
 - **状态栏显示** — 终端顶部固定显示平台/昵称/等级/经验/金币
 - **经验进度** — 显示当前等级经验进度
 - **心跳保活** — 自动维持 WebSocket 连接
+- **Bark 异常推送** — 连接失败/运行异常自动推送到手机，同类错误默认 60 秒去重
 
 ### 开发工具
 - **[PB 解码工具](#pb-解码工具)** — 内置 Protobuf 数据解码器，方便调试分析
@@ -145,6 +146,7 @@ node tools/calc-exp-yield.js --input tools/seed-shop-merged-export.json
 ├── client.js              # 入口文件 - 参数解析与启动调度
 ├── src/
 │   ├── config.js          # 配置常量与生长阶段枚举
+│   ├── bark.js            # Bark 推送工具（告警发送+去重）
 │   ├── utils.js           # 工具函数 (类型转换/日志/时间同步/sleep)
 │   ├── proto.js           # Protobuf 加载与消息类型管理
 │   ├── network.js         # WebSocket 连接/消息编解码/登录/心跳
@@ -223,7 +225,23 @@ const CONFIG = {
     farmCheckInterval: 1000,     // 农场巡查完成后等待间隔
     friendCheckInterval: 10000,  // 好友巡查完成后等待间隔
     forceLowestLevelCrop: false, // true: 固定最低等级作物（白萝卜优先），跳过经验效率分析
+    barkPushUrl: 'https://api.day.app/zu5iBDxxzi8GPnjXaBsMKV/', // Bark 推送地址
+    barkDedupSeconds: 60,         // 同类异常去重时间窗口（秒）
+    barkGroup: 'qq-farm-bot',     // Bark 通知分组
 };
+```
+
+### Bark 推送说明
+
+- 触发范围：
+  - 绝大多数 `logWarn` 级别告警
+  - WebSocket 非手动断开/错误
+  - `uncaughtException` / `unhandledRejection` / 启动失败
+- 去重规则：同类错误（去掉数字噪声后）在 `barkDedupSeconds` 时间窗口内只推送一次。
+- 快速连通性测试：
+
+```bash
+node -e "const { pushBark } = require('./src/bark'); pushBark('测试', '连通性验证').then(()=>process.exit(0));"
 ```
 
 ### src/friend.js

@@ -4,6 +4,7 @@
 
 const Long = require('long');
 const { RUNTIME_HINT_MASK, RUNTIME_HINT_DATA } = require('./config');
+const { pushWarn } = require('./bark');
 
 // ============ 服务器时间状态 ============
 let serverTimeMs = 0;
@@ -55,6 +56,7 @@ function log(tag, msg) {
 
 function logWarn(tag, msg) {
     console.log(`[${now()}] [${tag}] ⚠ ${msg}`);
+    void pushWarn(tag, msg);
 }
 
 // ============ 异步工具 ============

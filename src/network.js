@@ -18,6 +18,7 @@ let clientSeq = 1;
 let serverSeq = 0;
 let heartbeatTimer = null;
 let pendingCallbacks = new Map();
+let manualClose = false;
 
 // ============ 用户状态 (登录后设置) ============
 const userState = {
@@ -324,7 +325,7 @@ function sendLogin(onLoginSuccess) {
 
     sendMsg('gamepb.userpb.UserService', 'Login', body, (err, bodyBytes, meta) => {
         if (err) {
-            log('登录', `失败: ${err.message}`);
+            logWarn('登录', `失败: ${err.message}`);
             return;
         }
         try {
@@ -412,6 +413,7 @@ function startHeartbeat() {
 // ============ WebSocket 连接 ============
 function connect(code, onLoginSuccess) {
     const url = `${CONFIG.serverUrl}?platform=${CONFIG.platform}&os=${CONFIG.os}&ver=${CONFIG.clientVersion}&code=${code}&openID=`;
+    manualClose = false;
 
     ws = new WebSocket(url, {
         headers: {
@@ -431,7 +433,13 @@ function connect(code, onLoginSuccess) {
     });
 
     ws.on('close', (code, reason) => {
-        console.log(`[WS] 连接关闭 (code=${code})`);
+        const reasonText = Buffer.isBuffer(reason) ? reason.toString('utf8') : String(reason || '');
+        if (manualClose) {
+            console.log(`[WS] 连接关闭 (code=${code})`);
+        } else {
+            const reasonPart = reasonText ? `, reason=${reasonText}` : '';
+            logWarn('WS', `连接关闭 (code=${code}${reasonPart})`);
+        }
         cleanup();
     });
 
@@ -446,10 +454,12 @@ function cleanup() {
 }
 
 function getWs() { return ws; }
+function markManualClose() { manualClose = true; }
 
 module.exports = {
     connect, cleanup, getWs,
     sendMsg, sendMsgAsync,
     getUserState,
     networkEvents,
+    markManualClose,
 };

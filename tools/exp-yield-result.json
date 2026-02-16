@@ -1,0 +1,4074 @@
+{
+  "generatedAt": "2026-02-13T16:06:11.999Z",
+  "input": "/Users/cyril/qq-farm-bot/tools/seed-shop-merged-export.json",
+  "config": {
+    "lands": 18,
+    "plantSpeedPerSecNoFert": 9,
+    "plantSpeedPerSecNormalFert": 6,
+    "plantSecondsNoFert": 2,
+    "plantSecondsNormalFert": 3,
+    "fertilizer": {
+      "mode": "minus_one_phase"
+    },
+    "rule": {
+      "expPerCycle": "expHarvest"
+    }
+  },
+  "stats": {
+    "rawCount": 100,
+    "calculatedCount": 100,
+    "skippedCount": 0,
+    "missingPhaseReduceCount": 0
+  },
+  "topNoFert": [
+    {
+      "seedId": 20074,
+      "name": "金桔",
+      "requiredLevel": 100,
+      "expPerHour": 3118.4278
+    },
+    {
+      "seedId": 20078,
+      "name": "杏子",
+      "requiredLevel": 99,
+      "expPerHour": 3118.3556
+    },
+    {
+      "seedId": 20222,
+      "name": "豹皮花",
+      "requiredLevel": 98,
+      "expPerHour": 3118.2835
+    },
+    {
+      "seedId": 20068,
+      "name": "冬瓜",
+      "requiredLevel": 97,
+      "expPerHour": 3118.0669
+    },
+    {
+      "seedId": 20221,
+      "name": "天堂鸟",
+      "requiredLevel": 96,
+      "expPerHour": 2969.9313
+    },
+    {
+      "seedId": 20063,
+      "name": "苦瓜",
+      "requiredLevel": 95,
+      "expPerHour": 2969.8625
+    },
+    {
+      "seedId": 20126,
+      "name": "曼珠沙华",
+      "requiredLevel": 94,
+      "expPerHour": 2969.7938
+    },
+    {
+      "seedId": 20116,
+      "name": "曼陀罗华",
+      "requiredLevel": 93,
+      "expPerHour": 2969.5876
+    },
+    {
+      "seedId": 20076,
+      "name": "山竹",
+      "requiredLevel": 92,
+      "expPerHour": 2821.4347
+    },
+    {
+      "seedId": 20220,
+      "name": "猪笼草",
+      "requiredLevel": 91,
+      "expPerHour": 2821.3694
+    }
+  ],
+  "topNormalFert": [
+    {
+      "seedId": 20074,
+      "name": "金桔",
+      "requiredLevel": 100,
+      "expPerHour": 3742.0441,
+      "gainPercent": 19.9978
+    },
+    {
+      "seedId": 20078,
+      "name": "杏子",
+      "requiredLevel": 99,
+      "expPerHour": 3741.8882,
+      "gainPercent": 19.9956
+    },
+    {
+      "seedId": 20222,
+      "name": "豹皮花",
+      "requiredLevel": 98,
+      "expPerHour": 3741.7323,
+      "gainPercent": 19.9933
+    },
+    {
+      "seedId": 20068,
+      "name": "冬瓜",
+      "requiredLevel": 97,
+      "expPerHour": 3741.2647,
+      "gainPercent": 19.9867
+    },
+    {
+      "seedId": 20221,
+      "name": "天堂鸟",
+      "requiredLevel": 96,
+      "expPerHour": 3563.8515,
+      "gainPercent": 19.9978
+    },
+    {
+      "seedId": 20063,
+      "name": "苦瓜",
+      "requiredLevel": 95,
+      "expPerHour": 3563.703,
+      "gainPercent": 19.9956
+    },
+    {
+      "seedId": 20126,
+      "name": "曼珠沙华",
+      "requiredLevel": 94,
+      "expPerHour": 3563.5546,
+      "gainPercent": 19.9933
+    },
+    {
+      "seedId": 20116,
+      "name": "曼陀罗华",
+      "requiredLevel": 93,
+      "expPerHour": 3563.1092,
+      "gainPercent": 19.9867
+    },
+    {
+      "seedId": 20076,
+      "name": "山竹",
+      "requiredLevel": 92,
+      "expPerHour": 3385.6589,
+      "gainPercent": 19.9978
+    },
+    {
+      "seedId": 20220,
+      "name": "猪笼草",
+      "requiredLevel": 91,
+      "expPerHour": 3385.5179,
+      "gainPercent": 19.9956
+    }
+  ],
+  "bestByLevel": [
+    {
+      "level": 1,
+      "bestNoFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1045.16
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 2,
+      "bestNoFert": {
+        "seedId": 20003,
+        "name": "胡萝卜",
+        "expPerHour": 1062.3
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 3,
+      "bestNoFert": {
+        "seedId": 20059,
+        "name": "大白菜",
+        "expPerHour": 1072.85
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 4,
+      "bestNoFert": {
+        "seedId": 20065,
+        "name": "大蒜",
+        "expPerHour": 1076.41
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 5,
+      "bestNoFert": {
+        "seedId": 20064,
+        "name": "大葱",
+        "expPerHour": 1078.2
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 6,
+      "bestNoFert": {
+        "seedId": 20060,
+        "name": "水稻",
+        "expPerHour": 1106.08
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 7,
+      "bestNoFert": {
+        "seedId": 20061,
+        "name": "小麦",
+        "expPerHour": 1115.38
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 8,
+      "bestNoFert": {
+        "seedId": 20061,
+        "name": "小麦",
+        "expPerHour": 1115.38
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 9,
+      "bestNoFert": {
+        "seedId": 20066,
+        "name": "鲜姜",
+        "expPerHour": 1144.42
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 10,
+      "bestNoFert": {
+        "seedId": 20005,
+        "name": "土豆",
+        "expPerHour": 1151.68
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 11,
+      "bestNoFert": {
+        "seedId": 20071,
+        "name": "小白菜",
+        "expPerHour": 1151.74
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 12,
+      "bestNoFert": {
+        "seedId": 20096,
+        "name": "生菜",
+        "expPerHour": 1151.79
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 13,
+      "bestNoFert": {
+        "seedId": 20099,
+        "name": "油菜",
+        "expPerHour": 1223.83
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 14,
+      "bestNoFert": {
+        "seedId": 20006,
+        "name": "茄子",
+        "expPerHour": 1223.92
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 15,
+      "bestNoFert": {
+        "seedId": 20051,
+        "name": "红枣",
+        "expPerHour": 1223.94
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 16,
+      "bestNoFert": {
+        "seedId": 20120,
+        "name": "蒲公英",
+        "expPerHour": 1223.97
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 17,
+      "bestNoFert": {
+        "seedId": 20259,
+        "name": "银莲花",
+        "expPerHour": 1295.82
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 18,
+      "bestNoFert": {
+        "seedId": 20007,
+        "name": "番茄",
+        "expPerHour": 1295.91
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 19,
+      "bestNoFert": {
+        "seedId": 20098,
+        "name": "花菜",
+        "expPerHour": 1295.94
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 20,
+      "bestNoFert": {
+        "seedId": 20305,
+        "name": "韭菜",
+        "expPerHour": 1295.97
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 21,
+      "bestNoFert": {
+        "seedId": 20105,
+        "name": "小雏菊",
+        "expPerHour": 1367.81
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 22,
+      "bestNoFert": {
+        "seedId": 20008,
+        "name": "豌豆",
+        "expPerHour": 1367.91
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 23,
+      "bestNoFert": {
+        "seedId": 20037,
+        "name": "莲藕",
+        "expPerHour": 1367.94
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 24,
+      "bestNoFert": {
+        "seedId": 20041,
+        "name": "红玫瑰",
+        "expPerHour": 1367.97
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 25,
+      "bestNoFert": {
+        "seedId": 20161,
+        "name": "秋菊（黄色）",
+        "expPerHour": 1457.8
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 26,
+      "bestNoFert": {
+        "seedId": 20110,
+        "name": "满天星",
+        "expPerHour": 1457.9
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 27,
+      "bestNoFert": {
+        "seedId": 20143,
+        "name": "含羞草",
+        "expPerHour": 1457.93
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 28,
+      "bestNoFert": {
+        "seedId": 20147,
+        "name": "牵牛花",
+        "expPerHour": 1457.97
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 29,
+      "bestNoFert": {
+        "seedId": 20162,
+        "name": "秋菊（红色）",
+        "expPerHour": 1547.79
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 30,
+      "bestNoFert": {
+        "seedId": 20009,
+        "name": "辣椒",
+        "expPerHour": 1547.89
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 31,
+      "bestNoFert": {
+        "seedId": 20097,
+        "name": "黄瓜",
+        "expPerHour": 1547.93
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 32,
+      "bestNoFert": {
+        "seedId": 20306,
+        "name": "芹菜",
+        "expPerHour": 1547.96
+      },
+      "bestNormalFert": {
+        "seedId": 20002,
+        "name": "白萝卜",
+        "expPerHour": 1963.64
+      }
+    },
+    {
+      "level": 33,
+      "bestNoFert": {
+        "seedId": 20103,
+        "name": "天香百合",
+        "expPerHour": 1655.77
+      },
+      "bestNormalFert": {
+        "seedId": 20103,
+        "name": "天香百合",
+        "expPerHour": 2069.46
+      }
+    },
+    {
+      "level": 34,
+      "bestNoFert": {
+        "seedId": 20010,
+        "name": "南瓜",
+        "expPerHour": 1655.89
+      },
+      "bestNormalFert": {
+        "seedId": 20010,
+        "name": "南瓜",
+        "expPerHour": 2069.73
+      }
+    },
+    {
+      "level": 35,
+      "bestNoFert": {
+        "seedId": 20308,
+        "name": "核桃",
+        "expPerHour": 1655.92
+      },
+      "bestNormalFert": {
+        "seedId": 20308,
+        "name": "核桃",
+        "expPerHour": 2207.8
+      }
+    },
+    {
+      "level": 36,
+      "bestNoFert": {
+        "seedId": 20091,
+        "name": "山楂",
+        "expPerHour": 1655.96
+      },
+      "bestNormalFert": {
+        "seedId": 20308,
+        "name": "核桃",
+        "expPerHour": 2207.8
+      }
+    },
+    {
+      "level": 37,
+      "bestNoFert": {
+        "seedId": 20073,
+        "name": "菠菜",
+        "expPerHour": 1763.76
+      },
+      "bestNormalFert": {
+        "seedId": 20308,
+        "name": "核桃",
+        "expPerHour": 2207.8
+      }
+    },
+    {
+      "level": 38,
+      "bestNoFert": {
+        "seedId": 20001,
+        "name": "草莓",
+        "expPerHour": 1763.88
+      },
+      "bestNormalFert": {
+        "seedId": 20308,
+        "name": "核桃",
+        "expPerHour": 2207.8
+      }
+    },
+    {
+      "level": 39,
+      "bestNoFert": {
+        "seedId": 20011,
+        "name": "苹果",
+        "expPerHour": 1763.92
+      },
+      "bestNormalFert": {
+        "seedId": 20308,
+        "name": "核桃",
+        "expPerHour": 2207.8
+      }
+    },
+    {
+      "level": 40,
+      "bestNoFert": {
+        "seedId": 20062,
+        "name": "四叶草",
+        "expPerHour": 1763.96
+      },
+      "bestNormalFert": {
+        "seedId": 20308,
+        "name": "核桃",
+        "expPerHour": 2207.8
+      }
+    },
+    {
+      "level": 41,
+      "bestNoFert": {
+        "seedId": 20104,
+        "name": "非洲菊",
+        "expPerHour": 1889.74
+      },
+      "bestNormalFert": {
+        "seedId": 20104,
+        "name": "非洲菊",
+        "expPerHour": 2267.43
+      }
+    },
+    {
+      "level": 42,
+      "bestNoFert": {
+        "seedId": 20135,
+        "name": "火绒草",
+        "expPerHour": 1889.87
+      },
+      "bestNormalFert": {
+        "seedId": 20135,
+        "name": "火绒草",
+        "expPerHour": 2362.19
+      }
+    },
+    {
+      "level": 43,
+      "bestNoFert": {
+        "seedId": 20141,
+        "name": "花香根鸢尾",
+        "expPerHour": 1889.91
+      },
+      "bestNormalFert": {
+        "seedId": 20141,
+        "name": "花香根鸢尾",
+        "expPerHour": 2362.29
+      }
+    },
+    {
+      "level": 44,
+      "bestNoFert": {
+        "seedId": 20142,
+        "name": "虞美人",
+        "expPerHour": 1889.96
+      },
+      "bestNormalFert": {
+        "seedId": 20142,
+        "name": "虞美人",
+        "expPerHour": 2362.4
+      }
+    },
+    {
+      "level": 45,
+      "bestNoFert": {
+        "seedId": 20145,
+        "name": "向日葵",
+        "expPerHour": 2015.72
+      },
+      "bestNormalFert": {
+        "seedId": 20145,
+        "name": "向日葵",
+        "expPerHour": 2418.6
+      }
+    },
+    {
+      "level": 46,
+      "bestNoFert": {
+        "seedId": 20014,
+        "name": "西瓜",
+        "expPerHour": 2015.86
+      },
+      "bestNormalFert": {
+        "seedId": 20014,
+        "name": "西瓜",
+        "expPerHour": 2519.67
+      }
+    },
+    {
+      "level": 47,
+      "bestNoFert": {
+        "seedId": 20070,
+        "name": "黄豆",
+        "expPerHour": 2015.91
+      },
+      "bestNormalFert": {
+        "seedId": 20070,
+        "name": "黄豆",
+        "expPerHour": 2519.78
+      }
+    },
+    {
+      "level": 48,
+      "bestNoFert": {
+        "seedId": 20015,
+        "name": "香蕉",
+        "expPerHour": 2015.95
+      },
+      "bestNormalFert": {
+        "seedId": 20015,
+        "name": "香蕉",
+        "expPerHour": 2519.89
+      }
+    },
+    {
+      "level": 49,
+      "bestNoFert": {
+        "seedId": 20100,
+        "name": "竹笋",
+        "expPerHour": 2141.7
+      },
+      "bestNormalFert": {
+        "seedId": 20100,
+        "name": "竹笋",
+        "expPerHour": 2676.8
+      }
+    },
+    {
+      "level": 50,
+      "bestNoFert": {
+        "seedId": 20018,
+        "name": "桃子",
+        "expPerHour": 2141.85
+      },
+      "bestNormalFert": {
+        "seedId": 20018,
+        "name": "桃子",
+        "expPerHour": 2677.15
+      }
+    },
+    {
+      "level": 51,
+      "bestNoFert": {
+        "seedId": 20047,
+        "name": "甘蔗",
+        "expPerHour": 2141.9
+      },
+      "bestNormalFert": {
+        "seedId": 20047,
+        "name": "甘蔗",
+        "expPerHour": 2677.27
+      }
+    },
+    {
+      "level": 52,
+      "bestNoFert": {
+        "seedId": 20019,
+        "name": "橙子",
+        "expPerHour": 2141.95
+      },
+      "bestNormalFert": {
+        "seedId": 20019,
+        "name": "橙子",
+        "expPerHour": 2677.38
+      }
+    },
+    {
+      "level": 53,
+      "bestNoFert": {
+        "seedId": 20128,
+        "name": "茉莉花",
+        "expPerHour": 2285.68
+      },
+      "bestNormalFert": {
+        "seedId": 20128,
+        "name": "茉莉花",
+        "expPerHour": 2856.76
+      }
+    },
+    {
+      "level": 54,
+      "bestNoFert": {
+        "seedId": 20013,
+        "name": "葡萄",
+        "expPerHour": 2285.84
+      },
+      "bestNormalFert": {
+        "seedId": 20013,
+        "name": "葡萄",
+        "expPerHour": 2857.13
+      }
+    },
+    {
+      "level": 55,
+      "bestNoFert": {
+        "seedId": 20044,
+        "name": "丝瓜",
+        "expPerHour": 2285.89
+      },
+      "bestNormalFert": {
+        "seedId": 20044,
+        "name": "丝瓜",
+        "expPerHour": 2857.25
+      }
+    },
+    {
+      "level": 56,
+      "bestNoFert": {
+        "seedId": 20072,
+        "name": "榛子",
+        "expPerHour": 2285.95
+      },
+      "bestNormalFert": {
+        "seedId": 20072,
+        "name": "榛子",
+        "expPerHour": 2857.38
+      }
+    },
+    {
+      "level": 57,
+      "bestNoFert": {
+        "seedId": 20396,
+        "name": "迎春花",
+        "expPerHour": 2429.66
+      },
+      "bestNormalFert": {
+        "seedId": 20396,
+        "name": "迎春花",
+        "expPerHour": 3036.71
+      }
+    },
+    {
+      "level": 58,
+      "bestNoFert": {
+        "seedId": 20023,
+        "name": "石榴",
+        "expPerHour": 2429.83
+      },
+      "bestNormalFert": {
+        "seedId": 20023,
+        "name": "石榴",
+        "expPerHour": 3037.1
+      }
+    },
+    {
+      "level": 59,
+      "bestNoFert": {
+        "seedId": 20095,
+        "name": "栗子",
+        "expPerHour": 2429.89
+      },
+      "bestNormalFert": {
+        "seedId": 20095,
+        "name": "栗子",
+        "expPerHour": 3037.24
+      }
+    },
+    {
+      "level": 60,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 61,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 62,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 63,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 64,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 65,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 66,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 67,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 68,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 69,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 70,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 71,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 72,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 73,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 74,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 75,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 76,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 77,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 78,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 79,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 80,
+      "bestNoFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 2429.94
+      },
+      "bestNormalFert": {
+        "seedId": 20026,
+        "name": "柚子",
+        "expPerHour": 3037.37
+      }
+    },
+    {
+      "level": 81,
+      "bestNoFert": {
+        "seedId": 20039,
+        "name": "杨桃",
+        "expPerHour": 2551.15
+      },
+      "bestNormalFert": {
+        "seedId": 20039,
+        "name": "杨桃",
+        "expPerHour": 3061.03
+      }
+    },
+    {
+      "level": 82,
+      "bestNoFert": {
+        "seedId": 20056,
+        "name": "哈密瓜",
+        "expPerHour": 2551.32
+      },
+      "bestNormalFert": {
+        "seedId": 20056,
+        "name": "哈密瓜",
+        "expPerHour": 3061.42
+      }
+    },
+    {
+      "level": 83,
+      "bestNoFert": {
+        "seedId": 20075,
+        "name": "桑葚",
+        "expPerHour": 2551.38
+      },
+      "bestNormalFert": {
+        "seedId": 20075,
+        "name": "桑葚",
+        "expPerHour": 3061.54
+      }
+    },
+    {
+      "level": 84,
+      "bestNoFert": {
+        "seedId": 20042,
+        "name": "柠檬",
+        "expPerHour": 2551.44
+      },
+      "bestNormalFert": {
+        "seedId": 20042,
+        "name": "柠檬",
+        "expPerHour": 3061.67
+      }
+    },
+    {
+      "level": 85,
+      "bestNoFert": {
+        "seedId": 20057,
+        "name": "芒果",
+        "expPerHour": 2686.13
+      },
+      "bestNormalFert": {
+        "seedId": 20057,
+        "name": "芒果",
+        "expPerHour": 3222.99
+      }
+    },
+    {
+      "level": 86,
+      "bestNoFert": {
+        "seedId": 20048,
+        "name": "杨梅",
+        "expPerHour": 2686.31
+      },
+      "bestNormalFert": {
+        "seedId": 20048,
+        "name": "杨梅",
+        "expPerHour": 3223.4
+      }
+    },
+    {
+      "level": 87,
+      "bestNoFert": {
+        "seedId": 20058,
+        "name": "榴莲",
+        "expPerHour": 2686.38
+      },
+      "bestNormalFert": {
+        "seedId": 20058,
+        "name": "榴莲",
+        "expPerHour": 3223.53
+      }
+    },
+    {
+      "level": 88,
+      "bestNoFert": {
+        "seedId": 20079,
+        "name": "番石榴",
+        "expPerHour": 2686.44
+      },
+      "bestNormalFert": {
+        "seedId": 20079,
+        "name": "番石榴",
+        "expPerHour": 3223.67
+      }
+    },
+    {
+      "level": 89,
+      "bestNoFert": {
+        "seedId": 20218,
+        "name": "瓶子树",
+        "expPerHour": 2821.11
+      },
+      "bestNormalFert": {
+        "seedId": 20218,
+        "name": "瓶子树",
+        "expPerHour": 3384.95
+      }
+    },
+    {
+      "level": 90,
+      "bestNoFert": {
+        "seedId": 20077,
+        "name": "蓝莓",
+        "expPerHour": 2821.3
+      },
+      "bestNormalFert": {
+        "seedId": 20077,
+        "name": "蓝莓",
+        "expPerHour": 3385.38
+      }
+    },
+    {
+      "level": 91,
+      "bestNoFert": {
+        "seedId": 20220,
+        "name": "猪笼草",
+        "expPerHour": 2821.37
+      },
+      "bestNormalFert": {
+        "seedId": 20220,
+        "name": "猪笼草",
+        "expPerHour": 3385.52
+      }
+    },
+    {
+      "level": 92,
+      "bestNoFert": {
+        "seedId": 20076,
+        "name": "山竹",
+        "expPerHour": 2821.43
+      },
+      "bestNormalFert": {
+        "seedId": 20076,
+        "name": "山竹",
+        "expPerHour": 3385.66
+      }
+    },
+    {
+      "level": 93,
+      "bestNoFert": {
+        "seedId": 20116,
+        "name": "曼陀罗华",
+        "expPerHour": 2969.59
+      },
+      "bestNormalFert": {
+        "seedId": 20116,
+        "name": "曼陀罗华",
+        "expPerHour": 3563.11
+      }
+    },
+    {
+      "level": 94,
+      "bestNoFert": {
+        "seedId": 20126,
+        "name": "曼珠沙华",
+        "expPerHour": 2969.79
+      },
+      "bestNormalFert": {
+        "seedId": 20126,
+        "name": "曼珠沙华",
+        "expPerHour": 3563.55
+      }
+    },
+    {
+      "level": 95,
+      "bestNoFert": {
+        "seedId": 20063,
+        "name": "苦瓜",
+        "expPerHour": 2969.86
+      },
+      "bestNormalFert": {
+        "seedId": 20063,
+        "name": "苦瓜",
+        "expPerHour": 3563.7
+      }
+    },
+    {
+      "level": 96,
+      "bestNoFert": {
+        "seedId": 20221,
+        "name": "天堂鸟",
+        "expPerHour": 2969.93
+      },
+      "bestNormalFert": {
+        "seedId": 20221,
+        "name": "天堂鸟",
+        "expPerHour": 3563.85
+      }
+    },
+    {
+      "level": 97,
+      "bestNoFert": {
+        "seedId": 20068,
+        "name": "冬瓜",
+        "expPerHour": 3118.07
+      },
+      "bestNormalFert": {
+        "seedId": 20068,
+        "name": "冬瓜",
+        "expPerHour": 3741.26
+      }
+    },
+    {
+      "level": 98,
+      "bestNoFert": {
+        "seedId": 20222,
+        "name": "豹皮花",
+        "expPerHour": 3118.28
+      },
+      "bestNormalFert": {
+        "seedId": 20222,
+        "name": "豹皮花",
+        "expPerHour": 3741.73
+      }
+    },
+    {
+      "level": 99,
+      "bestNoFert": {
+        "seedId": 20078,
+        "name": "杏子",
+        "expPerHour": 3118.36
+      },
+      "bestNormalFert": {
+        "seedId": 20078,
+        "name": "杏子",
+        "expPerHour": 3741.89
+      }
+    },
+    {
+      "level": 100,
+      "bestNoFert": {
+        "seedId": 20074,
+        "name": "金桔",
+        "expPerHour": 3118.43
+      },
+      "bestNormalFert": {
+        "seedId": 20074,
+        "name": "金桔",
+        "expPerHour": 3742.04
+      }
+    }
+  ],
+  "currentLevel": {
+    "level": 29,
+    "bestNoFert": {
+      "seedId": 20162,
+      "name": "秋菊（红色）",
+      "expPerHour": 1547.79
+    },
+    "bestNormalFert": {
+      "seedId": 20002,
+      "name": "白萝卜",
+      "expPerHour": 1963.64
+    }
+  },
+  "rows": [
+    {
+      "seedId": 20002,
+      "goodsId": 15,
+      "plantId": 1020002,
+      "name": "白萝卜",
+      "requiredLevel": 1,
+      "unlocked": true,
+      "price": 2,
+      "expHarvest": 1,
+      "expPerCycle": 1,
+      "growTimeSec": 60,
+      "growTimeStr": "1分钟",
+      "normalFertReduceSec": 30,
+      "growTimeNormalFert": 30,
+      "growTimeNormalFertStr": "30s",
+      "cycleSecNoFert": 62,
+      "cycleSecNormalFert": 33,
+      "farmExpPerHourNoFert": 1045.1612903225807,
+      "farmExpPerHourNormalFert": 1963.6363636363635,
+      "farmExpPerDayNoFert": 25083.87096774194,
+      "farmExpPerDayNormalFert": 47127.27272727272,
+      "gainPercent": 87.87878787878786,
+      "expPerGoldSeed": 0.5,
+      "fruitId": 40002,
+      "fruitCount": 5
+    },
+    {
+      "seedId": 20003,
+      "goodsId": 16,
+      "plantId": 1020003,
+      "name": "胡萝卜",
+      "requiredLevel": 2,
+      "unlocked": true,
+      "price": 4,
+      "expHarvest": 2,
+      "expPerCycle": 2,
+      "growTimeSec": 120,
+      "growTimeStr": "2分钟",
+      "normalFertReduceSec": 30,
+      "growTimeNormalFert": 90,
+      "growTimeNormalFertStr": "1m30s",
+      "cycleSecNoFert": 122,
+      "cycleSecNormalFert": 93,
+      "farmExpPerHourNoFert": 1062.295081967213,
+      "farmExpPerHourNormalFert": 1393.5483870967741,
+      "farmExpPerDayNoFert": 25495.08196721311,
+      "farmExpPerDayNormalFert": 33445.161290322576,
+      "gainPercent": 31.182795698924735,
+      "expPerGoldSeed": 0.5,
+      "fruitId": 40003,
+      "fruitCount": 10
+    },
+    {
+      "seedId": 20059,
+      "goodsId": 17,
+      "plantId": 1020059,
+      "name": "大白菜",
+      "requiredLevel": 3,
+      "unlocked": true,
+      "price": 10,
+      "expHarvest": 5,
+      "expPerCycle": 5,
+      "growTimeSec": 300,
+      "growTimeStr": "5分钟",
+      "normalFertReduceSec": 60,
+      "growTimeNormalFert": 240,
+      "growTimeNormalFertStr": "4m",
+      "cycleSecNoFert": 302,
+      "cycleSecNormalFert": 243,
+      "farmExpPerHourNoFert": 1072.8476821192053,
+      "farmExpPerHourNormalFert": 1333.3333333333333,
+      "farmExpPerDayNoFert": 25748.344370860927,
+      "farmExpPerDayNormalFert": 32000,
+      "gainPercent": 24.2798353909465,
+      "expPerGoldSeed": 0.5,
+      "fruitId": 40059,
+      "fruitCount": 20
+    },
+    {
+      "seedId": 20065,
+      "goodsId": 18,
+      "plantId": 1020065,
+      "name": "大蒜",
+      "requiredLevel": 4,
+      "unlocked": true,
+      "price": 20,
+      "expHarvest": 10,
+      "expPerCycle": 10,
+      "growTimeSec": 600,
+      "growTimeStr": "10分钟",
+      "normalFertReduceSec": 120,
+      "growTimeNormalFert": 480,
+      "growTimeNormalFertStr": "8m",
+      "cycleSecNoFert": 602,
+      "cycleSecNormalFert": 483,
+      "farmExpPerHourNoFert": 1076.4119601328905,
+      "farmExpPerHourNormalFert": 1341.6149068322982,
+      "farmExpPerDayNoFert": 25833.887043189374,
+      "farmExpPerDayNormalFert": 32198.757763975154,
+      "gainPercent": 24.63768115942028,
+      "expPerGoldSeed": 0.5,
+      "fruitId": 40065,
+      "fruitCount": 20
+    },
+    {
+      "seedId": 20064,
+      "goodsId": 115,
+      "plantId": 1020064,
+      "name": "大葱",
+      "requiredLevel": 5,
+      "unlocked": true,
+      "price": 42,
+      "expHarvest": 20,
+      "expPerCycle": 20,
+      "growTimeSec": 1200,
+      "growTimeStr": "20分钟",
+      "normalFertReduceSec": 300,
+      "growTimeNormalFert": 900,
+      "growTimeNormalFertStr": "15m",
+      "cycleSecNoFert": 1202,
+      "cycleSecNormalFert": 903,
+      "farmExpPerHourNoFert": 1078.2029950083195,
+      "farmExpPerHourNormalFert": 1435.2159468438538,
+      "farmExpPerDayNoFert": 25876.871880199666,
+      "farmExpPerDayNormalFert": 34445.18272425249,
+      "gainPercent": 33.111849390919154,
+      "expPerGoldSeed": 0.47619047619047616,
+      "fruitId": 40064,
+      "fruitCount": 30
+    },
+    {
+      "seedId": 20060,
+      "goodsId": 19,
+      "plantId": 1020060,
+      "name": "水稻",
+      "requiredLevel": 6,
+      "unlocked": true,
+      "price": 84,
+      "expHarvest": 41,
+      "expPerCycle": 41,
+      "growTimeSec": 2400,
+      "growTimeStr": "40分钟",
+      "normalFertReduceSec": 480,
+      "growTimeNormalFert": 1920,
+      "growTimeNormalFertStr": "32m",
+      "cycleSecNoFert": 2402,
+      "cycleSecNormalFert": 1923,
+      "farmExpPerHourNoFert": 1106.0782681099083,
+      "farmExpPerHourNormalFert": 1381.5912636505461,
+      "farmExpPerDayNoFert": 26545.8784346378,
+      "farmExpPerDayNormalFert": 33158.190327613105,
+      "gainPercent": 24.908996359854413,
+      "expPerGoldSeed": 0.4880952380952381,
+      "fruitId": 40060,
+      "fruitCount": 30
+    },
+    {
+      "seedId": 20061,
+      "goodsId": 20,
+      "plantId": 1020061,
+      "name": "小麦",
+      "requiredLevel": 7,
+      "unlocked": true,
+      "price": 126,
+      "expHarvest": 62,
+      "expPerCycle": 62,
+      "growTimeSec": 3600,
+      "growTimeStr": "1小时",
+      "normalFertReduceSec": 720,
+      "growTimeNormalFert": 2880,
+      "growTimeNormalFertStr": "48m",
+      "cycleSecNoFert": 3602,
+      "cycleSecNormalFert": 2883,
+      "farmExpPerHourNoFert": 1115.3803442531928,
+      "farmExpPerHourNormalFert": 1393.5483870967741,
+      "farmExpPerDayNoFert": 26769.12826207663,
+      "farmExpPerDayNormalFert": 33445.161290322576,
+      "gainPercent": 24.939299340964254,
+      "expPerGoldSeed": 0.49206349206349204,
+      "fruitId": 40061,
+      "fruitCount": 40
+    },
+    {
+      "seedId": 20004,
+      "goodsId": 21,
+      "plantId": 1020004,
+      "name": "玉米",
+      "requiredLevel": 8,
+      "unlocked": true,
+      "price": 168,
+      "expHarvest": 82,
+      "expPerCycle": 82,
+      "growTimeSec": 4800,
+      "growTimeStr": "1小时20分",
+      "normalFertReduceSec": 960,
+      "growTimeNormalFert": 3840,
+      "growTimeNormalFertStr": "1h4m",
+      "cycleSecNoFert": 4802,
+      "cycleSecNormalFert": 3843,
+      "farmExpPerHourNoFert": 1106.5389421074551,
+      "farmExpPerHourNormalFert": 1382.6697892271661,
+      "farmExpPerDayNoFert": 26556.934610578923,
+      "farmExpPerDayNormalFert": 33184.07494145199,
+      "gainPercent": 24.95446265938069,
+      "expPerGoldSeed": 0.4880952380952381,
+      "fruitId": 40004,
+      "fruitCount": 40
+    },
+    {
+      "seedId": 20066,
+      "goodsId": 116,
+      "plantId": 1020066,
+      "name": "鲜姜",
+      "requiredLevel": 9,
+      "unlocked": true,
+      "price": 223,
+      "expHarvest": 106,
+      "expPerCycle": 106,
+      "growTimeSec": 6000,
+      "growTimeStr": "1小时40分",
+      "normalFertReduceSec": 1500,
+      "growTimeNormalFert": 4500,
+      "growTimeNormalFertStr": "1h15m",
+      "cycleSecNoFert": 6002,
+      "cycleSecNormalFert": 4503,
+      "farmExpPerHourNoFert": 1144.418527157614,
+      "farmExpPerHourNormalFert": 1525.3830779480347,
+      "farmExpPerDayNoFert": 27466.044651782737,
+      "farmExpPerDayNormalFert": 36609.19387075283,
+      "gainPercent": 33.2889184987786,
+      "expPerGoldSeed": 0.47533632286995514,
+      "fruitId": 40066,
+      "fruitCount": 60
+    },
+    {
+      "seedId": 20005,
+      "goodsId": 22,
+      "plantId": 1020005,
+      "name": "土豆",
+      "requiredLevel": 10,
+      "unlocked": true,
+      "price": 268,
+      "expHarvest": 128,
+      "expPerCycle": 128,
+      "growTimeSec": 7200,
+      "growTimeStr": "2小时",
+      "normalFertReduceSec": 1440,
+      "growTimeNormalFert": 5760,
+      "growTimeNormalFertStr": "1h36m",
+      "cycleSecNoFert": 7202,
+      "cycleSecNormalFert": 5763,
+      "farmExpPerHourNoFert": 1151.6800888642042,
+      "farmExpPerHourNormalFert": 1439.2503904216553,
+      "farmExpPerDayNoFert": 27640.3221327409,
+      "farmExpPerDayNormalFert": 34542.009370119726,
+      "gainPercent": 24.969633871247627,
+      "expPerGoldSeed": 0.47761194029850745,
+      "fruitId": 40005,
+      "fruitCount": 60
+    },
+    {
+      "seedId": 20071,
+      "goodsId": 23,
+      "plantId": 1020071,
+      "name": "小白菜",
+      "requiredLevel": 11,
+      "unlocked": true,
+      "price": 335,
+      "expHarvest": 160,
+      "expPerCycle": 160,
+      "growTimeSec": 9000,
+      "growTimeStr": "2小时30分",
+      "normalFertReduceSec": 2250,
+      "growTimeNormalFert": 6750,
+      "growTimeNormalFertStr": "1h52m30s",
+      "cycleSecNoFert": 9002,
+      "cycleSecNormalFert": 6753,
+      "farmExpPerHourNoFert": 1151.7440568762497,
+      "farmExpPerHourNormalFert": 1535.3176366059529,
+      "farmExpPerDayNoFert": 27641.857365029995,
+      "farmExpPerDayNormalFert": 36847.62327854287,
+      "gainPercent": 33.303716866577815,
+      "expPerGoldSeed": 0.47761194029850745,
+      "fruitId": 40071,
+      "fruitCount": 80
+    },
+    {
+      "seedId": 20096,
+      "goodsId": 24,
+      "plantId": 1020096,
+      "name": "生菜",
+      "requiredLevel": 12,
+      "unlocked": true,
+      "price": 402,
+      "expHarvest": 192,
+      "expPerCycle": 192,
+      "growTimeSec": 10800,
+      "growTimeStr": "3小时",
+      "normalFertReduceSec": 2160,
+      "growTimeNormalFert": 8640,
+      "growTimeNormalFertStr": "2h24m",
+      "cycleSecNoFert": 10802,
+      "cycleSecNormalFert": 8643,
+      "farmExpPerHourNoFert": 1151.786706165525,
+      "farmExpPerHourNormalFert": 1439.5001735508506,
+      "farmExpPerDayNoFert": 27642.880947972597,
+      "farmExpPerDayNormalFert": 34548.004165220416,
+      "gainPercent": 24.979752400786776,
+      "expPerGoldSeed": 0.47761194029850745,
+      "fruitId": 40096,
+      "fruitCount": 80
+    },
+    {
+      "seedId": 20099,
+      "goodsId": 60,
+      "plantId": 1020099,
+      "name": "油菜",
+      "requiredLevel": 13,
+      "unlocked": true,
+      "price": 576,
+      "expHarvest": 272,
+      "expPerCycle": 272,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 3600,
+      "growTimeNormalFert": 10800,
+      "growTimeNormalFertStr": "3h0m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 10803,
+      "farmExpPerHourNoFert": 1223.8300236078323,
+      "farmExpPerHourNormalFert": 1631.546792557623,
+      "farmExpPerDayNoFert": 29371.920566587978,
+      "farmExpPerDayNormalFert": 39157.12302138295,
+      "gainPercent": 33.314819957419225,
+      "expPerGoldSeed": 0.4722222222222222,
+      "fruitId": 40099,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20006,
+      "goodsId": 25,
+      "plantId": 1020006,
+      "name": "茄子",
+      "requiredLevel": 14,
+      "unlocked": true,
+      "price": 1152,
+      "expHarvest": 544,
+      "expPerCycle": 544,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 5760,
+      "growTimeNormalFert": 23040,
+      "growTimeNormalFertStr": "6h24m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 23043,
+      "farmExpPerHourNoFert": 1223.915005902368,
+      "farmExpPerHourNormalFert": 1529.8008071865643,
+      "farmExpPerDayNoFert": 29373.960141656833,
+      "farmExpPerDayNormalFert": 36715.21937247754,
+      "gainPercent": 24.992405502755712,
+      "expPerGoldSeed": 0.4722222222222222,
+      "fruitId": 40006,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20051,
+      "goodsId": 26,
+      "plantId": 1020051,
+      "name": "红枣",
+      "requiredLevel": 15,
+      "unlocked": true,
+      "price": 1728,
+      "expHarvest": 816,
+      "expPerCycle": 816,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 8640,
+      "growTimeNormalFert": 34560,
+      "growTimeNormalFertStr": "9h36m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 34563,
+      "farmExpPerHourNoFert": 1223.9433359566685,
+      "farmExpPerHourNormalFert": 1529.8671990278622,
+      "farmExpPerDayNoFert": 29374.640062960047,
+      "farmExpPerDayNormalFert": 36716.812776668696,
+      "gainPercent": 24.99493678210805,
+      "expPerGoldSeed": 0.4722222222222222,
+      "fruitId": 40051,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20120,
+      "goodsId": 117,
+      "plantId": 1020120,
+      "name": "蒲公英",
+      "requiredLevel": 16,
+      "unlocked": true,
+      "price": 3456,
+      "expHarvest": 1632,
+      "expPerCycle": 1632,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 17280,
+      "growTimeNormalFert": 69120,
+      "growTimeNormalFertStr": "19h12m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 69123,
+      "farmExpPerHourNoFert": 1223.9716673225157,
+      "farmExpPerHourNormalFert": 1529.9335966320907,
+      "farmExpPerDayNoFert": 29375.320015740377,
+      "farmExpPerDayNormalFert": 36718.40631917018,
+      "gainPercent": 24.99746828117993,
+      "expPerGoldSeed": 0.4722222222222222,
+      "fruitId": 40120,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20259,
+      "goodsId": 118,
+      "plantId": 1020259,
+      "name": "银莲花",
+      "requiredLevel": 17,
+      "unlocked": true,
+      "price": 640,
+      "expHarvest": 288,
+      "expPerCycle": 288,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2880,
+      "growTimeNormalFert": 11520,
+      "growTimeNormalFertStr": "3h12m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 11523,
+      "farmExpPerHourNoFert": 1295.8200249965282,
+      "farmExpPerHourNormalFert": 1619.5782348346784,
+      "farmExpPerDayNoFert": 31099.680599916675,
+      "farmExpPerDayNormalFert": 38869.87763603228,
+      "gainPercent": 24.984812982730187,
+      "expPerGoldSeed": 0.45,
+      "fruitId": 40259,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20007,
+      "goodsId": 27,
+      "plantId": 1020007,
+      "name": "番茄",
+      "requiredLevel": 18,
+      "unlocked": true,
+      "price": 1280,
+      "expHarvest": 576,
+      "expPerCycle": 576,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 5760,
+      "growTimeNormalFert": 23040,
+      "growTimeNormalFertStr": "6h24m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 23043,
+      "farmExpPerHourNoFert": 1295.910006249566,
+      "farmExpPerHourNormalFert": 1619.7890899622446,
+      "farmExpPerDayNoFert": 31101.840149989584,
+      "farmExpPerDayNormalFert": 38874.93815909387,
+      "gainPercent": 24.992405502755716,
+      "expPerGoldSeed": 0.45,
+      "fruitId": 40007,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20098,
+      "goodsId": 28,
+      "plantId": 1020098,
+      "name": "花菜",
+      "requiredLevel": 19,
+      "unlocked": true,
+      "price": 1920,
+      "expHarvest": 864,
+      "expPerCycle": 864,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 8640,
+      "growTimeNormalFert": 34560,
+      "growTimeNormalFertStr": "9h36m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 34563,
+      "farmExpPerHourNoFert": 1295.9400027776492,
+      "farmExpPerHourNormalFert": 1619.8593872059719,
+      "farmExpPerDayNoFert": 31102.56006666358,
+      "farmExpPerDayNormalFert": 38876.625292943325,
+      "gainPercent": 24.99493678210805,
+      "expPerGoldSeed": 0.45,
+      "fruitId": 40098,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20305,
+      "goodsId": 61,
+      "plantId": 1020305,
+      "name": "韭菜",
+      "requiredLevel": 20,
+      "unlocked": true,
+      "price": 3840,
+      "expHarvest": 1728,
+      "expPerCycle": 1728,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 17280,
+      "growTimeNormalFert": 69120,
+      "growTimeNormalFertStr": "19h12m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 69123,
+      "farmExpPerHourNoFert": 1295.9700006944283,
+      "farmExpPerHourNormalFert": 1619.9296905516255,
+      "farmExpPerDayNoFert": 31103.28001666628,
+      "farmExpPerDayNormalFert": 38878.31257323901,
+      "gainPercent": 24.99746828117994,
+      "expPerGoldSeed": 0.45,
+      "fruitId": 40305,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20105,
+      "goodsId": 119,
+      "plantId": 1020105,
+      "name": "小雏菊",
+      "requiredLevel": 21,
+      "unlocked": true,
+      "price": 704,
+      "expHarvest": 304,
+      "expPerCycle": 304,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2880,
+      "growTimeNormalFert": 11520,
+      "growTimeNormalFertStr": "3h12m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 11523,
+      "farmExpPerHourNoFert": 1367.810026385224,
+      "farmExpPerHourNormalFert": 1709.554803436605,
+      "farmExpPerDayNoFert": 32827.44063324538,
+      "farmExpPerDayNormalFert": 41029.31528247852,
+      "gainPercent": 24.984812982730205,
+      "expPerGoldSeed": 0.4318181818181818,
+      "fruitId": 40105,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20008,
+      "goodsId": 29,
+      "plantId": 1020008,
+      "name": "豌豆",
+      "requiredLevel": 22,
+      "unlocked": true,
+      "price": 1408,
+      "expHarvest": 608,
+      "expPerCycle": 608,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 5760,
+      "growTimeNormalFert": 23040,
+      "growTimeNormalFertStr": "6h24m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 23043,
+      "farmExpPerHourNoFert": 1367.9050065967642,
+      "farmExpPerHourNormalFert": 1709.7773727379247,
+      "farmExpPerDayNoFert": 32829.72015832234,
+      "farmExpPerDayNormalFert": 41034.656945710194,
+      "gainPercent": 24.9924055027557,
+      "expPerGoldSeed": 0.4318181818181818,
+      "fruitId": 40008,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20037,
+      "goodsId": 63,
+      "plantId": 1020037,
+      "name": "莲藕",
+      "requiredLevel": 23,
+      "unlocked": true,
+      "price": 2112,
+      "expHarvest": 912,
+      "expPerCycle": 912,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 8640,
+      "growTimeNormalFert": 34560,
+      "growTimeNormalFertStr": "9h36m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 34563,
+      "farmExpPerHourNoFert": 1367.9366695986298,
+      "farmExpPerHourNormalFert": 1709.8515753840813,
+      "farmExpPerDayNoFert": 32830.48007036711,
+      "farmExpPerDayNormalFert": 41036.437809217954,
+      "gainPercent": 24.99493678210803,
+      "expPerGoldSeed": 0.4318181818181818,
+      "fruitId": 40037,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20041,
+      "goodsId": 30,
+      "plantId": 1020041,
+      "name": "红玫瑰",
+      "requiredLevel": 24,
+      "unlocked": true,
+      "price": 4224,
+      "expHarvest": 1824,
+      "expPerCycle": 1824,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 17280,
+      "growTimeNormalFert": 69120,
+      "growTimeNormalFertStr": "19h12m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 69123,
+      "farmExpPerHourNoFert": 1367.968334066341,
+      "farmExpPerHourNormalFert": 1709.9257844711601,
+      "farmExpPerDayNoFert": 32831.24001759218,
+      "farmExpPerDayNormalFert": 41038.21882730784,
+      "gainPercent": 24.997468281179934,
+      "expPerGoldSeed": 0.4318181818181818,
+      "fruitId": 40041,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20161,
+      "goodsId": 120,
+      "plantId": 1020161,
+      "name": "秋菊（黄色）",
+      "requiredLevel": 25,
+      "unlocked": true,
+      "price": 792,
+      "expHarvest": 324,
+      "expPerCycle": 324,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2880,
+      "growTimeNormalFert": 11520,
+      "growTimeNormalFertStr": "3h12m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 11523,
+      "farmExpPerHourNoFert": 1457.7975281210943,
+      "farmExpPerHourNormalFert": 1822.0255141890134,
+      "farmExpPerDayNoFert": 34987.14067490626,
+      "farmExpPerDayNormalFert": 43728.61234053632,
+      "gainPercent": 24.9848129827302,
+      "expPerGoldSeed": 0.4090909090909091,
+      "fruitId": 40161,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20110,
+      "goodsId": 121,
+      "plantId": 1020110,
+      "name": "满天星",
+      "requiredLevel": 26,
+      "unlocked": true,
+      "price": 1584,
+      "expHarvest": 648,
+      "expPerCycle": 648,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 5760,
+      "growTimeNormalFert": 23040,
+      "growTimeNormalFertStr": "6h24m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 23043,
+      "farmExpPerHourNoFert": 1457.8987570307618,
+      "farmExpPerHourNormalFert": 1822.2627262075248,
+      "farmExpPerDayNoFert": 34989.57016873828,
+      "farmExpPerDayNormalFert": 43734.305428980595,
+      "gainPercent": 24.992405502755695,
+      "expPerGoldSeed": 0.4090909090909091,
+      "fruitId": 40110,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20143,
+      "goodsId": 122,
+      "plantId": 1020143,
+      "name": "含羞草",
+      "requiredLevel": 27,
+      "unlocked": true,
+      "price": 2376,
+      "expHarvest": 972,
+      "expPerCycle": 972,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 7200,
+      "growTimeNormalFert": 36000,
+      "growTimeNormalFertStr": "10h0m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 36003,
+      "farmExpPerHourNoFert": 1457.9325031248554,
+      "farmExpPerHourNormalFert": 1749.4542121489876,
+      "farmExpPerDayNoFert": 34990.38007499653,
+      "farmExpPerDayNormalFert": 41986.9010915757,
+      "gainPercent": 19.995555925895058,
+      "expPerGoldSeed": 0.4090909090909091,
+      "fruitId": 40143,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20147,
+      "goodsId": 123,
+      "plantId": 1020147,
+      "name": "牵牛花",
+      "requiredLevel": 28,
+      "unlocked": true,
+      "price": 4752,
+      "expHarvest": 1944,
+      "expPerCycle": 1944,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 17280,
+      "growTimeNormalFert": 69120,
+      "growTimeNormalFertStr": "19h12m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 69123,
+      "farmExpPerHourNoFert": 1457.9662507812318,
+      "farmExpPerHourNormalFert": 1822.4209018705785,
+      "farmExpPerDayNoFert": 34991.19001874956,
+      "farmExpPerDayNormalFert": 43738.10164489388,
+      "gainPercent": 24.997468281179934,
+      "expPerGoldSeed": 0.4090909090909091,
+      "fruitId": 40147,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20162,
+      "goodsId": 124,
+      "plantId": 1020162,
+      "name": "秋菊（红色）",
+      "requiredLevel": 29,
+      "unlocked": true,
+      "price": 888,
+      "expHarvest": 344,
+      "expPerCycle": 344,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2880,
+      "growTimeNormalFert": 11520,
+      "growTimeNormalFertStr": "3h12m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 11523,
+      "farmExpPerHourNoFert": 1547.7850298569642,
+      "farmExpPerHourNormalFert": 1934.4962249414214,
+      "farmExpPerDayNoFert": 37146.84071656714,
+      "farmExpPerDayNormalFert": 46427.909398594114,
+      "gainPercent": 24.98481298273019,
+      "expPerGoldSeed": 0.38738738738738737,
+      "fruitId": 40162,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20009,
+      "goodsId": 31,
+      "plantId": 1020009,
+      "name": "辣椒",
+      "requiredLevel": 30,
+      "unlocked": true,
+      "price": 1776,
+      "expHarvest": 688,
+      "expPerCycle": 688,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 5760,
+      "growTimeNormalFert": 23040,
+      "growTimeNormalFertStr": "6h24m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 23043,
+      "farmExpPerHourNoFert": 1547.8925074647595,
+      "farmExpPerHourNormalFert": 1934.7480796771256,
+      "farmExpPerDayNoFert": 37149.42017915423,
+      "farmExpPerDayNormalFert": 46433.95391225102,
+      "gainPercent": 24.99240550275572,
+      "expPerGoldSeed": 0.38738738738738737,
+      "fruitId": 40009,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20097,
+      "goodsId": 32,
+      "plantId": 1020097,
+      "name": "黄瓜",
+      "requiredLevel": 31,
+      "unlocked": true,
+      "price": 2664,
+      "expHarvest": 1032,
+      "expPerCycle": 1032,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 8640,
+      "growTimeNormalFert": 34560,
+      "growTimeNormalFertStr": "9h36m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 34563,
+      "farmExpPerHourNoFert": 1547.9283366510808,
+      "farmExpPerHourNormalFert": 1934.8320458293551,
+      "farmExpPerDayNoFert": 37150.28007962594,
+      "farmExpPerDayNormalFert": 46435.96909990453,
+      "gainPercent": 24.99493678210805,
+      "expPerGoldSeed": 0.38738738738738737,
+      "fruitId": 40097,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20306,
+      "goodsId": 64,
+      "plantId": 1020306,
+      "name": "芹菜",
+      "requiredLevel": 32,
+      "unlocked": true,
+      "price": 5328,
+      "expHarvest": 2064,
+      "expPerCycle": 2064,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 17280,
+      "growTimeNormalFert": 69120,
+      "growTimeNormalFertStr": "19h12m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 69123,
+      "farmExpPerHourNoFert": 1547.9641674961226,
+      "farmExpPerHourNormalFert": 1934.916019269997,
+      "farmExpPerDayNoFert": 37151.14001990695,
+      "farmExpPerDayNormalFert": 46437.98446247993,
+      "gainPercent": 24.997468281179934,
+      "expPerGoldSeed": 0.38738738738738737,
+      "fruitId": 40306,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20103,
+      "goodsId": 125,
+      "plantId": 1020103,
+      "name": "天香百合",
+      "requiredLevel": 33,
+      "unlocked": true,
+      "price": 992,
+      "expHarvest": 368,
+      "expPerCycle": 368,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2880,
+      "growTimeNormalFert": 11520,
+      "growTimeNormalFertStr": "3h12m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 11523,
+      "farmExpPerHourNoFert": 1655.7700319400085,
+      "farmExpPerHourNormalFert": 2069.461077844311,
+      "farmExpPerDayNoFert": 39738.480766560206,
+      "farmExpPerDayNormalFert": 49667.06586826347,
+      "gainPercent": 24.984812982730165,
+      "expPerGoldSeed": 0.3709677419354839,
+      "fruitId": 40103,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20010,
+      "goodsId": 33,
+      "plantId": 1020010,
+      "name": "南瓜",
+      "requiredLevel": 34,
+      "unlocked": false,
+      "price": 1984,
+      "expHarvest": 736,
+      "expPerCycle": 736,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 5760,
+      "growTimeNormalFert": 23040,
+      "growTimeNormalFertStr": "6h24m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 23043,
+      "farmExpPerHourNoFert": 1655.8850079855565,
+      "farmExpPerHourNormalFert": 2069.7305038406457,
+      "farmExpPerDayNoFert": 39741.240191653356,
+      "farmExpPerDayNormalFert": 49673.5320921755,
+      "gainPercent": 24.99240550275572,
+      "expPerGoldSeed": 0.3709677419354839,
+      "fruitId": 40010,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20308,
+      "goodsId": 34,
+      "plantId": 1020308,
+      "name": "核桃",
+      "requiredLevel": 35,
+      "unlocked": false,
+      "price": 2976,
+      "expHarvest": 1104,
+      "expPerCycle": 1104,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 10800,
+      "growTimeNormalFert": 32400,
+      "growTimeNormalFertStr": "9h0m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 32403,
+      "farmExpPerHourNoFert": 1655.923336882552,
+      "farmExpPerHourNormalFert": 2207.795574483844,
+      "farmExpPerDayNoFert": 39742.16008518125,
+      "farmExpPerDayNormalFert": 52987.09378761226,
+      "gainPercent": 33.32716106533344,
+      "expPerGoldSeed": 0.3709677419354839,
+      "fruitId": 40308,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20091,
+      "goodsId": 126,
+      "plantId": 1020091,
+      "name": "山楂",
+      "requiredLevel": 36,
+      "unlocked": false,
+      "price": 5952,
+      "expHarvest": 2208,
+      "expPerCycle": 2208,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 14400,
+      "growTimeNormalFert": 72000,
+      "growTimeNormalFertStr": "20h0m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 72003,
+      "farmExpPerHourNoFert": 1655.961667553992,
+      "farmExpPerHourNormalFert": 1987.117203449856,
+      "farmExpPerDayNoFert": 39743.080021295806,
+      "farmExpPerDayNormalFert": 47690.81288279655,
+      "gainPercent": 19.997777870366495,
+      "expPerGoldSeed": 0.3709677419354839,
+      "fruitId": 40091,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20073,
+      "goodsId": 127,
+      "plantId": 1020073,
+      "name": "菠菜",
+      "requiredLevel": 37,
+      "unlocked": false,
+      "price": 1120,
+      "expHarvest": 392,
+      "expPerCycle": 392,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2880,
+      "growTimeNormalFert": 11520,
+      "growTimeNormalFertStr": "3h12m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 11523,
+      "farmExpPerHourNoFert": 1763.7550340230523,
+      "farmExpPerHourNormalFert": 2204.425930747201,
+      "farmExpPerDayNoFert": 42330.12081655326,
+      "farmExpPerDayNormalFert": 52906.22233793283,
+      "gainPercent": 24.98481298273019,
+      "expPerGoldSeed": 0.35,
+      "fruitId": 40073,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20001,
+      "goodsId": 35,
+      "plantId": 1020001,
+      "name": "草莓",
+      "requiredLevel": 38,
+      "unlocked": false,
+      "price": 2240,
+      "expHarvest": 784,
+      "expPerCycle": 784,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 5760,
+      "growTimeNormalFert": 23040,
+      "growTimeNormalFertStr": "6h24m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 23043,
+      "farmExpPerHourNoFert": 1763.8775085063537,
+      "farmExpPerHourNormalFert": 2204.7129280041663,
+      "farmExpPerDayNoFert": 42333.06020415249,
+      "farmExpPerDayNormalFert": 52913.11027209999,
+      "gainPercent": 24.99240550275573,
+      "expPerGoldSeed": 0.35,
+      "fruitId": 40001,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20011,
+      "goodsId": 36,
+      "plantId": 1020011,
+      "name": "苹果",
+      "requiredLevel": 39,
+      "unlocked": false,
+      "price": 3360,
+      "expHarvest": 1176,
+      "expPerCycle": 1176,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 8640,
+      "growTimeNormalFert": 34560,
+      "growTimeNormalFertStr": "9h36m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 34563,
+      "farmExpPerHourNoFert": 1763.9183371140225,
+      "farmExpPerHourNormalFert": 2204.808610363684,
+      "farmExpPerDayNoFert": 42334.04009073654,
+      "farmExpPerDayNormalFert": 52915.406648728414,
+      "gainPercent": 24.994936782108038,
+      "expPerGoldSeed": 0.35,
+      "fruitId": 40011,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20062,
+      "goodsId": 128,
+      "plantId": 1020062,
+      "name": "四叶草",
+      "requiredLevel": 40,
+      "unlocked": false,
+      "price": 6720,
+      "expHarvest": 2352,
+      "expPerCycle": 2352,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 17280,
+      "growTimeNormalFert": 69120,
+      "growTimeNormalFertStr": "19h12m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 69123,
+      "farmExpPerHourNoFert": 1763.959167611861,
+      "farmExpPerHourNormalFert": 2204.9043010286014,
+      "farmExpPerDayNoFert": 42335.020022684665,
+      "farmExpPerDayNormalFert": 52917.70322468643,
+      "gainPercent": 24.997468281179927,
+      "expPerGoldSeed": 0.35,
+      "fruitId": 40062,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20104,
+      "goodsId": 129,
+      "plantId": 1020104,
+      "name": "非洲菊",
+      "requiredLevel": 41,
+      "unlocked": false,
+      "price": 1248,
+      "expHarvest": 420,
+      "expPerCycle": 420,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2400,
+      "growTimeNormalFert": 12000,
+      "growTimeNormalFertStr": "3h20m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 12003,
+      "farmExpPerHourNoFert": 1889.7375364532706,
+      "farmExpPerHourNormalFert": 2267.4331417145713,
+      "farmExpPerDayNoFert": 45353.700874878494,
+      "farmExpPerDayNormalFert": 54418.39540114971,
+      "gainPercent": 19.986669999166857,
+      "expPerGoldSeed": 0.33653846153846156,
+      "fruitId": 40104,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20135,
+      "goodsId": 130,
+      "plantId": 1020135,
+      "name": "火绒草",
+      "requiredLevel": 42,
+      "unlocked": false,
+      "price": 2496,
+      "expHarvest": 840,
+      "expPerCycle": 840,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 5760,
+      "growTimeNormalFert": 23040,
+      "growTimeNormalFertStr": "6h24m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 23043,
+      "farmExpPerHourNoFert": 1889.8687591139505,
+      "farmExpPerHourNormalFert": 2362.1924228616067,
+      "farmExpPerDayNoFert": 45356.85021873481,
+      "farmExpPerDayNormalFert": 56692.618148678564,
+      "gainPercent": 24.992405502755716,
+      "expPerGoldSeed": 0.33653846153846156,
+      "fruitId": 40135,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20141,
+      "goodsId": 131,
+      "plantId": 1020141,
+      "name": "花香根鸢尾",
+      "requiredLevel": 43,
+      "unlocked": false,
+      "price": 3744,
+      "expHarvest": 1260,
+      "expPerCycle": 1260,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 8640,
+      "growTimeNormalFert": 34560,
+      "growTimeNormalFertStr": "9h36m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 34563,
+      "farmExpPerHourNoFert": 1889.9125040507383,
+      "farmExpPerHourNormalFert": 2362.294939675375,
+      "farmExpPerDayNoFert": 45357.90009721772,
+      "farmExpPerDayNormalFert": 56695.078552209,
+      "gainPercent": 24.994936782108027,
+      "expPerGoldSeed": 0.33653846153846156,
+      "fruitId": 40141,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20142,
+      "goodsId": 132,
+      "plantId": 1020142,
+      "name": "虞美人",
+      "requiredLevel": 44,
+      "unlocked": false,
+      "price": 7488,
+      "expHarvest": 2520,
+      "expPerCycle": 2520,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 17280,
+      "growTimeNormalFert": 69120,
+      "growTimeNormalFertStr": "19h12m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 69123,
+      "farmExpPerHourNoFert": 1889.956251012708,
+      "farmExpPerHourNormalFert": 2362.3974653877867,
+      "farmExpPerDayNoFert": 45358.95002430499,
+      "farmExpPerDayNormalFert": 56697.53916930688,
+      "gainPercent": 24.997468281179916,
+      "expPerGoldSeed": 0.33653846153846156,
+      "fruitId": 40142,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20145,
+      "goodsId": 133,
+      "plantId": 1020145,
+      "name": "向日葵",
+      "requiredLevel": 45,
+      "unlocked": false,
+      "price": 1400,
+      "expHarvest": 448,
+      "expPerCycle": 448,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2400,
+      "growTimeNormalFert": 12000,
+      "growTimeNormalFertStr": "3h20m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 12003,
+      "farmExpPerHourNoFert": 2015.7200388834883,
+      "farmExpPerHourNormalFert": 2418.5953511622097,
+      "farmExpPerDayNoFert": 48377.28093320372,
+      "farmExpPerDayNormalFert": 58046.28842789303,
+      "gainPercent": 19.986669999166892,
+      "expPerGoldSeed": 0.32,
+      "fruitId": 40145,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20014,
+      "goodsId": 37,
+      "plantId": 1020014,
+      "name": "西瓜",
+      "requiredLevel": 46,
+      "unlocked": false,
+      "price": 2800,
+      "expHarvest": 896,
+      "expPerCycle": 896,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 5760,
+      "growTimeNormalFert": 23040,
+      "growTimeNormalFertStr": "6h24m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 23043,
+      "farmExpPerHourNoFert": 2015.8600097215472,
+      "farmExpPerHourNormalFert": 2519.6719177190466,
+      "farmExpPerDayNoFert": 48380.64023331713,
+      "farmExpPerDayNormalFert": 60472.12602525712,
+      "gainPercent": 24.992405502755695,
+      "expPerGoldSeed": 0.32,
+      "fruitId": 40014,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20070,
+      "goodsId": 38,
+      "plantId": 1020070,
+      "name": "黄豆",
+      "requiredLevel": 47,
+      "unlocked": false,
+      "price": 4200,
+      "expHarvest": 1344,
+      "expPerCycle": 1344,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 8640,
+      "growTimeNormalFert": 34560,
+      "growTimeNormalFertStr": "9h36m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 34563,
+      "farmExpPerHourNoFert": 2015.9066709874544,
+      "farmExpPerHourNormalFert": 2519.781268987067,
+      "farmExpPerDayNoFert": 48381.76010369891,
+      "farmExpPerDayNormalFert": 60474.75045568961,
+      "gainPercent": 24.994936782108027,
+      "expPerGoldSeed": 0.32,
+      "fruitId": 40070,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20015,
+      "goodsId": 39,
+      "plantId": 1020015,
+      "name": "香蕉",
+      "requiredLevel": 48,
+      "unlocked": false,
+      "price": 8400,
+      "expHarvest": 2688,
+      "expPerCycle": 2688,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 17280,
+      "growTimeNormalFert": 69120,
+      "growTimeNormalFertStr": "19h12m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 69123,
+      "farmExpPerHourNoFert": 2015.9533344135552,
+      "farmExpPerHourNormalFert": 2519.890629746973,
+      "farmExpPerDayNoFert": 48382.880025925326,
+      "farmExpPerDayNormalFert": 60477.37511392735,
+      "gainPercent": 24.997468281179934,
+      "expPerGoldSeed": 0.32,
+      "fruitId": 40015,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20100,
+      "goodsId": 40,
+      "plantId": 1020100,
+      "name": "竹笋",
+      "requiredLevel": 49,
+      "unlocked": false,
+      "price": 1560,
+      "expHarvest": 476,
+      "expPerCycle": 476,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2880,
+      "growTimeNormalFert": 11520,
+      "growTimeNormalFertStr": "3h12m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 11523,
+      "farmExpPerHourNoFert": 2141.7025413137067,
+      "farmExpPerHourNormalFert": 2676.8029159073158,
+      "farmExpPerDayNoFert": 51400.860991528956,
+      "farmExpPerDayNormalFert": 64243.26998177558,
+      "gainPercent": 24.984812982730176,
+      "expPerGoldSeed": 0.30512820512820515,
+      "fruitId": 40100,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20018,
+      "goodsId": 41,
+      "plantId": 1020018,
+      "name": "桃子",
+      "requiredLevel": 50,
+      "unlocked": false,
+      "price": 3120,
+      "expHarvest": 952,
+      "expPerCycle": 952,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 5760,
+      "growTimeNormalFert": 23040,
+      "growTimeNormalFertStr": "6h24m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 23043,
+      "farmExpPerHourNoFert": 2141.8512603291438,
+      "farmExpPerHourNormalFert": 2677.1514125764875,
+      "farmExpPerDayNoFert": 51404.43024789945,
+      "farmExpPerDayNormalFert": 64251.633901835696,
+      "gainPercent": 24.992405502755723,
+      "expPerGoldSeed": 0.30512820512820515,
+      "fruitId": 40018,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20047,
+      "goodsId": 42,
+      "plantId": 1020047,
+      "name": "甘蔗",
+      "requiredLevel": 51,
+      "unlocked": false,
+      "price": 4680,
+      "expHarvest": 1428,
+      "expPerCycle": 1428,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 8640,
+      "growTimeNormalFert": 34560,
+      "growTimeNormalFertStr": "9h36m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 34563,
+      "farmExpPerHourNoFert": 2141.90083792417,
+      "farmExpPerHourNormalFert": 2677.267598298759,
+      "farmExpPerDayNoFert": 51405.62011018008,
+      "farmExpPerDayNormalFert": 64254.42235917022,
+      "gainPercent": 24.994936782108052,
+      "expPerGoldSeed": 0.30512820512820515,
+      "fruitId": 40047,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20019,
+      "goodsId": 43,
+      "plantId": 1020019,
+      "name": "橙子",
+      "requiredLevel": 52,
+      "unlocked": false,
+      "price": 9360,
+      "expHarvest": 2856,
+      "expPerCycle": 2856,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 17280,
+      "growTimeNormalFert": 69120,
+      "growTimeNormalFertStr": "19h12m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 69123,
+      "farmExpPerHourNoFert": 2141.950417814402,
+      "farmExpPerHourNormalFert": 2677.3837941061583,
+      "farmExpPerDayNoFert": 51406.81002754565,
+      "farmExpPerDayNormalFert": 64257.2110585478,
+      "gainPercent": 24.997468281179938,
+      "expPerGoldSeed": 0.30512820512820515,
+      "fruitId": 40019,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20128,
+      "goodsId": 134,
+      "plantId": 1020128,
+      "name": "茉莉花",
+      "requiredLevel": 53,
+      "unlocked": false,
+      "price": 1728,
+      "expHarvest": 508,
+      "expPerCycle": 508,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2880,
+      "growTimeNormalFert": 11520,
+      "growTimeNormalFertStr": "3h12m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 11523,
+      "farmExpPerHourNoFert": 2285.6825440910984,
+      "farmExpPerHourNormalFert": 2856.756053111169,
+      "farmExpPerDayNoFert": 54856.381058186365,
+      "farmExpPerDayNormalFert": 68562.14527466806,
+      "gainPercent": 24.984812982730194,
+      "expPerGoldSeed": 0.29398148148148145,
+      "fruitId": 40128,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20013,
+      "goodsId": 44,
+      "plantId": 1020013,
+      "name": "葡萄",
+      "requiredLevel": 54,
+      "unlocked": false,
+      "price": 3456,
+      "expHarvest": 1016,
+      "expPerCycle": 1016,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 5760,
+      "growTimeNormalFert": 23040,
+      "growTimeNormalFertStr": "6h24m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 23043,
+      "farmExpPerHourNoFert": 2285.84126102354,
+      "farmExpPerHourNormalFert": 2857.127978127848,
+      "farmExpPerDayNoFert": 54860.19026456496,
+      "farmExpPerDayNormalFert": 68571.07147506835,
+      "gainPercent": 24.992405502755723,
+      "expPerGoldSeed": 0.29398148148148145,
+      "fruitId": 40013,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20044,
+      "goodsId": 45,
+      "plantId": 1020044,
+      "name": "丝瓜",
+      "requiredLevel": 55,
+      "unlocked": false,
+      "price": 5184,
+      "expHarvest": 1524,
+      "expPerCycle": 1524,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 8640,
+      "growTimeNormalFert": 34560,
+      "growTimeNormalFertStr": "9h36m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 34563,
+      "farmExpPerHourNoFert": 2285.8941715661313,
+      "farmExpPerHourNormalFert": 2857.251974654978,
+      "farmExpPerDayNoFert": 54861.46011758715,
+      "farmExpPerDayNormalFert": 68574.04739171948,
+      "gainPercent": 24.99493678210803,
+      "expPerGoldSeed": 0.29398148148148145,
+      "fruitId": 40044,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20072,
+      "goodsId": 66,
+      "plantId": 1020072,
+      "name": "榛子",
+      "requiredLevel": 56,
+      "unlocked": false,
+      "price": 10368,
+      "expHarvest": 3048,
+      "expPerCycle": 3048,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 17280,
+      "growTimeNormalFert": 69120,
+      "growTimeNormalFertStr": "19h12m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 69123,
+      "farmExpPerHourNoFert": 2285.9470845582277,
+      "farmExpPerHourNormalFert": 2857.375981945228,
+      "farmExpPerDayNoFert": 54862.73002939747,
+      "farmExpPerDayNormalFert": 68577.02356668547,
+      "gainPercent": 24.997468281179923,
+      "expPerGoldSeed": 0.29398148148148145,
+      "fruitId": 40072,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20396,
+      "goodsId": 46,
+      "plantId": 1020396,
+      "name": "迎春花",
+      "requiredLevel": 57,
+      "unlocked": false,
+      "price": 1920,
+      "expHarvest": 540,
+      "expPerCycle": 540,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2880,
+      "growTimeNormalFert": 11520,
+      "growTimeNormalFertStr": "3h12m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 11523,
+      "farmExpPerHourNoFert": 2429.6625468684906,
+      "farmExpPerHourNormalFert": 3036.709190315022,
+      "farmExpPerDayNoFert": 58311.901124843775,
+      "farmExpPerDayNormalFert": 72881.02056756054,
+      "gainPercent": 24.984812982730187,
+      "expPerGoldSeed": 0.28125,
+      "fruitId": 40396,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20023,
+      "goodsId": 47,
+      "plantId": 1020023,
+      "name": "石榴",
+      "requiredLevel": 58,
+      "unlocked": false,
+      "price": 3840,
+      "expHarvest": 1080,
+      "expPerCycle": 1080,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 5760,
+      "growTimeNormalFert": 23040,
+      "growTimeNormalFertStr": "6h24m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 23043,
+      "farmExpPerHourNoFert": 2429.8312617179363,
+      "farmExpPerHourNormalFert": 3037.1045436792083,
+      "farmExpPerDayNoFert": 58315.95028123047,
+      "farmExpPerDayNormalFert": 72890.509048301,
+      "gainPercent": 24.99240550275571,
+      "expPerGoldSeed": 0.28125,
+      "fruitId": 40023,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20095,
+      "goodsId": 48,
+      "plantId": 1020095,
+      "name": "栗子",
+      "requiredLevel": 59,
+      "unlocked": false,
+      "price": 5760,
+      "expHarvest": 1620,
+      "expPerCycle": 1620,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 8640,
+      "growTimeNormalFert": 34560,
+      "growTimeNormalFertStr": "9h36m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 34563,
+      "farmExpPerHourNoFert": 2429.8875052080925,
+      "farmExpPerHourNormalFert": 3037.236351011197,
+      "farmExpPerDayNoFert": 58317.30012499422,
+      "farmExpPerDayNormalFert": 72893.67242426872,
+      "gainPercent": 24.994936782108013,
+      "expPerGoldSeed": 0.28125,
+      "fruitId": 40095,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20026,
+      "goodsId": 49,
+      "plantId": 1020026,
+      "name": "柚子",
+      "requiredLevel": 60,
+      "unlocked": false,
+      "price": 11520,
+      "expHarvest": 3240,
+      "expPerCycle": 3240,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 17280,
+      "growTimeNormalFert": 69120,
+      "growTimeNormalFertStr": "19h12m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 69123,
+      "farmExpPerHourNoFert": 2429.943751302053,
+      "farmExpPerHourNormalFert": 3037.3681697842976,
+      "farmExpPerDayNoFert": 58318.65003124927,
+      "farmExpPerDayNormalFert": 72896.83607482314,
+      "gainPercent": 24.997468281179938,
+      "expPerGoldSeed": 0.28125,
+      "fruitId": 40026,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20050,
+      "goodsId": 50,
+      "plantId": 1020050,
+      "name": "蘑菇",
+      "requiredLevel": 61,
+      "unlocked": false,
+      "price": 3168,
+      "expHarvest": 429,
+      "expPerCycle": 429,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 3600,
+      "growTimeNormalFert": 10800,
+      "growTimeNormalFertStr": "3h0m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 10803,
+      "farmExpPerHourNoFert": 1930.2319122344118,
+      "farmExpPerHourNormalFert": 2573.285198555957,
+      "farmExpPerDayNoFert": 46325.565893625884,
+      "farmExpPerDayNormalFert": 61758.84476534296,
+      "gainPercent": 33.31481995741925,
+      "expPerGoldSeed": 0.13541666666666666,
+      "fruitId": 40050,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20027,
+      "goodsId": 51,
+      "plantId": 1020027,
+      "name": "菠萝",
+      "requiredLevel": 62,
+      "unlocked": false,
+      "price": 6336,
+      "expHarvest": 858,
+      "expPerCycle": 858,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 4800,
+      "growTimeNormalFert": 24000,
+      "growTimeNormalFertStr": "6h40m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 24003,
+      "farmExpPerHourNoFert": 1930.3659468092494,
+      "farmExpPerHourNormalFert": 2316.310461192351,
+      "farmExpPerDayNoFert": 46328.78272342199,
+      "farmExpPerDayNormalFert": 55591.45106861642,
+      "gainPercent": 19.99333416656251,
+      "expPerGoldSeed": 0.13541666666666666,
+      "fruitId": 40027,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20036,
+      "goodsId": 52,
+      "plantId": 1020036,
+      "name": "箬竹",
+      "requiredLevel": 63,
+      "unlocked": false,
+      "price": 9504,
+      "expHarvest": 1287,
+      "expPerCycle": 1287,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 7200,
+      "growTimeNormalFert": 36000,
+      "growTimeNormalFertStr": "10h0m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 36003,
+      "farmExpPerHourNoFert": 1930.41062913754,
+      "farmExpPerHourNormalFert": 2316.4069660861596,
+      "farmExpPerDayNoFert": 46329.855099300956,
+      "farmExpPerDayNormalFert": 55593.76718606783,
+      "gainPercent": 19.995555925895072,
+      "expPerGoldSeed": 0.13541666666666666,
+      "fruitId": 40036,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20043,
+      "goodsId": 68,
+      "plantId": 1020043,
+      "name": "无花果",
+      "requiredLevel": 64,
+      "unlocked": false,
+      "price": 19008,
+      "expHarvest": 2574,
+      "expPerCycle": 2574,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 14400,
+      "growTimeNormalFert": 72000,
+      "growTimeNormalFertStr": "20h0m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 72003,
+      "farmExpPerHourNoFert": 1930.455313534409,
+      "farmExpPerHourNormalFert": 2316.5034790217073,
+      "farmExpPerDayNoFert": 46330.92752482582,
+      "farmExpPerDayNormalFert": 55596.08349652098,
+      "gainPercent": 19.9977778703665,
+      "expPerGoldSeed": 0.13541666666666666,
+      "fruitId": 40043,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20029,
+      "goodsId": 53,
+      "plantId": 1020029,
+      "name": "椰子",
+      "requiredLevel": 65,
+      "unlocked": false,
+      "price": 3492,
+      "expHarvest": 456,
+      "expPerCycle": 456,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2400,
+      "growTimeNormalFert": 12000,
+      "growTimeNormalFertStr": "3h20m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 12003,
+      "farmExpPerHourNoFert": 2051.7150395778367,
+      "farmExpPerHourNormalFert": 2461.7845538615347,
+      "farmExpPerDayNoFert": 49241.16094986808,
+      "farmExpPerDayNormalFert": 59082.82929267683,
+      "gainPercent": 19.986669999166864,
+      "expPerGoldSeed": 0.13058419243986255,
+      "fruitId": 40029,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20049,
+      "goodsId": 54,
+      "plantId": 1020049,
+      "name": "花生",
+      "requiredLevel": 66,
+      "unlocked": false,
+      "price": 6984,
+      "expHarvest": 912,
+      "expPerCycle": 912,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 4800,
+      "growTimeNormalFert": 24000,
+      "growTimeNormalFertStr": "6h40m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 24003,
+      "farmExpPerHourNoFert": 2051.857509895146,
+      "farmExpPerHourNormalFert": 2462.092238470191,
+      "farmExpPerDayNoFert": 49244.580237483504,
+      "farmExpPerDayNormalFert": 59090.213723284585,
+      "gainPercent": 19.993334166562523,
+      "expPerGoldSeed": 0.13058419243986255,
+      "fruitId": 40049,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20052,
+      "goodsId": 70,
+      "plantId": 1020052,
+      "name": "金针菇",
+      "requiredLevel": 67,
+      "unlocked": false,
+      "price": 10476,
+      "expHarvest": 1368,
+      "expPerCycle": 1368,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 7200,
+      "growTimeNormalFert": 36000,
+      "growTimeNormalFertStr": "10h0m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 36003,
+      "farmExpPerHourNoFert": 2051.9050043979446,
+      "farmExpPerHourNormalFert": 2462.194817098575,
+      "farmExpPerDayNoFert": 49245.720105550674,
+      "farmExpPerDayNormalFert": 59092.675610365804,
+      "gainPercent": 19.995555925895065,
+      "expPerGoldSeed": 0.13058419243986255,
+      "fruitId": 40052,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20031,
+      "goodsId": 55,
+      "plantId": 1020031,
+      "name": "葫芦",
+      "requiredLevel": 68,
+      "unlocked": false,
+      "price": 20952,
+      "expHarvest": 2736,
+      "expPerCycle": 2736,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 14400,
+      "growTimeNormalFert": 72000,
+      "growTimeNormalFertStr": "20h0m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 72003,
+      "farmExpPerHourNoFert": 2051.952501099511,
+      "farmExpPerHourNormalFert": 2462.297404274822,
+      "farmExpPerDayNoFert": 49246.86002638827,
+      "farmExpPerDayNormalFert": 59095.137702595726,
+      "gainPercent": 19.997777870366537,
+      "expPerGoldSeed": 0.13058419243986255,
+      "fruitId": 40031,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20045,
+      "goodsId": 56,
+      "plantId": 1020045,
+      "name": "猕猴桃",
+      "requiredLevel": 69,
+      "unlocked": false,
+      "price": 3828,
+      "expHarvest": 480,
+      "expPerCycle": 480,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2400,
+      "growTimeNormalFert": 12000,
+      "growTimeNormalFertStr": "3h20m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 12003,
+      "farmExpPerHourNoFert": 2159.7000416608803,
+      "farmExpPerHourNormalFert": 2591.3521619595103,
+      "farmExpPerDayNoFert": 51832.80099986112,
+      "farmExpPerDayNormalFert": 62192.45188702825,
+      "gainPercent": 19.986669999166892,
+      "expPerGoldSeed": 0.12539184952978055,
+      "fruitId": 40045,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20054,
+      "goodsId": 74,
+      "plantId": 1020054,
+      "name": "梨",
+      "requiredLevel": 70,
+      "unlocked": false,
+      "price": 7656,
+      "expHarvest": 960,
+      "expPerCycle": 960,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 4800,
+      "growTimeNormalFert": 24000,
+      "growTimeNormalFertStr": "6h40m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 24003,
+      "farmExpPerHourNoFert": 2159.8500104159434,
+      "farmExpPerHourNormalFert": 2591.676040494938,
+      "farmExpPerDayNoFert": 51836.400249982646,
+      "farmExpPerDayNormalFert": 62200.22497187852,
+      "gainPercent": 19.993334166562512,
+      "expPerGoldSeed": 0.12539184952978055,
+      "fruitId": 40054,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20442,
+      "goodsId": 78,
+      "plantId": 1020442,
+      "name": "睡莲",
+      "requiredLevel": 71,
+      "unlocked": false,
+      "price": 11484,
+      "expHarvest": 1440,
+      "expPerCycle": 1440,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 7200,
+      "growTimeNormalFert": 36000,
+      "growTimeNormalFertStr": "10h0m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 36003,
+      "farmExpPerHourNoFert": 2159.9000046294154,
+      "farmExpPerHourNormalFert": 2591.7840179985,
+      "farmExpPerDayNoFert": 51837.600111105974,
+      "farmExpPerDayNormalFert": 62202.816431964005,
+      "gainPercent": 19.995555925895054,
+      "expPerGoldSeed": 0.12539184952978055,
+      "fruitId": 40442,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20033,
+      "goodsId": 83,
+      "plantId": 1020033,
+      "name": "火龙果",
+      "requiredLevel": 72,
+      "unlocked": false,
+      "price": 22968,
+      "expHarvest": 2880,
+      "expPerCycle": 2880,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 14400,
+      "growTimeNormalFert": 72000,
+      "growTimeNormalFertStr": "20h0m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 72003,
+      "farmExpPerHourNoFert": 2159.9500011573805,
+      "farmExpPerHourNormalFert": 2591.8920044998126,
+      "farmExpPerDayNoFert": 51838.800027777135,
+      "farmExpPerDayNormalFert": 62205.40810799551,
+      "gainPercent": 19.997777870366527,
+      "expPerGoldSeed": 0.12539184952978055,
+      "fruitId": 40033,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20055,
+      "goodsId": 62,
+      "plantId": 1020055,
+      "name": "枇杷",
+      "requiredLevel": 73,
+      "unlocked": false,
+      "price": 4176,
+      "expHarvest": 510,
+      "expPerCycle": 510,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2400,
+      "growTimeNormalFert": 12000,
+      "growTimeNormalFertStr": "3h20m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 12003,
+      "farmExpPerHourNoFert": 2294.6812942646857,
+      "farmExpPerHourNormalFert": 2753.3116720819794,
+      "farmExpPerDayNoFert": 55072.351062352456,
+      "farmExpPerDayNormalFert": 66079.4801299675,
+      "gainPercent": 19.98666999916686,
+      "expPerGoldSeed": 0.1221264367816092,
+      "fruitId": 40055,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20034,
+      "goodsId": 65,
+      "plantId": 1020034,
+      "name": "樱桃",
+      "requiredLevel": 74,
+      "unlocked": false,
+      "price": 8352,
+      "expHarvest": 1020,
+      "expPerCycle": 1020,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 4800,
+      "growTimeNormalFert": 24000,
+      "growTimeNormalFertStr": "6h40m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 24003,
+      "farmExpPerHourNoFert": 2294.84063606694,
+      "farmExpPerHourNormalFert": 2753.655793025872,
+      "farmExpPerDayNoFert": 55076.175265606566,
+      "farmExpPerDayNormalFert": 66087.73903262093,
+      "gainPercent": 19.9933341665625,
+      "expPerGoldSeed": 0.1221264367816092,
+      "fruitId": 40034,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20413,
+      "goodsId": 67,
+      "plantId": 1020413,
+      "name": "李子",
+      "requiredLevel": 75,
+      "unlocked": false,
+      "price": 12528,
+      "expHarvest": 1530,
+      "expPerCycle": 1530,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 7200,
+      "growTimeNormalFert": 36000,
+      "growTimeNormalFertStr": "10h0m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 36003,
+      "farmExpPerHourNoFert": 2294.893754918754,
+      "farmExpPerHourNormalFert": 2753.7705191234063,
+      "farmExpPerDayNoFert": 55077.450118050096,
+      "farmExpPerDayNormalFert": 66090.49245896176,
+      "gainPercent": 19.99555592589505,
+      "expPerGoldSeed": 0.1221264367816092,
+      "fruitId": 40413,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20035,
+      "goodsId": 69,
+      "plantId": 1020035,
+      "name": "荔枝",
+      "requiredLevel": 76,
+      "unlocked": false,
+      "price": 25056,
+      "expHarvest": 3060,
+      "expPerCycle": 3060,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 14400,
+      "growTimeNormalFert": 72000,
+      "growTimeNormalFertStr": "20h0m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 72003,
+      "farmExpPerHourNoFert": 2294.946876229717,
+      "farmExpPerHourNormalFert": 2753.8852547810507,
+      "farmExpPerDayNoFert": 55078.72502951321,
+      "farmExpPerDayNormalFert": 66093.24611474521,
+      "gainPercent": 19.997777870366505,
+      "expPerGoldSeed": 0.1221264367816092,
+      "fruitId": 40035,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20067,
+      "goodsId": 72,
+      "plantId": 1020067,
+      "name": "香瓜",
+      "requiredLevel": 77,
+      "unlocked": false,
+      "price": 4560,
+      "expHarvest": 537,
+      "expPerCycle": 537,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2400,
+      "growTimeNormalFert": 12000,
+      "growTimeNormalFertStr": "3h20m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 12003,
+      "farmExpPerHourNoFert": 2416.16442160811,
+      "farmExpPerHourNormalFert": 2899.075231192202,
+      "farmExpPerDayNoFert": 57987.94611859464,
+      "farmExpPerDayNormalFert": 69577.80554861284,
+      "gainPercent": 19.986669999166878,
+      "expPerGoldSeed": 0.11776315789473685,
+      "fruitId": 40067,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20038,
+      "goodsId": 75,
+      "plantId": 1020038,
+      "name": "木瓜",
+      "requiredLevel": 78,
+      "unlocked": false,
+      "price": 9120,
+      "expHarvest": 1074,
+      "expPerCycle": 1074,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 4800,
+      "growTimeNormalFert": 24000,
+      "growTimeNormalFertStr": "6h40m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 24003,
+      "farmExpPerHourNoFert": 2416.332199152837,
+      "farmExpPerHourNormalFert": 2899.4375703037117,
+      "farmExpPerDayNoFert": 57991.97277966808,
+      "farmExpPerDayNormalFert": 69586.50168728908,
+      "gainPercent": 19.993334166562484,
+      "expPerGoldSeed": 0.11776315789473685,
+      "fruitId": 40038,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20053,
+      "goodsId": 77,
+      "plantId": 1020053,
+      "name": "桂圆",
+      "requiredLevel": 79,
+      "unlocked": false,
+      "price": 13680,
+      "expHarvest": 1611,
+      "expPerCycle": 1611,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 7200,
+      "growTimeNormalFert": 36000,
+      "growTimeNormalFertStr": "10h0m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 36003,
+      "farmExpPerHourNoFert": 2416.3881301791585,
+      "farmExpPerHourNormalFert": 2899.558370135822,
+      "farmExpPerDayNoFert": 57993.3151242998,
+      "farmExpPerDayNormalFert": 69589.40088325972,
+      "gainPercent": 19.995555925895054,
+      "expPerGoldSeed": 0.11776315789473685,
+      "fruitId": 40053,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20080,
+      "goodsId": 80,
+      "plantId": 1020080,
+      "name": "月柿",
+      "requiredLevel": 80,
+      "unlocked": false,
+      "price": 27360,
+      "expHarvest": 3222,
+      "expPerCycle": 3222,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 14400,
+      "growTimeNormalFert": 72000,
+      "growTimeNormalFertStr": "20h0m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 72003,
+      "farmExpPerHourNoFert": 2416.4440637948196,
+      "farmExpPerHourNormalFert": 2899.6791800341653,
+      "farmExpPerDayNoFert": 57994.657531075674,
+      "farmExpPerDayNormalFert": 69592.30032081997,
+      "gainPercent": 19.99777787036651,
+      "expPerGoldSeed": 0.11776315789473685,
+      "fruitId": 40080,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20039,
+      "goodsId": 82,
+      "plantId": 1020039,
+      "name": "杨桃",
+      "requiredLevel": 81,
+      "unlocked": false,
+      "price": 4944,
+      "expHarvest": 567,
+      "expPerCycle": 567,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2400,
+      "growTimeNormalFert": 12000,
+      "growTimeNormalFertStr": "3h20m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 12003,
+      "farmExpPerHourNoFert": 2551.1456742119153,
+      "farmExpPerHourNormalFert": 3061.034741314671,
+      "farmExpPerDayNoFert": 61227.49618108597,
+      "farmExpPerDayNormalFert": 73464.83379155211,
+      "gainPercent": 19.986669999166846,
+      "expPerGoldSeed": 0.11468446601941748,
+      "fruitId": 40039,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20056,
+      "goodsId": 84,
+      "plantId": 1020056,
+      "name": "哈密瓜",
+      "requiredLevel": 82,
+      "unlocked": false,
+      "price": 9888,
+      "expHarvest": 1134,
+      "expPerCycle": 1134,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 4800,
+      "growTimeNormalFert": 24000,
+      "growTimeNormalFertStr": "6h40m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 24003,
+      "farmExpPerHourNoFert": 2551.322824803833,
+      "farmExpPerHourNormalFert": 3061.417322834646,
+      "farmExpPerDayNoFert": 61231.747795291994,
+      "farmExpPerDayNormalFert": 73474.0157480315,
+      "gainPercent": 19.993334166562516,
+      "expPerGoldSeed": 0.11468446601941748,
+      "fruitId": 40056,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20075,
+      "goodsId": 71,
+      "plantId": 1020075,
+      "name": "桑葚",
+      "requiredLevel": 83,
+      "unlocked": false,
+      "price": 14832,
+      "expHarvest": 1701,
+      "expPerCycle": 1701,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 7200,
+      "growTimeNormalFert": 36000,
+      "growTimeNormalFertStr": "10h0m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 36003,
+      "farmExpPerHourNoFert": 2551.381880468497,
+      "farmExpPerHourNormalFert": 3061.5448712607285,
+      "farmExpPerDayNoFert": 61233.16513124393,
+      "farmExpPerDayNormalFert": 73477.07691025748,
+      "gainPercent": 19.99555592589507,
+      "expPerGoldSeed": 0.11468446601941748,
+      "fruitId": 40075,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20042,
+      "goodsId": 73,
+      "plantId": 1020042,
+      "name": "柠檬",
+      "requiredLevel": 84,
+      "unlocked": false,
+      "price": 29664,
+      "expHarvest": 3402,
+      "expPerCycle": 3402,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 14400,
+      "growTimeNormalFert": 72000,
+      "growTimeNormalFertStr": "20h0m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 72003,
+      "farmExpPerHourNoFert": 2551.440938867156,
+      "farmExpPerHourNormalFert": 3061.6724303154033,
+      "farmExpPerDayNoFert": 61234.58253281175,
+      "farmExpPerDayNormalFert": 73480.13832756967,
+      "gainPercent": 19.99777787036649,
+      "expPerGoldSeed": 0.11468446601941748,
+      "fruitId": 40042,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20057,
+      "goodsId": 76,
+      "plantId": 1020057,
+      "name": "芒果",
+      "requiredLevel": 85,
+      "unlocked": false,
+      "price": 5364,
+      "expHarvest": 597,
+      "expPerCycle": 597,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2400,
+      "growTimeNormalFert": 12000,
+      "growTimeNormalFertStr": "3h20m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 12003,
+      "farmExpPerHourNoFert": 2686.12692681572,
+      "farmExpPerHourNormalFert": 3222.994251437141,
+      "farmExpPerDayNoFert": 64467.04624357728,
+      "farmExpPerDayNormalFert": 77351.86203449138,
+      "gainPercent": 19.986669999166896,
+      "expPerGoldSeed": 0.11129753914988814,
+      "fruitId": 40057,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20048,
+      "goodsId": 79,
+      "plantId": 1020048,
+      "name": "杨梅",
+      "requiredLevel": 86,
+      "unlocked": false,
+      "price": 10728,
+      "expHarvest": 1194,
+      "expPerCycle": 1194,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 4800,
+      "growTimeNormalFert": 24000,
+      "growTimeNormalFertStr": "6h40m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 24003,
+      "farmExpPerHourNoFert": 2686.3134504548298,
+      "farmExpPerHourNormalFert": 3223.3970753655794,
+      "farmExpPerDayNoFert": 64471.522810915914,
+      "farmExpPerDayNormalFert": 77361.5298087739,
+      "gainPercent": 19.99333416656251,
+      "expPerGoldSeed": 0.11129753914988814,
+      "fruitId": 40048,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20058,
+      "goodsId": 81,
+      "plantId": 1020058,
+      "name": "榴莲",
+      "requiredLevel": 87,
+      "unlocked": false,
+      "price": 16092,
+      "expHarvest": 1791,
+      "expPerCycle": 1791,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 7200,
+      "growTimeNormalFert": 36000,
+      "growTimeNormalFertStr": "10h0m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 36003,
+      "farmExpPerHourNoFert": 2686.3756307578356,
+      "farmExpPerHourNormalFert": 3223.5313723856343,
+      "farmExpPerDayNoFert": 64473.01513818806,
+      "farmExpPerDayNormalFert": 77364.75293725522,
+      "gainPercent": 19.995555925895044,
+      "expPerGoldSeed": 0.11129753914988814,
+      "fruitId": 40058,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20079,
+      "goodsId": 85,
+      "plantId": 1020079,
+      "name": "番石榴",
+      "requiredLevel": 88,
+      "unlocked": false,
+      "price": 32184,
+      "expHarvest": 3582,
+      "expPerCycle": 3582,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 14400,
+      "growTimeNormalFert": 72000,
+      "growTimeNormalFertStr": "20h0m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 72003,
+      "farmExpPerHourNoFert": 2686.437813939492,
+      "farmExpPerHourNormalFert": 3223.665680596642,
+      "farmExpPerDayNoFert": 64474.50753454781,
+      "farmExpPerDayNormalFert": 77367.9763343194,
+      "gainPercent": 19.997777870366512,
+      "expPerGoldSeed": 0.11129753914988814,
+      "fruitId": 40079,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20218,
+      "goodsId": 57,
+      "plantId": 1020218,
+      "name": "瓶子树",
+      "requiredLevel": 89,
+      "unlocked": false,
+      "price": 5796,
+      "expHarvest": 627,
+      "expPerCycle": 627,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2400,
+      "growTimeNormalFert": 12000,
+      "growTimeNormalFertStr": "3h20m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 12003,
+      "farmExpPerHourNoFert": 2821.1081794195247,
+      "farmExpPerHourNormalFert": 3384.95376155961,
+      "farmExpPerDayNoFert": 67706.59630606859,
+      "farmExpPerDayNormalFert": 81238.89027743065,
+      "gainPercent": 19.986669999166885,
+      "expPerGoldSeed": 0.10817805383022774,
+      "fruitId": 40218,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20077,
+      "goodsId": 86,
+      "plantId": 1020077,
+      "name": "蓝莓",
+      "requiredLevel": 90,
+      "unlocked": false,
+      "price": 11592,
+      "expHarvest": 1254,
+      "expPerCycle": 1254,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 4800,
+      "growTimeNormalFert": 24000,
+      "growTimeNormalFertStr": "6h40m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 24003,
+      "farmExpPerHourNoFert": 2821.304076105826,
+      "farmExpPerHourNormalFert": 3385.376827896513,
+      "farmExpPerDayNoFert": 67711.29782653983,
+      "farmExpPerDayNormalFert": 81249.04386951632,
+      "gainPercent": 19.99333416656252,
+      "expPerGoldSeed": 0.10817805383022774,
+      "fruitId": 40077,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20220,
+      "goodsId": 58,
+      "plantId": 1020220,
+      "name": "猪笼草",
+      "requiredLevel": 91,
+      "unlocked": false,
+      "price": 17388,
+      "expHarvest": 1881,
+      "expPerCycle": 1881,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 7200,
+      "growTimeNormalFert": 36000,
+      "growTimeNormalFertStr": "10h0m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 36003,
+      "farmExpPerHourNoFert": 2821.3693810471736,
+      "farmExpPerHourNormalFert": 3385.517873510541,
+      "farmExpPerDayNoFert": 67712.86514513216,
+      "farmExpPerDayNormalFert": 81252.42896425299,
+      "gainPercent": 19.995555925895076,
+      "expPerGoldSeed": 0.10817805383022774,
+      "fruitId": 40220,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20076,
+      "goodsId": 87,
+      "plantId": 1020076,
+      "name": "山竹",
+      "requiredLevel": 92,
+      "unlocked": false,
+      "price": 34776,
+      "expHarvest": 3762,
+      "expPerCycle": 3762,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 14400,
+      "growTimeNormalFert": 72000,
+      "growTimeNormalFertStr": "20h0m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 72003,
+      "farmExpPerHourNoFert": 2821.4346890118286,
+      "farmExpPerHourNormalFert": 3385.6589308778803,
+      "farmExpPerDayNoFert": 67714.43253628389,
+      "farmExpPerDayNormalFert": 81255.81434106913,
+      "gainPercent": 19.997777870366512,
+      "expPerGoldSeed": 0.10817805383022774,
+      "fruitId": 40076,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20116,
+      "goodsId": 59,
+      "plantId": 1020116,
+      "name": "曼陀罗华",
+      "requiredLevel": 93,
+      "unlocked": false,
+      "price": 6240,
+      "expHarvest": 660,
+      "expPerCycle": 660,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2400,
+      "growTimeNormalFert": 12000,
+      "growTimeNormalFertStr": "3h20m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 12003,
+      "farmExpPerHourNoFert": 2969.587557283711,
+      "farmExpPerHourNormalFert": 3563.1092226943265,
+      "farmExpPerDayNoFert": 71270.10137480906,
+      "farmExpPerDayNormalFert": 85514.62134466384,
+      "gainPercent": 19.98666999916687,
+      "expPerGoldSeed": 0.10576923076923077,
+      "fruitId": 40116,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20126,
+      "goodsId": 88,
+      "plantId": 1020126,
+      "name": "曼珠沙华",
+      "requiredLevel": 94,
+      "unlocked": false,
+      "price": 12480,
+      "expHarvest": 1320,
+      "expPerCycle": 1320,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 4800,
+      "growTimeNormalFert": 24000,
+      "growTimeNormalFertStr": "6h40m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 24003,
+      "farmExpPerHourNoFert": 2969.793764321922,
+      "farmExpPerHourNormalFert": 3563.55455568054,
+      "farmExpPerDayNoFert": 71275.05034372612,
+      "farmExpPerDayNormalFert": 85525.30933633295,
+      "gainPercent": 19.99333416656252,
+      "expPerGoldSeed": 0.10576923076923077,
+      "fruitId": 40126,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20063,
+      "goodsId": 89,
+      "plantId": 1020063,
+      "name": "苦瓜",
+      "requiredLevel": 95,
+      "unlocked": false,
+      "price": 18720,
+      "expHarvest": 1980,
+      "expPerCycle": 1980,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 7200,
+      "growTimeNormalFert": 36000,
+      "growTimeNormalFertStr": "10h0m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 36003,
+      "farmExpPerHourNoFert": 2969.8625063654463,
+      "farmExpPerHourNormalFert": 3563.703024747938,
+      "farmExpPerDayNoFert": 71276.7001527707,
+      "farmExpPerDayNormalFert": 85528.87259395051,
+      "gainPercent": 19.99555592589506,
+      "expPerGoldSeed": 0.10576923076923077,
+      "fruitId": 40063,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20221,
+      "goodsId": 93,
+      "plantId": 1020221,
+      "name": "天堂鸟",
+      "requiredLevel": 96,
+      "unlocked": false,
+      "price": 37440,
+      "expHarvest": 3960,
+      "expPerCycle": 3960,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 14400,
+      "growTimeNormalFert": 72000,
+      "growTimeNormalFertStr": "20h0m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 72003,
+      "farmExpPerHourNoFert": 2969.9312515913984,
+      "farmExpPerHourNormalFert": 3563.851506187242,
+      "farmExpPerDayNoFert": 71278.35003819356,
+      "farmExpPerDayNormalFert": 85532.43614849381,
+      "gainPercent": 19.99777787036651,
+      "expPerGoldSeed": 0.10576923076923077,
+      "fruitId": 40221,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20068,
+      "goodsId": 92,
+      "plantId": 1020068,
+      "name": "冬瓜",
+      "requiredLevel": 97,
+      "unlocked": false,
+      "price": 6720,
+      "expHarvest": 693,
+      "expPerCycle": 693,
+      "growTimeSec": 14400,
+      "growTimeStr": "4小时",
+      "normalFertReduceSec": 2400,
+      "growTimeNormalFert": 12000,
+      "growTimeNormalFertStr": "3h20m",
+      "cycleSecNoFert": 14402,
+      "cycleSecNormalFert": 12003,
+      "farmExpPerHourNoFert": 3118.066935147896,
+      "farmExpPerHourNormalFert": 3741.264683829043,
+      "farmExpPerDayNoFert": 74833.6064435495,
+      "farmExpPerDayNormalFert": 89790.35241189704,
+      "gainPercent": 19.98666999916689,
+      "expPerGoldSeed": 0.103125,
+      "fruitId": 40068,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20222,
+      "goodsId": 94,
+      "plantId": 1020222,
+      "name": "豹皮花",
+      "requiredLevel": 98,
+      "unlocked": false,
+      "price": 13440,
+      "expHarvest": 1386,
+      "expPerCycle": 1386,
+      "growTimeSec": 28800,
+      "growTimeStr": "8小时",
+      "normalFertReduceSec": 4800,
+      "growTimeNormalFert": 24000,
+      "growTimeNormalFertStr": "6h40m",
+      "cycleSecNoFert": 28802,
+      "cycleSecNormalFert": 24003,
+      "farmExpPerHourNoFert": 3118.283452538018,
+      "farmExpPerHourNormalFert": 3741.7322834645665,
+      "farmExpPerDayNoFert": 74838.80286091243,
+      "farmExpPerDayNormalFert": 89801.57480314959,
+      "gainPercent": 19.993334166562505,
+      "expPerGoldSeed": 0.103125,
+      "fruitId": 40222,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20078,
+      "goodsId": 96,
+      "plantId": 1020078,
+      "name": "杏子",
+      "requiredLevel": 99,
+      "unlocked": false,
+      "price": 20160,
+      "expHarvest": 2079,
+      "expPerCycle": 2079,
+      "growTimeSec": 43200,
+      "growTimeStr": "12小时",
+      "normalFertReduceSec": 7200,
+      "growTimeNormalFert": 36000,
+      "growTimeNormalFertStr": "10h0m",
+      "cycleSecNoFert": 43202,
+      "cycleSecNormalFert": 36003,
+      "farmExpPerHourNoFert": 3118.3556316837185,
+      "farmExpPerHourNormalFert": 3741.8881759853343,
+      "farmExpPerDayNoFert": 74840.53516040924,
+      "farmExpPerDayNormalFert": 89805.31622364803,
+      "gainPercent": 19.995555925895054,
+      "expPerGoldSeed": 0.103125,
+      "fruitId": 40078,
+      "fruitCount": 200
+    },
+    {
+      "seedId": 20074,
+      "goodsId": 100,
+      "plantId": 1020074,
+      "name": "金桔",
+      "requiredLevel": 100,
+      "unlocked": false,
+      "price": 40320,
+      "expHarvest": 4158,
+      "expPerCycle": 4158,
+      "growTimeSec": 86400,
+      "growTimeStr": "24小时",
+      "normalFertReduceSec": 14400,
+      "growTimeNormalFert": 72000,
+      "growTimeNormalFertStr": "20h0m",
+      "cycleSecNoFert": 86402,
+      "cycleSecNormalFert": 72003,
+      "farmExpPerHourNoFert": 3118.4278141709683,
+      "farmExpPerHourNormalFert": 3742.044081496604,
+      "farmExpPerDayNoFert": 74842.26754010323,
+      "farmExpPerDayNormalFert": 89809.0579559185,
+      "gainPercent": 19.997777870366505,
+      "expPerGoldSeed": 0.103125,
+      "fruitId": 40074,
+      "fruitCount": 200
+    }
+  ]
+}
