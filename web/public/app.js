@@ -6,6 +6,7 @@ const state = {
   sessions: {},
   selectedAccountId: 'default',
   bark: null,
+  startPayloads: {},
   ui: {
     friendOps: {
       allowBadOps: true,
@@ -68,6 +69,7 @@ const els = {
   qrPhase: document.getElementById('qrPhase'),
   qrImage: document.getElementById('qrImage'),
   qrLink: document.getElementById('qrLink'),
+  refreshQrBtn: document.getElementById('refreshQrBtn'),
   qrAltLinks: document.getElementById('qrAltLinks'),
   qrMessage: document.getElementById('qrMessage'),
   logs: document.getElementById('logs'),
@@ -188,6 +190,16 @@ function createEmptySession(accountId) {
   };
 }
 
+function isSessionRunningLike(account) {
+  const s = (account && account.session) || {};
+  return ['starting', 'running', 'stopping'].includes(s.status);
+}
+
+function shouldLoadFriends(accountId) {
+  const session = ensureSession(accountId);
+  return isSessionRunningLike(session);
+}
+
 function ensureSession(accountId) {
   const id = normalizeAccountId(accountId);
   if (!state.sessions[id]) {
@@ -305,9 +317,16 @@ function renderBestCrop() {
 
 function renderQr() {
   const current = getCurrentSession();
+  const currentSession = current.session || {};
   const q = current.qr || {};
-  setText(els.qrPhase, `状态：${q.phase || '-'}`);
-  setText(els.qrMessage, q.message || '');
+  const qrLoginSuccess = Boolean(q.qrUrl) && currentSession.status === 'running';
+  if (qrLoginSuccess) {
+    setText(els.qrPhase, '状态：已登录');
+    setText(els.qrMessage, '已登录成功');
+  } else {
+    setText(els.qrPhase, `状态：${q.phase || '-'}`);
+    setText(els.qrMessage, q.message || '');
+  }
   if (q.qrUrl) {
     els.qrImage.classList.remove('hidden');
     els.qrImage.src = `/api/qr.svg?text=${encodeURIComponent(q.qrUrl)}&t=${Date.now()}`;
@@ -328,6 +347,10 @@ function renderQr() {
   } else {
     els.qrAltLinks.innerHTML = '';
   }
+
+  const canRefresh = !qrLoginSuccess && Boolean(q.qrUrl || q.phase);
+  els.refreshQrBtn.classList.toggle('hidden', !canRefresh);
+  els.refreshQrBtn.disabled = false;
 }
 
 function formatLogLine(item) {
@@ -630,7 +653,12 @@ async function bootstrap() {
   refreshPanels();
   resetLogView();
   await queryLogsFromApi({ append: false });
-  await loadFriends();
+  if (shouldLoadFriends(state.selectedAccountId)) {
+    await loadFriends();
+  } else {
+    state.friends[state.selectedAccountId] = [];
+    setText(els.friendUiStatus, '账号未进入运行状态，登录成功后再刷新好友');
+  }
 
   setText(els.serverMeta, `服务监听：${initial.meta.host}:${initial.meta.port}`);
 }
@@ -676,6 +704,13 @@ function connectEvents() {
       if (type === 'process') {
         const session = ensureSession(accountId);
         session.session = { ...(session.session || {}), ...payload };
+        if (payload && payload.state === 'running' && session.qr && session.qr.qrUrl) {
+          session.qr = {
+            ...(session.qr || {}),
+            phase: 'confirmed',
+            message: '已登录成功',
+          };
+        }
         if (!state.selectedAccountId) {
           state.selectedAccountId = accountId;
           els.accountId.value = accountId;
@@ -765,6 +800,7 @@ async function onStart() {
   try {
     els.startBtn.disabled = true;
     const payload = collectStartPayload();
+    state.startPayloads[payload.accountId] = { ...payload };
     state.selectedAccountId = payload.accountId;
     ensureSession(payload.accountId);
     els.accountId.value = payload.accountId;
@@ -821,6 +857,12 @@ async function onClearLogs() {
 
 async function loadFriends() {
   const accountId = normalizeAccountId(state.selectedAccountId);
+  if (!shouldLoadFriends(accountId)) {
+    state.friends[accountId] = [];
+    renderFriendList();
+    setText(els.friendUiStatus, '账号未进入运行状态，登录成功后再刷新好友');
+    return;
+  }
   try {
     els.refreshFriendsBtn.disabled = true;
     const ret = await fetchJson(`/api/friends?accountId=${encodeURIComponent(accountId)}`);
@@ -828,10 +870,56 @@ async function loadFriends() {
     renderFriendList();
     setText(els.friendUiStatus, `已加载 ${state.friends[accountId].length} 位好友`);
   } catch (e) {
-    setText(els.friendUiStatus, `加载好友失败：${e.message}`);
+    const raw = String(e && e.message ? e.message : '');
+    if (/\(404\)/.test(raw)) {
+      setText(els.friendUiStatus, '加载好友失败：后端不支持 /api/friends（请更新并重启 VPS 服务）');
+    } else {
+      setText(els.friendUiStatus, `加载好友失败：${raw}`);
+    }
     renderFriendList();
   } finally {
     els.refreshFriendsBtn.disabled = false;
+  }
+}
+
+function buildQrRefreshPayload(accountId) {
+  const cached = state.startPayloads[accountId] || {};
+  const interval = String(cached.interval || els.interval.value || '').trim();
+  const friendInterval = String(cached.friendInterval || els.friendInterval.value || '').trim();
+  return {
+    accountId,
+    mode: 'run',
+    platform: 'qq',
+    code: '',
+    useQr: true,
+    interval,
+    friendInterval,
+  };
+}
+
+async function onRefreshQr() {
+  const accountId = normalizeAccountId(state.selectedAccountId);
+  try {
+    els.refreshQrBtn.disabled = true;
+    setText(els.qrMessage, '正在刷新二维码...');
+    try {
+      await stopByAccount(accountId);
+    } catch (e) {
+      // ignore stop error and retry start directly
+    }
+    const payload = buildQrRefreshPayload(accountId);
+    state.startPayloads[accountId] = { ...payload };
+    await fetchJson('/api/session/start', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    setText(els.qrMessage, '二维码已刷新，请重新扫码');
+    resetLogView();
+    await queryLogsFromApi({ append: false });
+  } catch (e) {
+    setText(els.qrMessage, `刷新二维码失败：${e.message}`);
+  } finally {
+    els.refreshQrBtn.disabled = false;
   }
 }
 
@@ -977,6 +1065,7 @@ function bindEvents() {
   els.testBarkBtn.addEventListener('click', onTestBark);
   els.saveFriendUiBtn.addEventListener('click', onSaveFriendUi);
   els.refreshFriendsBtn.addEventListener('click', loadFriends);
+  els.refreshQrBtn.addEventListener('click', onRefreshQr);
   els.applyLogFiltersBtn.addEventListener('click', onApplyLogFilters);
   els.loadMoreLogsBtn.addEventListener('click', onLoadMoreLogs);
   els.friendList.addEventListener('click', onFriendListClick);
@@ -989,7 +1078,13 @@ function bindEvents() {
     refreshPanels();
     resetLogView();
     queryLogsFromApi({ append: false });
-    loadFriends();
+    if (shouldLoadFriends(next)) {
+      loadFriends();
+    } else {
+      state.friends[next] = [];
+      renderFriendList();
+      setText(els.friendUiStatus, '账号未进入运行状态，登录成功后再刷新好友');
+    }
   });
   els.logScope.addEventListener('change', () => {
     resetLogView();

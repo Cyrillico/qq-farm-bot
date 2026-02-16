@@ -291,6 +291,10 @@ textarea:focus {
   gap: 4px;
 }
 
+#refreshQrBtn.hidden {
+  display: none !important;
+}
+
 .qr-alt-links a {
   color: #9fdfff;
   font-size: 12px;
