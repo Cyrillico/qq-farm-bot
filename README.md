@@ -1,8 +1,7 @@
 # 紧急通知：已经有人反馈封号了 低调使用，被举报必封
 ## 一些提醒：某些人嘴脸不要那么难看，直接拿我原版的程序去倒卖
 # QQ经典农场 挂机脚本
-
-# 本项目基于原项目仓库https://github.com/linguo2625469/qq-farm-bot 进行开发
+# 本项目基于原项目仓库 https://github.com/linguo2625469/qq-farm-bot 进行开发
 
 
 基于 Node.js 的 QQ/微信 经典农场小程序自动化挂机脚本。通过分析小程序 WebSocket 通信协议（Protocol Buffers），实现全自动农场管理。
