@@ -68,6 +68,7 @@ const els = {
   qrPhase: document.getElementById('qrPhase'),
   qrImage: document.getElementById('qrImage'),
   qrLink: document.getElementById('qrLink'),
+  qrAltLinks: document.getElementById('qrAltLinks'),
   qrMessage: document.getElementById('qrMessage'),
   logs: document.getElementById('logs'),
   barkEnabled: document.getElementById('barkEnabled'),
@@ -179,6 +180,7 @@ function createEmptySession(accountId) {
     qr: {
       phase: '',
       qrUrl: '',
+      backupUrls: [],
       message: '',
     },
     bestCrop: null,
@@ -315,6 +317,16 @@ function renderQr() {
   } else {
     els.qrImage.classList.add('hidden');
     els.qrLink.classList.add('hidden');
+  }
+
+  const backupUrls = Array.isArray(q.backupUrls) ? q.backupUrls : [];
+  if (backupUrls.length > 0) {
+    const html = backupUrls.slice(0, 3).map((url, idx) => (
+      `<a target="_blank" rel="noreferrer" href="${escapeHtml(url)}">备用扫码链接 ${idx + 1}</a>`
+    )).join('');
+    els.qrAltLinks.innerHTML = html;
+  } else {
+    els.qrAltLinks.innerHTML = '';
   }
 }
 

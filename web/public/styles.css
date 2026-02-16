@@ -285,6 +285,18 @@ textarea:focus {
   font-size: 12px;
 }
 
+.qr-alt-links {
+  margin-top: 6px;
+  display: grid;
+  gap: 4px;
+}
+
+.qr-alt-links a {
+  color: #9fdfff;
+  font-size: 12px;
+  text-decoration: none;
+}
+
 #logs {
   margin: 0;
   max-height: 360px;
