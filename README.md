@@ -2,6 +2,7 @@
 ## 一些提醒：某些人嘴脸不要那么难看，直接拿我原版的程序去倒卖
 # QQ经典农场 挂机脚本
 
+#本项目基于原项目仓库https://github.com/linguo2625469/qq-farm-bot进行开发
 基于 Node.js 的 QQ/微信 经典农场小程序自动化挂机脚本。通过分析小程序 WebSocket 通信协议（Protocol Buffers），实现全自动农场管理。
 本脚本基于ai制作，必然有一定的bug，遇到了建议自己克服一下，后续不一定会更新了
 
@@ -115,16 +116,6 @@ WEB_UI_AUTH_SECRET=change-me-to-a-long-random-string
 - 建议同时把 `WEB_UI_HOST` 设为 `127.0.0.1`，减少暴露面。
 
 > 默认监听 `0.0.0.0`，如未开启鉴权会有明显安全风险，请勿直接暴露公网。
-
-### Vercel 部署说明（重要）
-
-当前项目核心能力依赖：
-- 常驻进程
-- 子进程 `fork` 多账号运行
-- 持续 WebSocket 与 SSE
-
-这与 Vercel 的 Serverless 运行模型不匹配，因此**不能稳定承载完整挂机能力**。  
-如果需要公网可访问控制台，建议使用 VPS / Docker 常驻部署（再配反向代理和 HTTPS）。
 
 ### VPS 一键部署（推荐）
 
@@ -368,7 +359,7 @@ const ENABLE_PUT_BAD_THINGS = false;  // 是否启用放虫放草功能（暂不
 
 本项目仅供学习和研究用途。使用本脚本可能违反游戏服务条款，由此产生的一切后果由使用者自行承担。
 
-![Star History Chart](https://api.star-history.com/svg?repos=linguo2625469/qq-farm-bot&type=Date&theme=light)
+![Star History Chart](https://api.star-history.com/svg?repos=Cyrillico/qq-farm-bot&type=Date&theme=light)
 
 ## License
 
