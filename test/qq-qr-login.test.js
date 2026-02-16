@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const { resolveQrUrls } = require('../src/qqQrLogin');
 
-test('resolveQrUrls should prefer API returned url and keep fallback backups', () => {
+test('resolveQrUrls should prefer stable fallback url and keep API url in backups', () => {
     const ret = resolveQrUrls(
         {
             url: 'https://q.qq.com/ide/real-scan-url',
@@ -12,8 +12,9 @@ test('resolveQrUrls should prefer API returned url and keep fallback backups', (
         'abc123'
     );
 
-    assert.equal(ret.primaryUrl, 'https://q.qq.com/ide/real-scan-url');
+    assert.equal(ret.primaryUrl, 'https://q.qq.com/qqq/code/abc123?_proxy=1&from=ide');
     assert.ok(Array.isArray(ret.backupUrls));
+    assert.ok(ret.backupUrls.includes('https://q.qq.com/ide/real-scan-url'));
     assert.ok(ret.backupUrls.includes('https://q.qq.com/ide/alt-scan-url'));
 });
 

@@ -34,12 +34,12 @@ function buildFallbackUrls(loginCode) {
 
 function resolveQrUrls(data, loginCode) {
     const candidates = [
+        ...buildFallbackUrls(loginCode),
         data && data.url,
         data && data.login_url,
         data && data.qr_url,
         data && data.qrcode_url,
         data && data.scan_url,
-        ...buildFallbackUrls(loginCode),
     ]
         .map(normalizeUrl)
         .filter(Boolean);
