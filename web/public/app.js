@@ -523,10 +523,10 @@ function mergeFetchedLogs(items, append) {
   uniq.sort((a, b) => {
     const ta = Number(a.ts || 0);
     const tb = Number(b.ts || 0);
-    if (ta !== tb) return tb - ta;
-    return Number(b.seq || 0) - Number(a.seq || 0);
+    if (ta !== tb) return ta - tb;
+    return Number(a.seq || 0) - Number(b.seq || 0);
   });
-  state.logView.items = uniq.slice(0, MAX_LOG_LINES);
+  state.logView.items = uniq.slice(-MAX_LOG_LINES);
 }
 
 async function queryLogsFromApi({ append = false } = {}) {
