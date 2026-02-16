@@ -211,6 +211,14 @@ textarea:focus {
   border: 1px solid #2b425f;
   border-radius: 10px;
   background: rgba(9, 20, 34, 0.72);
+  cursor: pointer;
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.session-item:hover {
+  transform: translateY(-1px);
+  border-color: #3e628a;
+  background: rgba(12, 24, 39, 0.86);
 }
 
 .session-item.active {
@@ -227,11 +235,37 @@ textarea:focus {
   color: var(--text);
   font-weight: 600;
   font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .session-desc {
   color: var(--muted);
   font-size: 12px;
+}
+
+.session-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.dot-running {
+  background: #66d99b;
+  box-shadow: 0 0 0 4px rgba(102, 217, 155, 0.16);
+}
+
+.dot-stopped {
+  background: #ff5d73;
+  box-shadow: 0 0 0 4px rgba(255, 93, 115, 0.14);
+}
+
+.session-dot-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .session-actions {

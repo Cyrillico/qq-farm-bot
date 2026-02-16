@@ -214,6 +214,10 @@ function getCurrentSession() {
 
 function getSortedAccountIds() {
   return Object.keys(state.sessions).sort((a, b) => {
+    const sa = ((state.sessions[a] || {}).session || {}).status || 'idle';
+    const sb = ((state.sessions[b] || {}).session || {}).status || 'idle';
+    if (sa === 'running' && sb !== 'running') return -1;
+    if (sb === 'running' && sa !== 'running') return 1;
     if (a === state.selectedAccountId) return -1;
     if (b === state.selectedAccountId) return 1;
     return a.localeCompare(b);
@@ -238,16 +242,23 @@ function renderSessionList() {
     const s = item.session || {};
     const st = item.status || {};
     const active = accountId === state.selectedAccountId ? ' active' : '';
+    const running = s.status === 'running';
+    const dotClass = running ? 'dot-running' : 'dot-stopped';
+    const dotText = running ? '运行中' : '未运行';
     const desc = `${s.status || 'idle'} | ${st.platform || '-'} | ${st.name || '-'} | Lv${st.level ?? 0}`;
     return `
-      <div class="session-item${active}">
+      <div class="session-item${active}" data-role="session-card" data-account-id="${escapeHtml(accountId)}">
         <div class="session-meta">
-          <div class="session-id">${escapeHtml(accountId)}</div>
+          <div class="session-id">
+            <span class="session-dot ${dotClass}"></span>
+            ${escapeHtml(accountId)}
+            <span class="session-dot-label">${dotText}</span>
+          </div>
           <div class="session-desc">${escapeHtml(desc)}</div>
         </div>
         <div class="session-actions">
-          <button class="btn" data-action="select" data-account-id="${escapeHtml(accountId)}">查看</button>
           <button class="btn btn-danger" data-action="stop" data-account-id="${escapeHtml(accountId)}">停止</button>
+          <button class="btn btn-danger" data-action="delete" data-account-id="${escapeHtml(accountId)}">删除</button>
         </div>
       </div>
     `;
@@ -774,6 +785,27 @@ function connectEvents() {
         queryLogsFromApi({ append: false });
         return;
       }
+
+      if (type === 'accountDeleted') {
+        const rawDeletedId = String((payload && payload.accountId) || frame.accountId || '').trim();
+        if (rawDeletedId) {
+          const deletedId = normalizeAccountId(rawDeletedId);
+          delete state.sessions[deletedId];
+          delete state.friends[deletedId];
+          delete state.startPayloads[deletedId];
+          if (state.selectedAccountId === deletedId) {
+            const ids = Object.keys(state.sessions);
+            const next = ids[0] || 'default';
+            state.selectedAccountId = next;
+            ensureSession(next);
+            els.accountId.value = next;
+            resetLogView();
+            queryLogsFromApi({ append: false });
+          }
+          refreshPanels();
+        }
+        return;
+      }
     } catch (e) {
       appendLog(state.selectedAccountId || 'default', { text: `[WebUI] 事件解析失败: ${e.message}` });
       renderLogs();
@@ -822,6 +854,13 @@ async function onStart() {
 
 async function stopByAccount(accountId) {
   await fetchJson('/api/session/stop', {
+    method: 'POST',
+    body: JSON.stringify({ accountId }),
+  });
+}
+
+async function deleteAccountById(accountId) {
+  return fetchJson('/api/session/delete', {
     method: 'POST',
     body: JSON.stringify({ accountId }),
   });
@@ -1004,25 +1043,61 @@ async function onTestBark() {
 
 function onSessionListClick(event) {
   const btn = event.target.closest('button[data-action][data-account-id]');
-  if (!btn) return;
-
-  const action = btn.dataset.action;
-  const accountId = normalizeAccountId(btn.dataset.accountId);
-  if (action === 'select') {
-    state.selectedAccountId = accountId;
-    els.accountId.value = accountId;
-    refreshPanels();
-    resetLogView();
-    queryLogsFromApi({ append: false });
-    loadFriends();
-    return;
+  if (btn) {
+    const action = btn.dataset.action;
+    const accountId = normalizeAccountId(btn.dataset.accountId);
+    if (action === 'stop') {
+      stopByAccount(accountId).catch((e) => {
+        appendLog(accountId, { text: `[WebUI] 停止失败: ${e.message}` });
+        renderLogs();
+      });
+      return;
+    }
+    if (action === 'delete') {
+      const ok = window.confirm(`确认删除账号 ${accountId} 吗？将停止进程并移除该账号视图数据。`);
+      if (!ok) return;
+      deleteAccountById(accountId).then((ret) => {
+        if (ret && ret.removed) {
+          delete state.sessions[accountId];
+          delete state.friends[accountId];
+          delete state.startPayloads[accountId];
+          const ids = Object.keys(state.sessions);
+          const next = ids[0] || 'default';
+          state.selectedAccountId = next;
+          ensureSession(next);
+          els.accountId.value = next;
+          refreshPanels();
+          resetLogView();
+          queryLogsFromApi({ append: false });
+          if (shouldLoadFriends(next)) {
+            loadFriends();
+          }
+          setText(els.sessionStatus, `账号 ${accountId} 已删除`);
+        } else {
+          setText(els.sessionStatus, `账号 ${accountId} 不存在或已删除`);
+        }
+      }).catch((e) => {
+        appendLog(accountId, { text: `[WebUI] 删除账号失败: ${e.message}` });
+        renderLogs();
+      });
+      return;
+    }
   }
 
-  if (action === 'stop') {
-    stopByAccount(accountId).catch((e) => {
-      appendLog(accountId, { text: `[WebUI] 停止失败: ${e.message}` });
-      renderLogs();
-    });
+  const card = event.target.closest('[data-role="session-card"][data-account-id]');
+  if (!card) return;
+  const accountId = normalizeAccountId(card.dataset.accountId);
+  state.selectedAccountId = accountId;
+  els.accountId.value = accountId;
+  refreshPanels();
+  resetLogView();
+  queryLogsFromApi({ append: false });
+  if (shouldLoadFriends(accountId)) {
+    loadFriends();
+  } else {
+    state.friends[accountId] = [];
+    renderFriendList();
+    setText(els.friendUiStatus, '账号未进入运行状态，登录成功后再刷新好友');
   }
 }
 
