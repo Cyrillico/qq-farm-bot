@@ -72,3 +72,20 @@ test('session manager supports multi-account start and bark broadcast', async ()
     assert.equal(manager.isRunning('qq-main'), false);
     assert.equal(manager.isRunning('wx-main'), false);
 });
+
+test('session manager deleteAccount stops running session and removes runner', async () => {
+    const manager = new SessionManager({
+        createRunner: () => new FakeRunner(),
+    });
+
+    manager.start('qq-main', { mode: 'run', platform: 'qq', code: 'q-code' });
+    assert.equal(manager.isRunning('qq-main'), true);
+
+    const removed = await manager.deleteAccount('qq-main');
+    assert.equal(removed, true);
+    assert.equal(manager.listAccounts().includes('qq-main'), false);
+    assert.equal(manager.isRunning('qq-main'), false);
+
+    const removedAgain = await manager.deleteAccount('qq-main');
+    assert.equal(removedAgain, false);
+});

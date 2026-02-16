@@ -68,6 +68,20 @@ class SessionManager extends EventEmitter {
         };
     }
 
+    async deleteAccount(accountId) {
+        const id = normalizeAccountId(accountId);
+        const runner = this.runners.get(id);
+        if (!runner) return false;
+        try {
+            if (runner.isRunning()) {
+                await runner.stop();
+            }
+        } finally {
+            this.runners.delete(id);
+        }
+        return true;
+    }
+
     applyBarkSettings(accountId, barkSettings) {
         const id = normalizeAccountId(accountId);
         const runner = this.runners.get(id);

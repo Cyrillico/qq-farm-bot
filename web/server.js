@@ -448,6 +448,25 @@ function startServer(options = {}) {
             }
         }
 
+        if (req.method === 'POST' && pathname === '/api/session/delete') {
+            try {
+                const body = await readJsonBody(req);
+                const rawId = String((body && body.accountId) || '').trim();
+                if (!rawId) {
+                    return sendJson(res, 400, { ok: false, error: 'accountId is required' });
+                }
+                const accountId = normalizeAccountId(rawId);
+                await sessionManager.deleteAccount(accountId);
+                const removed = stateStore.deleteAccount(accountId);
+                if (removed) {
+                    publish('accountDeleted', { accountId }, accountId);
+                }
+                return sendJson(res, 200, { ok: true, accountId, removed });
+            } catch (e) {
+                return sendJson(res, 500, { ok: false, error: e.message });
+            }
+        }
+
         if (req.method === 'POST' && pathname === '/api/logs/clear') {
             try {
                 const body = await readJsonBody(req);

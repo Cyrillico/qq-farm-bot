@@ -95,3 +95,20 @@ test('state store queryLogs supports filters and cursor pagination', () => {
     assert.equal(page2.items.length, 1);
     assert.equal(page2.items[0].text, '[好友] 巡查');
 });
+
+test('state store can delete account snapshot completely', () => {
+    const store = createStateStore({ maxLogs: 10 });
+    store.setStatus('qq-main', { platform: 'qq', name: 'QQ号' });
+    store.setStatus('wx-main', { platform: 'wx', name: '微信号' });
+    store.addLog('qq-main', { text: 'q1' });
+    store.addLog('wx-main', { text: 'w1' });
+
+    const removed = store.deleteAccount('qq-main');
+    assert.equal(removed, true);
+    const snapshot = store.getSnapshot();
+    assert.equal(Boolean(snapshot.sessions['qq-main']), false);
+    assert.equal(Boolean(snapshot.sessions['wx-main']), true);
+
+    const missing = store.deleteAccount('not-exists');
+    assert.equal(missing, false);
+});

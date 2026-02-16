@@ -124,6 +124,13 @@ function createStateStore(options = {}) {
         account.logs = [];
     }
 
+    function deleteAccount(accountId) {
+        const id = String(accountId || '').trim();
+        if (!id || !state.sessions[id]) return false;
+        delete state.sessions[id];
+        return true;
+    }
+
     function getAccountSnapshot(accountId) {
         const account = ensureAccount(accountId);
         return deepClone(account);
@@ -209,6 +216,7 @@ function createStateStore(options = {}) {
         setQr,
         setBestCrop,
         clearLogs,
+        deleteAccount,
         getAccountSnapshot,
         listAccountIds,
         getSnapshot,
