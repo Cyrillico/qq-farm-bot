@@ -149,6 +149,26 @@
       </div>
     </section>
 
+    <section class="panel friend-panel">
+      <h2>好友操作</h2>
+      <div class="grid two">
+        <label class="checkbox">
+          <input id="allowBadOps" type="checkbox" />
+          <span>允许高风险操作（放虫/放草/捣乱）</span>
+        </label>
+        <label class="checkbox">
+          <input id="confirmDangerous" type="checkbox" />
+          <span>高风险操作二次确认</span>
+        </label>
+      </div>
+      <div class="actions">
+        <button id="saveFriendUiBtn" class="btn">保存好友设置</button>
+        <button id="refreshFriendsBtn" class="btn btn-primary">刷新好友列表</button>
+      </div>
+      <p id="friendUiStatus" class="status-line"></p>
+      <div id="friendList" class="friend-list"></div>
+    </section>
+
     <section class="panel bark-panel">
       <h2>Bark 设置</h2>
       <div class="grid two">
@@ -188,6 +208,37 @@
 
     <section class="panel logs-panel">
       <h2>实时日志</h2>
+      <div class="grid four">
+        <label>
+          级别
+          <select id="logLevel">
+            <option value="all">all</option>
+            <option value="info">info</option>
+            <option value="warn">warn</option>
+            <option value="error">error</option>
+          </select>
+        </label>
+        <label>
+          标签
+          <input id="logTag" type="text" placeholder="例如 好友/WS" />
+        </label>
+        <label>
+          关键字
+          <input id="logKeyword" type="text" placeholder="支持模糊匹配" />
+        </label>
+        <label>
+          动作
+          <select id="logAction">
+            <option value="">全部</option>
+            <option value="friend_manual">friend_manual</option>
+          </select>
+        </label>
+      </div>
+      <div class="actions">
+        <button id="applyLogFiltersBtn" class="btn btn-primary">应用筛选</button>
+        <button id="loadMoreLogsBtn" class="btn">加载更多</button>
+      </div>
+      <p id="logsStatus" class="status-line"></p>
       <pre id="logs"></pre>
     </section>
   </main>

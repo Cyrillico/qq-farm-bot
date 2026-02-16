@@ -85,6 +85,30 @@ class SessionManager extends EventEmitter {
         return applied;
     }
 
+    async listFriends(accountId) {
+        const id = normalizeAccountId(accountId);
+        const runner = this.runners.get(id);
+        if (!runner || !runner.isRunning()) {
+            throw new Error('session not running');
+        }
+        if (typeof runner.callRpc !== 'function') {
+            throw new Error('runner rpc unavailable');
+        }
+        return runner.callRpc('friends.list', {}, 10000);
+    }
+
+    async runFriendOp(accountId, payload = {}) {
+        const id = normalizeAccountId(accountId);
+        const runner = this.runners.get(id);
+        if (!runner || !runner.isRunning()) {
+            throw new Error('session not running');
+        }
+        if (typeof runner.callRpc !== 'function') {
+            throw new Error('runner rpc unavailable');
+        }
+        return runner.callRpc('friends.op', payload || {}, 15000);
+    }
+
     #bindRunner(accountId, runner) {
         const wrap = (type, payload) => {
             this.emit(type, {
@@ -105,4 +129,3 @@ module.exports = {
     normalizeAccountId,
     SessionManager,
 };
-

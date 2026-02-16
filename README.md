@@ -92,10 +92,20 @@ Web 控制台支持：
 - 运行模式切换（run / verify / decode）
 - QQ 扫码二维码页面内展示
 - 实时日志滚动（每账号最多保留 5000 行，可切换查看单账号/全部账号）
+- 日志后端筛选查询（账号/级别/tag/关键字/action）+ 游标分页“加载更多”
 - 账号状态实时展示（平台/昵称/等级/经验/金币/升级还差经验，按账号切换）
 - 最佳作物实时展示（当前选种、当前等级最优、下一级最优）
+- 好友列表与单好友一键操作（偷/浇水/除草/除虫/放虫/放草/捣乱）
+- 高风险好友操作开关（`allowBadOps`）与二次确认（`confirmDangerous`）
 - Bark 链接与通知分类设置（fatal/network/business）并立即生效
 - Bark 一键测试推送
+
+新增 API：
+- `GET /api/friends?accountId=<id>`
+- `POST /api/friends/op`
+- `GET /api/logs/query`
+- `GET /api/settings/ui`
+- `PUT /api/settings/ui`
 
 多账号使用示例：
 1. 在 Web 页面把 `accountId` 填为 `qq-main`，平台选 QQ，启动。
@@ -258,7 +268,7 @@ node tools/calc-exp-yield.js --input tools/seed-shop-merged-export.json
 │   └── vps-oneclick.md    # VPS 一键部署详细说明
 ├── tools/                 # 辅助工具
 │   └── analyze-exp-*.js   # 经验效率分析脚本
-├── .qq-farm-ui-settings.example.json # Web UI Bark 设置示例
+├── .qq-farm-ui-settings.example.json # Web UI Bark/UI 设置示例
 ├── .env.example           # Web UI 环境变量示例（含登录鉴权）
 └── package.json
 ```
@@ -341,12 +351,39 @@ node -e "const { pushBark } = require('./src/bark'); pushBark('测试', '连通�
   - `network`：WS/登录/心跳/协议解码相关
   - `business`：农场/好友/仓库/任务等业务告警
 
+### 好友操作设置（Web）
+
+`/api/settings/ui` 当前支持：
+
+```json
+{
+  "ui": {
+    "friendOps": {
+      "allowBadOps": true,
+      "confirmDangerous": true
+    }
+  }
+}
+```
+
+- `allowBadOps=false` 时，接口会拒绝 `putBug/putWeed/bad`。
+- `confirmDangerous=true` 时，前端执行高风险操作会弹确认框。
+- 手动好友操作会写入日志 `action=friend_manual`，可被日志筛选命中。
+
 ### src/friend.js
 
 ```javascript
 const HELP_ONLY_WITH_EXP = true;      // 只在有经验时帮助好友（已更新可用）
-const ENABLE_PUT_BAD_THINGS = false;  // 是否启用放虫放草功能（暂不可用 必须关闭，否则有严重的话后果）
+const ENABLE_PUT_BAD_THINGS = false;  // 自动巡查中的放虫放草开关（默认关闭）；手动操作由 Web 设置 allowBadOps 控制
 ```
+
+### 公开仓库安全检查
+
+- 确保 `.qq-farm-ui-settings.json`、`.env*` 仍在 `.gitignore` 且未被追踪。
+- 默认源码不写入真实 Bark 链接（仅 placeholder）。
+- 公网部署必须配置 `WEB_UI_AUTH_USERNAME/WEB_UI_AUTH_PASSWORD/WEB_UI_AUTH_SECRET`。
+- 建议在反向代理层启用 HTTPS，并加基础安全响应头。
+- 如果 Bark key 曾在聊天/终端暴露，建议在 Bark 端立即更换新 key 并作废旧 key。
 
 ## 注意事项
 

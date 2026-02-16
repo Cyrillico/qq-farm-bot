@@ -59,12 +59,14 @@ function classifyWarnCategory(tag) {
     return 'business';
 }
 
-function log(tag, msg) {
+function log(tag, msg, meta = {}) {
+    const action = String((meta && meta.action) || '').trim();
     const text = `[${now()}] [${tag}] ${msg}`;
     emitUiEvent('log', {
         level: 'info',
         tag: String(tag || ''),
         message: String(msg || ''),
+        action,
         text,
     });
     if (!isUiEventsEnabled()) {
@@ -72,14 +74,22 @@ function log(tag, msg) {
     }
 }
 
-function logWarn(tag, msg, category) {
-    const pickedCategory = category || classifyWarnCategory(tag);
+function logWarn(tag, msg, category, meta = {}) {
+    let pickedCategory = category;
+    let pickedMeta = meta;
+    if (typeof category === 'object' && category !== null) {
+        pickedMeta = category;
+        pickedCategory = '';
+    }
+    pickedCategory = pickedCategory || classifyWarnCategory(tag);
+    const action = String((pickedMeta && pickedMeta.action) || '').trim();
     const text = `[${now()}] [${tag}] ⚠ ${msg}`;
     emitUiEvent('log', {
         level: 'warn',
         tag: String(tag || ''),
         message: String(msg || ''),
         category: pickedCategory,
+        action,
         text,
     });
     if (!isUiEventsEnabled()) {

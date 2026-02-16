@@ -1,9 +1,24 @@
 const MAX_LOG_LINES = 5000;
+const LOG_QUERY_LIMIT = 200;
+const FRIEND_DANGEROUS_ACTIONS = new Set(['putBug', 'putWeed', 'bad']);
 
 const state = {
   sessions: {},
   selectedAccountId: 'default',
   bark: null,
+  ui: {
+    friendOps: {
+      allowBadOps: true,
+      confirmDangerous: true,
+    },
+  },
+  friends: {},
+  logView: {
+    items: [],
+    cursor: null,
+    loading: false,
+    hasLoaded: false,
+  },
   auth: {
     enabled: false,
     authenticated: true,
@@ -62,6 +77,19 @@ const els = {
   catFatal: document.getElementById('catFatal'),
   catNetwork: document.getElementById('catNetwork'),
   catBusiness: document.getElementById('catBusiness'),
+  allowBadOps: document.getElementById('allowBadOps'),
+  confirmDangerous: document.getElementById('confirmDangerous'),
+  saveFriendUiBtn: document.getElementById('saveFriendUiBtn'),
+  refreshFriendsBtn: document.getElementById('refreshFriendsBtn'),
+  friendUiStatus: document.getElementById('friendUiStatus'),
+  friendList: document.getElementById('friendList'),
+  logLevel: document.getElementById('logLevel'),
+  logTag: document.getElementById('logTag'),
+  logKeyword: document.getElementById('logKeyword'),
+  logAction: document.getElementById('logAction'),
+  applyLogFiltersBtn: document.getElementById('applyLogFiltersBtn'),
+  loadMoreLogsBtn: document.getElementById('loadMoreLogsBtn'),
+  logsStatus: document.getElementById('logsStatus'),
   saveBarkBtn: document.getElementById('saveBarkBtn'),
   testBarkBtn: document.getElementById('testBarkBtn'),
   barkStatus: document.getElementById('barkStatus'),
@@ -111,6 +139,23 @@ function escapeHtml(text) {
 function normalizeAccountId(raw) {
   const text = String(raw || '').trim();
   return text || 'default';
+}
+
+function getSelectedAccountForLogs() {
+  const scope = els.logScope.value;
+  if (scope === 'all') return 'all';
+  return normalizeAccountId(state.selectedAccountId);
+}
+
+function getActiveLogFilters() {
+  return {
+    accountId: getSelectedAccountForLogs(),
+    level: els.logLevel.value || 'all',
+    tag: els.logTag.value.trim(),
+    keyword: els.logKeyword.value.trim(),
+    action: els.logAction.value.trim(),
+    limit: LOG_QUERY_LIMIT,
+  };
 }
 
 function createEmptySession(accountId) {
@@ -273,31 +318,63 @@ function renderQr() {
   }
 }
 
+function formatLogLine(item) {
+  const accountPrefix = item.accountId ? `[${item.accountId}] ` : '';
+  const text = item.text || item.message || '';
+  return `${accountPrefix}${text}`;
+}
+
 function renderLogs() {
-  const scope = els.logScope.value;
-  let lines = [];
-
-  if (scope === 'all') {
-    const merged = [];
-    for (const accountId of Object.keys(state.sessions)) {
-      const logs = state.sessions[accountId].logs || [];
-      for (const item of logs) {
-        merged.push({
-          ts: item.ts || 0,
-          accountId,
-          text: item.text || item.message || '',
-        });
-      }
-    }
-    merged.sort((a, b) => a.ts - b.ts);
-    lines = merged.slice(-MAX_LOG_LINES).map((item) => `[${item.accountId}] ${item.text}`);
-  } else {
-    const current = getCurrentSession();
-    lines = (current.logs || []).slice(-MAX_LOG_LINES).map((item) => item.text || item.message || '');
-  }
-
+  const lines = (state.logView.items || []).slice(0, MAX_LOG_LINES).map((item) => formatLogLine(item));
   els.logs.textContent = lines.join('\n');
   els.logs.scrollTop = els.logs.scrollHeight;
+}
+
+function renderLogsStatus() {
+  const total = (state.logView.items || []).length;
+  const cursorText = state.logView.cursor ? '可继续加载历史' : '已到最早日志';
+  setText(els.logsStatus, `当前显示 ${total} 条，${cursorText}`);
+  els.loadMoreLogsBtn.disabled = !state.logView.cursor || state.logView.loading;
+}
+
+function renderUiSettings() {
+  const friendOps = (state.ui && state.ui.friendOps) || {};
+  els.allowBadOps.checked = Boolean(friendOps.allowBadOps);
+  els.confirmDangerous.checked = Boolean(friendOps.confirmDangerous);
+}
+
+function renderFriendList() {
+  const accountId = normalizeAccountId(state.selectedAccountId);
+  const friends = state.friends[accountId] || [];
+  if (!friends.length) {
+    els.friendList.innerHTML = '<p class="friend-empty">暂无好友数据，点击“刷新好友列表”加载</p>';
+    return;
+  }
+
+  const allowBadOps = Boolean(state.ui && state.ui.friendOps && state.ui.friendOps.allowBadOps);
+  const html = friends.map((f) => {
+    const preview = f.preview || {};
+    const disabledBad = allowBadOps ? '' : ' disabled';
+    return `
+      <article class="friend-item">
+        <div class="friend-head">
+          <div class="friend-name">${escapeHtml(f.name || f.gid)}</div>
+          <div class="friend-meta">GID:${escapeHtml(f.gid)} | Lv${Number.isFinite(f.level) ? f.level : '-'}</div>
+          <div class="friend-preview">偷:${preview.steal || 0} 水:${preview.dry || 0} 草:${preview.weed || 0} 虫:${preview.insect || 0}</div>
+        </div>
+        <div class="friend-actions">
+          <button class="btn" data-friend-action="steal" data-gid="${escapeHtml(f.gid)}">偷</button>
+          <button class="btn" data-friend-action="water" data-gid="${escapeHtml(f.gid)}">浇水</button>
+          <button class="btn" data-friend-action="weed" data-gid="${escapeHtml(f.gid)}">除草</button>
+          <button class="btn" data-friend-action="insecticide" data-gid="${escapeHtml(f.gid)}">除虫</button>
+          <button class="btn btn-danger" data-friend-action="putBug" data-gid="${escapeHtml(f.gid)}"${disabledBad}>放虫</button>
+          <button class="btn btn-danger" data-friend-action="putWeed" data-gid="${escapeHtml(f.gid)}"${disabledBad}>放草</button>
+          <button class="btn btn-danger" data-friend-action="bad" data-gid="${escapeHtml(f.gid)}"${disabledBad}>捣乱</button>
+        </div>
+      </article>
+    `;
+  }).join('');
+  els.friendList.innerHTML = html;
 }
 
 function renderBarkSettings() {
@@ -318,20 +395,100 @@ function refreshPanels() {
   renderStatus();
   renderBestCrop();
   renderQr();
+  renderUiSettings();
+  renderFriendList();
   renderLogs();
+  renderLogsStatus();
 }
 
 function appendLog(accountId, entry) {
   const session = ensureSession(accountId);
   const log = {
+    seq: entry.seq || 0,
     ts: entry.ts || Date.now(),
+    level: entry.level || 'info',
+    tag: entry.tag || '',
+    action: entry.action || '',
     text: entry.text || entry.message || JSON.stringify(entry),
     message: entry.message || '',
+    accountId,
   };
   session.logs.push(log);
   if (session.logs.length > MAX_LOG_LINES) {
     session.logs.splice(0, session.logs.length - MAX_LOG_LINES);
   }
+}
+
+function matchLogFilter(accountId, item, filters) {
+  if (!item) return false;
+  if (filters.accountId !== 'all' && filters.accountId !== accountId) return false;
+  if (filters.level !== 'all' && item.level !== filters.level) return false;
+  if (filters.tag && item.tag !== filters.tag) return false;
+  if (filters.action && item.action !== filters.action) return false;
+  if (filters.keyword) {
+    const haystack = `${item.tag || ''} ${item.message || ''} ${item.text || ''}`.toLowerCase();
+    if (!haystack.includes(filters.keyword.toLowerCase())) return false;
+  }
+  return true;
+}
+
+function mergeFetchedLogs(items, append) {
+  const existing = append ? [...state.logView.items] : [];
+  const merged = append ? [...existing, ...items] : [...items];
+  const uniq = [];
+  const seen = new Set();
+  for (const item of merged) {
+    const key = `${item.accountId || ''}:${item.seq || ''}:${item.ts || ''}:${item.text || ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uniq.push(item);
+  }
+  uniq.sort((a, b) => {
+    const ta = Number(a.ts || 0);
+    const tb = Number(b.ts || 0);
+    if (ta !== tb) return tb - ta;
+    return Number(b.seq || 0) - Number(a.seq || 0);
+  });
+  state.logView.items = uniq.slice(0, MAX_LOG_LINES);
+}
+
+async function queryLogsFromApi({ append = false } = {}) {
+  if (state.logView.loading) return;
+  state.logView.loading = true;
+  renderLogsStatus();
+  try {
+    const filters = getActiveLogFilters();
+    const qs = new URLSearchParams();
+    qs.set('accountId', filters.accountId);
+    qs.set('level', filters.level);
+    qs.set('tag', filters.tag);
+    qs.set('keyword', filters.keyword);
+    qs.set('action', filters.action);
+    qs.set('limit', String(filters.limit));
+    if (append && state.logView.cursor) {
+      qs.set('beforeTs', String(state.logView.cursor.beforeTs));
+      qs.set('beforeSeq', String(state.logView.cursor.beforeSeq));
+    }
+    const ret = await fetchJson(`/api/logs/query?${qs.toString()}`);
+    const payload = ret.data || {};
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    mergeFetchedLogs(items, append);
+    state.logView.cursor = payload.nextCursor || null;
+    state.logView.hasLoaded = true;
+    renderLogs();
+    renderLogsStatus();
+  } catch (e) {
+    setText(els.logsStatus, `日志查询失败：${e.message}`);
+  } finally {
+    state.logView.loading = false;
+    renderLogsStatus();
+  }
+}
+
+function resetLogView() {
+  state.logView.items = [];
+  state.logView.cursor = null;
+  state.logView.hasLoaded = false;
 }
 
 function collectStartPayload() {
@@ -453,8 +610,15 @@ async function bootstrap() {
   els.accountId.value = state.selectedAccountId;
 
   state.bark = initial.settings && initial.settings.bark ? initial.settings.bark : null;
+  state.ui = initial.settings && initial.settings.ui
+    ? initial.settings.ui
+    : state.ui;
   renderBarkSettings();
+  renderUiSettings();
   refreshPanels();
+  resetLogView();
+  await queryLogsFromApi({ append: false });
+  await loadFriends();
 
   setText(els.serverMeta, `服务监听：${initial.meta.host}:${initial.meta.port}`);
 }
@@ -473,12 +637,27 @@ function connectEvents() {
 
       if (type === 'log') {
         appendLog(accountId, payload);
+        const filters = getActiveLogFilters();
+        const liveItem = {
+          accountId,
+          seq: payload.seq || 0,
+          ts: payload.ts || Date.now(),
+          level: payload.level || 'info',
+          tag: payload.tag || '',
+          action: payload.action || '',
+          text: payload.text || payload.message || '',
+          message: payload.message || '',
+        };
+        if (matchLogFilter(accountId, liveItem, filters)) {
+          mergeFetchedLogs([liveItem], true);
+          renderLogs();
+          renderLogsStatus();
+        }
         if (!state.selectedAccountId) {
           state.selectedAccountId = accountId;
           els.accountId.value = accountId;
         }
         renderSessionList();
-        renderLogs();
         return;
       }
 
@@ -529,6 +708,13 @@ function connectEvents() {
         return;
       }
 
+      if (type === 'settings' && payload.scope === 'ui' && payload.ui) {
+        state.ui = payload.ui;
+        renderUiSettings();
+        renderFriendList();
+        return;
+      }
+
       if (type === 'logsCleared') {
         if (frame.accountId) {
           ensureSession(accountId).logs = [];
@@ -537,7 +723,8 @@ function connectEvents() {
             state.sessions[id].logs = [];
           }
         }
-        renderLogs();
+        resetLogView();
+        queryLogsFromApi({ append: false });
         return;
       }
     } catch (e) {
@@ -575,6 +762,8 @@ async function onStart() {
     });
     setText(els.sessionStatus, `当前账号：${payload.accountId} | 状态：starting`);
     renderSessionList();
+    resetLogView();
+    await queryLogsFromApi({ append: false });
   } catch (e) {
     appendLog(state.selectedAccountId || 'default', { text: `[WebUI] 启动失败: ${e.message}` });
     renderLogs();
@@ -610,9 +799,76 @@ async function onClearLogs() {
       method: 'POST',
       body: JSON.stringify(body),
     });
+    resetLogView();
+    await queryLogsFromApi({ append: false });
   } catch (e) {
     appendLog(state.selectedAccountId || 'default', { text: `[WebUI] 清空日志失败: ${e.message}` });
     renderLogs();
+  }
+}
+
+async function loadFriends() {
+  const accountId = normalizeAccountId(state.selectedAccountId);
+  try {
+    els.refreshFriendsBtn.disabled = true;
+    const ret = await fetchJson(`/api/friends?accountId=${encodeURIComponent(accountId)}`);
+    state.friends[accountId] = Array.isArray(ret.data) ? ret.data : [];
+    renderFriendList();
+    setText(els.friendUiStatus, `已加载 ${state.friends[accountId].length} 位好友`);
+  } catch (e) {
+    setText(els.friendUiStatus, `加载好友失败：${e.message}`);
+    renderFriendList();
+  } finally {
+    els.refreshFriendsBtn.disabled = false;
+  }
+}
+
+async function runFriendAction(gid, action) {
+  const accountId = normalizeAccountId(state.selectedAccountId);
+  const allowBadOps = Boolean(state.ui && state.ui.friendOps && state.ui.friendOps.allowBadOps);
+  if (FRIEND_DANGEROUS_ACTIONS.has(action) && !allowBadOps) {
+    setText(els.friendUiStatus, '当前已禁用高风险操作');
+    return;
+  }
+  const needConfirm = Boolean(state.ui && state.ui.friendOps && state.ui.friendOps.confirmDangerous);
+  if (needConfirm && FRIEND_DANGEROUS_ACTIONS.has(action)) {
+    const ok = window.confirm(`确认对 GID:${gid} 执行 ${action} 吗？`);
+    if (!ok) return;
+  }
+
+  try {
+    setText(els.friendUiStatus, `执行中：${action} @ ${gid} ...`);
+    const ret = await fetchJson('/api/friends/op', {
+      method: 'POST',
+      body: JSON.stringify({ accountId, gid, action }),
+    });
+    const data = ret.data || {};
+    const summary = data.message || '完成';
+    setText(els.friendUiStatus, `执行成功：${summary}`);
+    await loadFriends();
+  } catch (e) {
+    setText(els.friendUiStatus, `执行失败：${e.message}`);
+  }
+}
+
+async function onSaveFriendUi() {
+  try {
+    const payload = {
+      friendOps: {
+        allowBadOps: els.allowBadOps.checked,
+        confirmDangerous: els.confirmDangerous.checked,
+      },
+    };
+    const ret = await fetchJson('/api/settings/ui', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    state.ui = ret.ui || state.ui;
+    renderUiSettings();
+    renderFriendList();
+    setText(els.friendUiStatus, '好友设置已保存');
+  } catch (e) {
+    setText(els.friendUiStatus, `保存失败：${e.message}`);
   }
 }
 
@@ -656,6 +912,9 @@ function onSessionListClick(event) {
     state.selectedAccountId = accountId;
     els.accountId.value = accountId;
     refreshPanels();
+    resetLogView();
+    queryLogsFromApi({ append: false });
+    loadFriends();
     return;
   }
 
@@ -665,6 +924,28 @@ function onSessionListClick(event) {
       renderLogs();
     });
   }
+}
+
+async function onApplyLogFilters() {
+  resetLogView();
+  await queryLogsFromApi({ append: false });
+}
+
+async function onLoadMoreLogs() {
+  if (!state.logView.cursor) {
+    setText(els.logsStatus, '已到最早日志');
+    return;
+  }
+  await queryLogsFromApi({ append: true });
+}
+
+function onFriendListClick(event) {
+  const btn = event.target.closest('button[data-friend-action][data-gid]');
+  if (!btn) return;
+  const action = String(btn.dataset.friendAction || '');
+  const gid = String(btn.dataset.gid || '');
+  if (!action || !gid) return;
+  runFriendAction(gid, action);
 }
 
 function bindEvents() {
@@ -682,13 +963,38 @@ function bindEvents() {
   els.clearLogsBtn.addEventListener('click', onClearLogs);
   els.saveBarkBtn.addEventListener('click', onSaveBark);
   els.testBarkBtn.addEventListener('click', onTestBark);
+  els.saveFriendUiBtn.addEventListener('click', onSaveFriendUi);
+  els.refreshFriendsBtn.addEventListener('click', loadFriends);
+  els.applyLogFiltersBtn.addEventListener('click', onApplyLogFilters);
+  els.loadMoreLogsBtn.addEventListener('click', onLoadMoreLogs);
+  els.friendList.addEventListener('click', onFriendListClick);
+  els.logLevel.addEventListener('change', onApplyLogFilters);
+  els.logAction.addEventListener('change', onApplyLogFilters);
   els.accountId.addEventListener('change', () => {
     const next = normalizeAccountId(els.accountId.value);
     state.selectedAccountId = next;
     ensureSession(next);
     refreshPanels();
+    resetLogView();
+    queryLogsFromApi({ append: false });
+    loadFriends();
   });
-  els.logScope.addEventListener('change', renderLogs);
+  els.logScope.addEventListener('change', () => {
+    resetLogView();
+    queryLogsFromApi({ append: false });
+  });
+  els.logTag.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      onApplyLogFilters();
+    }
+  });
+  els.logKeyword.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      onApplyLogFilters();
+    }
+  });
   els.sessionList.addEventListener('click', onSessionListClick);
 }
 

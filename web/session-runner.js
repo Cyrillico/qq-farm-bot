@@ -19,6 +19,10 @@ class SessionRunner extends EventEmitter {
         this.stopRequested = false;
         this.mode = 'run';
         this.args = [];
+        this.rpcPending = new Map();
+        this.rpcSeq = 0;
+        this.boundChildForMessages = null;
+        this.childMessageHandler = null;
     }
 
     isRunning() {
@@ -88,6 +92,7 @@ class SessionRunner extends EventEmitter {
 
         this.#bindStream(child.stdout, 'stdout');
         this.#bindStream(child.stderr, 'stderr');
+        this.#ensureChildMessageBinding(child);
 
         child.on('spawn', () => {
             this.emit('spawn', {
@@ -95,10 +100,6 @@ class SessionRunner extends EventEmitter {
                 mode: this.mode,
                 args: [...this.args],
             });
-        });
-
-        child.on('message', (msg) => {
-            this.emit('child-message', msg);
         });
 
         child.on('exit', (code, signal) => {
@@ -109,6 +110,8 @@ class SessionRunner extends EventEmitter {
                 mode: this.mode,
                 args: [...this.args],
             };
+            this.#rejectAllPendingRpc('session exited');
+            this.#clearChildMessageBinding(child);
             this.child = null;
             this.stopRequested = false;
             this.emit('exit', payload);
@@ -167,6 +170,96 @@ class SessionRunner extends EventEmitter {
         } catch (e) {
             return false;
         }
+    }
+
+    callRpc(method, payload = {}, timeoutMs = 8000) {
+        const child = this.child;
+        if (!this.isRunning() || !child || !child.connected) {
+            return Promise.reject(new Error('session not running'));
+        }
+        if (typeof child.send !== 'function') {
+            return Promise.reject(new Error('ipc unavailable'));
+        }
+
+        this.#ensureChildMessageBinding(child);
+
+        const safeMethod = String(method || '').trim();
+        if (!safeMethod) {
+            return Promise.reject(new Error('rpc method is required'));
+        }
+        const requestId = `${Date.now()}-${++this.rpcSeq}`;
+        const ttl = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 8000;
+
+        return new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+                this.rpcPending.delete(requestId);
+                reject(new Error(`rpc timeout: ${safeMethod}`));
+            }, ttl);
+
+            this.rpcPending.set(requestId, {
+                resolve,
+                reject,
+                timer,
+            });
+
+            try {
+                child.send({
+                    type: 'rpc:req',
+                    requestId,
+                    method: safeMethod,
+                    payload: payload || {},
+                });
+            } catch (e) {
+                clearTimeout(timer);
+                this.rpcPending.delete(requestId);
+                reject(e);
+            }
+        });
+    }
+
+    #ensureChildMessageBinding(child) {
+        if (!child) return;
+        if (this.boundChildForMessages === child && this.childMessageHandler) return;
+        if (this.boundChildForMessages && this.childMessageHandler) {
+            this.boundChildForMessages.off('message', this.childMessageHandler);
+        }
+        this.childMessageHandler = (msg) => {
+            this.emit('child-message', msg);
+            this.#handleRpcResponse(msg);
+        };
+        child.on('message', this.childMessageHandler);
+        this.boundChildForMessages = child;
+    }
+
+    #clearChildMessageBinding(child) {
+        if (!child || this.boundChildForMessages !== child || !this.childMessageHandler) return;
+        child.off('message', this.childMessageHandler);
+        this.boundChildForMessages = null;
+        this.childMessageHandler = null;
+    }
+
+    #handleRpcResponse(msg) {
+        if (!msg || typeof msg !== 'object') return;
+        if (msg.type !== 'rpc:res') return;
+        const requestId = String(msg.requestId || '');
+        if (!requestId) return;
+        const pending = this.rpcPending.get(requestId);
+        if (!pending) return;
+        clearTimeout(pending.timer);
+        this.rpcPending.delete(requestId);
+        if (msg.ok) {
+            pending.resolve(msg.payload);
+            return;
+        }
+        pending.reject(new Error(String(msg.error || 'rpc failed')));
+    }
+
+    #rejectAllPendingRpc(reason) {
+        for (const [requestId, pending] of this.rpcPending) {
+            clearTimeout(pending.timer);
+            pending.reject(new Error(reason || `rpc aborted: ${requestId}`));
+        }
+        this.rpcPending.clear();
     }
 
     #bindStream(stream, streamName) {

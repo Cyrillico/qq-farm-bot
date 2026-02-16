@@ -40,3 +40,58 @@ test('state store can clear logs for one account or all accounts', () => {
     assert.equal(snapshot.sessions['qq-main'].logs.length, 0);
     assert.equal(snapshot.sessions['wx-main'].logs.length, 0);
 });
+
+test('state store queryLogs supports filters and cursor pagination', () => {
+    const store = createStateStore({ maxLogs: 10 });
+
+    const a = store.addLog('qq-main', {
+        ts: 1000,
+        level: 'info',
+        tag: '好友',
+        text: '[好友] 巡查',
+        action: '',
+    });
+    const b = store.addLog('qq-main', {
+        ts: 1001,
+        level: 'warn',
+        tag: '好友',
+        text: '[好友] 手动操作 steal',
+        action: 'friend_manual',
+    });
+    const c = store.addLog('wx-main', {
+        ts: 1002,
+        level: 'error',
+        tag: 'WS',
+        text: '[WS] 错误',
+        action: '',
+    });
+
+    assert.ok(a.seq < b.seq);
+    assert.ok(b.seq < c.seq);
+
+    const page1 = store.queryLogs({
+        accountId: 'qq-main',
+        level: 'warn',
+        tag: '好友',
+        keyword: 'steal',
+        action: 'friend_manual',
+        limit: 1,
+    });
+    assert.equal(page1.items.length, 1);
+    assert.equal(page1.items[0].text, '[好友] 手动操作 steal');
+    assert.ok(page1.nextCursor.beforeTs > 0);
+    assert.ok(page1.nextCursor.beforeSeq > 0);
+
+    const page2 = store.queryLogs({
+        accountId: 'all',
+        level: 'all',
+        tag: '',
+        keyword: '',
+        action: '',
+        limit: 2,
+        beforeTs: page1.nextCursor.beforeTs,
+        beforeSeq: page1.nextCursor.beforeSeq,
+    });
+    assert.equal(page2.items.length, 1);
+    assert.equal(page2.items[0].text, '[好友] 巡查');
+});

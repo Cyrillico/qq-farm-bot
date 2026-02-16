@@ -15,7 +15,7 @@ const { CONFIG } = require('./src/config');
 const { loadProto } = require('./src/proto');
 const { connect, cleanup, getWs, markManualClose } = require('./src/network');
 const { startFarmCheckLoop, stopFarmCheckLoop } = require('./src/farm');
-const { startFriendCheckLoop, stopFriendCheckLoop } = require('./src/friend');
+const { startFriendCheckLoop, stopFriendCheckLoop, listFriendsForUi, runManualFriendOp } = require('./src/friend');
 const { initTaskSystem, cleanupTaskSystem } = require('./src/task');
 const { initStatusBar, cleanupStatusBar, setStatusPlatform } = require('./src/status');
 const { startSellLoop, stopSellLoop, debugSellFruits } = require('./src/warehouse');
@@ -130,8 +130,43 @@ function registerIpcHandlers() {
         if (msg.type === 'settings:bark') {
             updateRuntimeBarkSettings(msg.payload || {});
             emitProcessState('settingsUpdated', { scope: 'bark' });
+            return;
+        }
+        if (msg.type === 'rpc:req') {
+            void handleRpcRequest(msg);
         }
     });
+}
+
+async function handleRpcRequest(msg) {
+    const requestId = String(msg.requestId || '');
+    const method = String(msg.method || '');
+    const payload = msg.payload || {};
+    if (!requestId || !process.send) return;
+
+    try {
+        let result = null;
+        if (method === 'friends.list') {
+            result = await listFriendsForUi();
+        } else if (method === 'friends.op') {
+            result = await runManualFriendOp(payload);
+        } else {
+            throw new Error(`unsupported rpc method: ${method}`);
+        }
+        process.send({
+            type: 'rpc:res',
+            requestId,
+            ok: true,
+            payload: result,
+        });
+    } catch (e) {
+        process.send({
+            type: 'rpc:res',
+            requestId,
+            ok: false,
+            error: e && e.message ? e.message : String(e),
+        });
+    }
 }
 
 let fatalExitInProgress = false;

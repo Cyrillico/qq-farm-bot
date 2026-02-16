@@ -9,5 +9,11 @@
       "network": true,
       "business": true
     }
+  },
+  "ui": {
+    "friendOps": {
+      "allowBadOps": true,
+      "confirmDangerous": true
+    }
   }
 }

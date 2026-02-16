@@ -179,16 +179,6 @@ function markExpCheck(opId) {
 }
 
 /**
- * 检查某操作是否还有次数
- */
-function canOperate(opId) {
-    const limit = operationLimits.get(opId);
-    if (!limit) return true;
-    if (limit.dayTimesLimit <= 0) return true;
-    return limit.dayTimes < limit.dayTimesLimit;
-}
-
-/**
  * 获取某操作剩余次数
  */
 function getRemainingTimes(opId) {
@@ -295,6 +285,28 @@ async function putWeeds(friendGid, landIds) {
 // 调试开关 - 设为好友名字可只查看该好友的土地分析详情，设为 true 查看全部，false 关闭
 const DEBUG_FRIEND_LANDS = false;
 
+const FRIEND_MANUAL_ACTIONS = new Set([
+    'steal',
+    'water',
+    'weed',
+    'insecticide',
+    'putBug',
+    'putWeed',
+    'bad',
+]);
+
+let friendJobQueue = Promise.resolve();
+
+function enqueueFriendJob(task) {
+    const run = friendJobQueue.then(() => task());
+    friendJobQueue = run.catch(() => { });
+    return run;
+}
+
+function normalizeFriendName(friend, fallbackGid) {
+    return friend.remark || friend.name || `GID:${fallbackGid}`;
+}
+
 function analyzeFriendLands(lands, myGid, friendName = '') {
     const result = {
         stealable: [],   // 可偷
@@ -365,6 +377,168 @@ function analyzeFriendLands(lands, myGid, friendName = '') {
         }
     }
     return result;
+}
+
+function createManualCounts() {
+    return {
+        steal: 0,
+        water: 0,
+        weed: 0,
+        insecticide: 0,
+        putBug: 0,
+        putWeed: 0,
+    };
+}
+
+function summarizeManualCounts(counts) {
+    const parts = [];
+    if (counts.steal > 0) parts.push(`偷${counts.steal}`);
+    if (counts.water > 0) parts.push(`浇水${counts.water}`);
+    if (counts.weed > 0) parts.push(`除草${counts.weed}`);
+    if (counts.insecticide > 0) parts.push(`除虫${counts.insecticide}`);
+    if (counts.putBug > 0) parts.push(`放虫${counts.putBug}`);
+    if (counts.putWeed > 0) parts.push(`放草${counts.putWeed}`);
+    if (parts.length === 0) return '无可操作土地';
+    return parts.join('/');
+}
+
+async function executeLandBatch(friendGid, landIds, opFn) {
+    let ok = 0;
+    for (const landId of landIds) {
+        try {
+            await opFn(friendGid, [landId]);
+            ok++;
+        } catch (e) { /* ignore */ }
+        await sleep(100);
+    }
+    return ok;
+}
+
+function normalizeManualAction(action) {
+    const value = String(action || '').trim();
+    if (!FRIEND_MANUAL_ACTIONS.has(value)) {
+        throw new Error(`unsupported action: ${value}`);
+    }
+    return value;
+}
+
+async function listFriendsForUi() {
+    const state = getUserState();
+    const myGid = toNum(state.gid);
+    if (!myGid) {
+        throw new Error('not logged in');
+    }
+
+    const reply = await getAllFriends();
+    const friends = reply.game_friends || [];
+    const list = [];
+    for (const friend of friends) {
+        const gid = toNum(friend.gid);
+        if (!gid || gid === myGid) continue;
+        const plant = friend.plant || {};
+        list.push({
+            gid: String(gid),
+            name: normalizeFriendName(friend, gid),
+            level: toNum(friend.level),
+            preview: {
+                steal: toNum(plant.steal_plant_num),
+                dry: toNum(plant.dry_num),
+                weed: toNum(plant.weed_num),
+                insect: toNum(plant.insect_num),
+            },
+        });
+    }
+    list.sort((a, b) => {
+        const stealDiff = (b.preview.steal || 0) - (a.preview.steal || 0);
+        if (stealDiff !== 0) return stealDiff;
+        return a.name.localeCompare(b.name, 'zh-CN');
+    });
+    return list;
+}
+
+async function runManualFriendOpCore({ gid, action }) {
+    const state = getUserState();
+    const myGid = toNum(state.gid);
+    if (!myGid) {
+        throw new Error('not logged in');
+    }
+
+    const targetGid = Number.parseInt(String(gid || '').trim(), 10);
+    if (!Number.isFinite(targetGid) || targetGid <= 0) {
+        throw new Error('invalid gid');
+    }
+    const pickedAction = normalizeManualAction(action);
+
+    const reply = await getAllFriends();
+    const friends = reply.game_friends || [];
+    const friend = friends.find((f) => toNum(f.gid) === targetGid);
+    if (!friend) {
+        throw new Error('friend not found');
+    }
+    const friendName = normalizeFriendName(friend, targetGid);
+    const counts = createManualCounts();
+
+    let enterReply;
+    try {
+        enterReply = await enterFriendFarm(targetGid);
+    } catch (e) {
+        throw new Error(`enter friend farm failed: ${e.message}`);
+    }
+
+    try {
+        const lands = enterReply.lands || [];
+        const status = analyzeFriendLands(lands, myGid, friendName);
+
+        if (pickedAction === 'steal') {
+            counts.steal = await executeLandBatch(targetGid, status.stealable, stealHarvest);
+        } else if (pickedAction === 'water') {
+            markExpCheck(10007);
+            counts.water = await executeLandBatch(targetGid, status.needWater, helpWater);
+        } else if (pickedAction === 'weed') {
+            markExpCheck(10005);
+            counts.weed = await executeLandBatch(targetGid, status.needWeed, helpWeed);
+        } else if (pickedAction === 'insecticide') {
+            markExpCheck(10006);
+            counts.insecticide = await executeLandBatch(targetGid, status.needBug, helpInsecticide);
+        } else if (pickedAction === 'putBug') {
+            const ids = canOperate(10004)
+                ? status.canPutBug.slice(0, getRemainingTimes(10004))
+                : [];
+            counts.putBug = await executeLandBatch(targetGid, ids, putInsects);
+        } else if (pickedAction === 'putWeed') {
+            const ids = canOperate(10003)
+                ? status.canPutWeed.slice(0, getRemainingTimes(10003))
+                : [];
+            counts.putWeed = await executeLandBatch(targetGid, ids, putWeeds);
+        } else if (pickedAction === 'bad') {
+            const bugIds = canOperate(10004)
+                ? status.canPutBug.slice(0, getRemainingTimes(10004))
+                : [];
+            counts.putBug = await executeLandBatch(targetGid, bugIds, putInsects);
+            const weedIds = canOperate(10003)
+                ? status.canPutWeed.slice(0, getRemainingTimes(10003))
+                : [];
+            counts.putWeed = await executeLandBatch(targetGid, weedIds, putWeeds);
+        }
+
+        const summary = summarizeManualCounts(counts);
+        log('好友', `手动操作 ${friendName}: ${pickedAction} -> ${summary}`, {
+            action: 'friend_manual',
+        });
+        return {
+            gid: String(targetGid),
+            friendName,
+            action: pickedAction,
+            counts,
+            message: summary,
+        };
+    } finally {
+        await leaveFriendFarm(targetGid);
+    }
+}
+
+function runManualFriendOp(payload = {}) {
+    return enqueueFriendJob(() => runManualFriendOpCore(payload || {}));
 }
 
 // ============ 拜访好友 ============
@@ -500,7 +674,7 @@ async function visitFriend(friend, totalActions, myGid) {
 
 // ============ 好友巡查主循环 ============
 
-async function checkFriends() {
+async function checkFriendsCore() {
     const state = getUserState();
     if (isCheckingFriends || !state.gid) return;
     isCheckingFriends = true;
@@ -625,6 +799,10 @@ async function checkFriends() {
     }
 }
 
+async function checkFriends() {
+    return enqueueFriendJob(() => checkFriendsCore());
+}
+
 /**
  * 好友巡查循环 - 本次完成后等待指定秒数再开始下次
  */
@@ -712,4 +890,5 @@ async function acceptFriendsWithRetry(gids) {
 module.exports = {
     checkFriends, startFriendCheckLoop, stopFriendCheckLoop,
     checkAndAcceptApplications,
+    listFriendsForUi, runManualFriendOp,
 };

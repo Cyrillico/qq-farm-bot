@@ -105,6 +105,10 @@ body {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.grid.four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .stack {
   display: grid;
   gap: 12px;
@@ -296,6 +300,50 @@ textarea:focus {
   line-height: 1.5;
 }
 
+.friend-list {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.friend-item {
+  border: 1px solid #2b425f;
+  border-radius: 12px;
+  background: rgba(8, 17, 30, 0.75);
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.friend-head {
+  display: grid;
+  gap: 4px;
+}
+
+.friend-name {
+  font-weight: 700;
+  color: var(--accent-2);
+}
+
+.friend-meta,
+.friend-preview,
+.friend-empty {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.friend-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.friend-actions .btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .hidden {
   display: none !important;
 }
@@ -306,7 +354,8 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 
-  .grid.three {
+  .grid.three,
+  .grid.four {
     grid-template-columns: 1fr;
   }
 }

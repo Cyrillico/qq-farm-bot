@@ -7,6 +7,12 @@ const DEFAULT_SETTINGS_PATH = path.join(__dirname, '..', '.qq-farm-ui-settings.j
 function getDefaultSettings() {
     return {
         bark: defaultBarkSettings(),
+        ui: {
+            friendOps: {
+                allowBadOps: true,
+                confirmDangerous: true,
+            },
+        },
     };
 }
 
@@ -49,6 +55,8 @@ function validateBarkSettings(bark = {}) {
 }
 
 function mergeSettings(base, patch = {}) {
+    const baseUi = base.ui || {};
+    const baseFriendOps = baseUi.friendOps || {};
     const merged = {
         ...base,
         ...patch,
@@ -60,8 +68,42 @@ function mergeSettings(base, patch = {}) {
                 ...((patch.bark && patch.bark.categories) || {}),
             },
         },
+        ui: {
+            ...baseUi,
+            ...(patch.ui || {}),
+            friendOps: {
+                ...baseFriendOps,
+                ...((patch.ui && patch.ui.friendOps) || {}),
+            },
+        },
     };
     return merged;
+}
+
+function validateUiSettings(ui = {}) {
+    const errors = [];
+    if (!ui || typeof ui !== 'object') {
+        return {
+            ok: false,
+            errors: ['ui must be object'],
+        };
+    }
+
+    if (!ui.friendOps || typeof ui.friendOps !== 'object') {
+        errors.push('friendOps must be object');
+    } else {
+        if (typeof ui.friendOps.allowBadOps !== 'boolean') {
+            errors.push('friendOps.allowBadOps must be boolean');
+        }
+        if (typeof ui.friendOps.confirmDangerous !== 'boolean') {
+            errors.push('friendOps.confirmDangerous must be boolean');
+        }
+    }
+
+    return {
+        ok: errors.length === 0,
+        errors,
+    };
 }
 
 function normalizeSettings(input = {}) {
@@ -96,6 +138,7 @@ module.exports = {
     DEFAULT_SETTINGS_PATH,
     getDefaultSettings,
     validateBarkSettings,
+    validateUiSettings,
     mergeSettings,
     normalizeSettings,
     loadSettings,

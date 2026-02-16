@@ -7,6 +7,7 @@ const path = require('node:path');
 const {
     getDefaultSettings,
     validateBarkSettings,
+    validateUiSettings,
     loadSettings,
     saveSettings,
 } = require('../web/settings-store');
@@ -75,4 +76,51 @@ test('saveSettings and loadSettings roundtrip bark config', () => {
     assert.deepEqual(loaded.bark.enabled, false);
     assert.deepEqual(loaded.bark.group, 'new-group');
     assert.deepEqual(loaded.bark.dedupSeconds, 15);
+});
+
+test('default settings should include ui friendOps switches', () => {
+    const defaults = getDefaultSettings();
+    assert.equal(defaults.ui.friendOps.allowBadOps, true);
+    assert.equal(defaults.ui.friendOps.confirmDangerous, true);
+});
+
+test('saveSettings and loadSettings roundtrip ui friendOps switches', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qq-farm-ui-settings-ui-'));
+    const tempFile = path.join(tempDir, 'settings.json');
+    const defaults = getDefaultSettings();
+    const next = {
+        ...defaults,
+        ui: {
+            ...defaults.ui,
+            friendOps: {
+                allowBadOps: false,
+                confirmDangerous: false,
+            },
+        },
+    };
+
+    saveSettings(tempFile, next);
+    const loaded = loadSettings(tempFile);
+    assert.equal(loaded.ui.friendOps.allowBadOps, false);
+    assert.equal(loaded.ui.friendOps.confirmDangerous, false);
+});
+
+test('validateUiSettings rejects invalid friendOps switches', () => {
+    const bad = validateUiSettings({
+        friendOps: {
+            allowBadOps: 'yes',
+            confirmDangerous: 1,
+        },
+    });
+    assert.equal(bad.ok, false);
+    assert.ok(bad.errors.some((e) => e.includes('allowBadOps')));
+    assert.ok(bad.errors.some((e) => e.includes('confirmDangerous')));
+
+    const good = validateUiSettings({
+        friendOps: {
+            allowBadOps: true,
+            confirmDangerous: false,
+        },
+    });
+    assert.equal(good.ok, true);
 });

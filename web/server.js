@@ -12,6 +12,7 @@ const {
     loadSettings,
     saveSettings,
     validateBarkSettings,
+    validateUiSettings,
     mergeSettings,
 } = require('./settings-store');
 const {
@@ -71,6 +72,20 @@ function sendText(res, code, text, contentType = 'text/plain; charset=utf-8') {
         'Cache-Control': 'no-store',
     });
     res.end(text);
+}
+
+function setSecurityHeaders(res) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+}
+
+function parseBoundedInt(value, fallback, min, max) {
+    const n = Number.parseInt(value, 10);
+    if (!Number.isFinite(n)) return fallback;
+    if (n < min) return min;
+    if (n > max) return max;
+    return n;
 }
 
 function getMimeType(filePath) {
@@ -135,7 +150,8 @@ function generateQrSvg(text) {
 
 function startServer(options = {}) {
     const host = options.host || process.env.WEB_UI_HOST || '0.0.0.0';
-    const port = Number.parseInt(options.port || process.env.WEB_UI_PORT || '3210', 10);
+    const rawPort = options.port ?? process.env.WEB_UI_PORT ?? '3210';
+    const port = Number.parseInt(rawPort, 10);
     const settingsPath = options.settingsPath || DEFAULT_SETTINGS_PATH;
     const authConfig = buildAuthConfig(options.env || process.env);
     const stateStore = createStateStore({ maxLogs: 5000 });
@@ -189,6 +205,7 @@ function startServer(options = {}) {
             message: `子进程已启动 pid=${pid}`,
             text: `[WebUI] 子进程已启动 pid=${pid} args=${args.join(' ')}`,
             stream: 'server',
+            action: '',
         });
     });
 
@@ -200,6 +217,7 @@ function startServer(options = {}) {
             message: text,
             text,
             stream,
+            action: '',
         });
     });
 
@@ -238,6 +256,7 @@ function startServer(options = {}) {
                 message: p.message || '',
                 text: p.text || p.message || '',
                 category: p.category || '',
+                action: p.action || '',
                 stream: 'ui',
             });
             return;
@@ -260,6 +279,7 @@ function startServer(options = {}) {
             message: isError ? '子进程异常退出' : '子进程已停止',
             text: `[WebUI] 子进程退出 code=${code} signal=${signal}`,
             stream: 'server',
+            action: '',
         });
     });
 
@@ -312,6 +332,7 @@ function startServer(options = {}) {
     }
 
     const server = http.createServer(async (req, res) => {
+        setSecurityHeaders(res);
         const reqUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
         const pathname = reqUrl.pathname;
 
@@ -380,7 +401,7 @@ function startServer(options = {}) {
         if (req.method === 'GET' && pathname === '/api/state') {
             return sendJson(res, 200, {
                 state: stateStore.getSnapshot(),
-                settings: { bark: settings.bark },
+                settings: { bark: settings.bark, ui: settings.ui },
                 meta: { host, port },
             });
         }
@@ -444,6 +465,77 @@ function startServer(options = {}) {
             }
         }
 
+        if (req.method === 'GET' && pathname === '/api/logs/query') {
+            try {
+                const filters = {
+                    accountId: String(reqUrl.searchParams.get('accountId') || 'all').trim() || 'all',
+                    level: String(reqUrl.searchParams.get('level') || 'all').trim() || 'all',
+                    tag: String(reqUrl.searchParams.get('tag') || '').trim(),
+                    keyword: String(reqUrl.searchParams.get('keyword') || '').trim(),
+                    action: String(reqUrl.searchParams.get('action') || '').trim(),
+                    limit: parseBoundedInt(reqUrl.searchParams.get('limit'), 200, 1, 500),
+                    beforeTs: reqUrl.searchParams.get('beforeTs') || '',
+                    beforeSeq: reqUrl.searchParams.get('beforeSeq') || '',
+                };
+                const data = stateStore.queryLogs(filters);
+                return sendJson(res, 200, { ok: true, data });
+            } catch (e) {
+                return sendJson(res, 500, { ok: false, error: e.message });
+            }
+        }
+
+        if (req.method === 'GET' && pathname === '/api/friends') {
+            const rawAccountId = String(reqUrl.searchParams.get('accountId') || '').trim();
+            if (!rawAccountId) {
+                return sendJson(res, 400, { ok: false, error: 'accountId is required' });
+            }
+            const accountId = normalizeAccountId(rawAccountId);
+            try {
+                const data = await sessionManager.listFriends(accountId);
+                return sendJson(res, 200, { ok: true, data, accountId });
+            } catch (e) {
+                if (/session not running|runner rpc unavailable/i.test(String(e.message || ''))) {
+                    return sendJson(res, 409, { ok: false, error: e.message });
+                }
+                return sendJson(res, 500, { ok: false, error: e.message });
+            }
+        }
+
+        if (req.method === 'POST' && pathname === '/api/friends/op') {
+            try {
+                const body = await readJsonBody(req);
+                const rawAccountId = String(body.accountId || '').trim();
+                const gid = String(body.gid || '').trim();
+                const action = String(body.action || '').trim();
+                const allowedActions = new Set(['steal', 'water', 'weed', 'insecticide', 'putBug', 'putWeed', 'bad']);
+                if (!rawAccountId || !gid || !action) {
+                    return sendJson(res, 400, { ok: false, error: 'accountId/gid/action is required' });
+                }
+                const accountId = normalizeAccountId(rawAccountId);
+                if (!allowedActions.has(action)) {
+                    return sendJson(res, 400, { ok: false, error: 'invalid action' });
+                }
+                const isDangerous = action === 'putBug' || action === 'putWeed' || action === 'bad';
+                if (isDangerous && settings.ui && settings.ui.friendOps && settings.ui.friendOps.allowBadOps === false) {
+                    return sendJson(res, 400, { ok: false, error: 'dangerous friend ops disabled by settings' });
+                }
+
+                const opRet = await sessionManager.runFriendOp(accountId, { gid, action });
+                return sendJson(res, 200, {
+                    ok: true,
+                    data: {
+                        accountId,
+                        ...(opRet || {}),
+                    },
+                });
+            } catch (e) {
+                if (/session not running|runner rpc unavailable/i.test(String(e.message || ''))) {
+                    return sendJson(res, 409, { ok: false, error: e.message });
+                }
+                return sendJson(res, 500, { ok: false, error: e.message });
+            }
+        }
+
         if (req.method === 'GET' && pathname === '/api/settings/bark') {
             return sendJson(res, 200, { bark: settings.bark });
         }
@@ -462,6 +554,27 @@ function startServer(options = {}) {
                 sessionManager.applyBarkSettingsToAll(settings.bark);
                 publish('settings', { scope: 'bark', bark: settings.bark });
                 return sendJson(res, 200, { ok: true, bark: settings.bark });
+            } catch (e) {
+                return sendJson(res, 500, { ok: false, error: e.message });
+            }
+        }
+
+        if (req.method === 'GET' && pathname === '/api/settings/ui') {
+            return sendJson(res, 200, { ui: settings.ui });
+        }
+
+        if (req.method === 'PUT' && pathname === '/api/settings/ui') {
+            try {
+                const body = await readJsonBody(req);
+                const merged = mergeSettings(settings, { ui: body || {} });
+                const check = validateUiSettings(merged.ui);
+                if (!check.ok) {
+                    return sendJson(res, 400, { ok: false, errors: check.errors });
+                }
+
+                settings = saveSettings(settingsPath, merged);
+                publish('settings', { scope: 'ui', ui: settings.ui });
+                return sendJson(res, 200, { ok: true, ui: settings.ui });
             } catch (e) {
                 return sendJson(res, 500, { ok: false, error: e.message });
             }
