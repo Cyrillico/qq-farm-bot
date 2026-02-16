@@ -1,0 +1,13 @@
+{
+  "bark": {
+    "enabled": true,
+    "pushUrl": "https://api.day.app/your-device-key/",
+    "group": "qq-farm-bot",
+    "dedupSeconds": 60,
+    "categories": {
+      "fatal": true,
+      "network": true,
+      "business": true
+    }
+  }
+}

@@ -5,7 +5,7 @@
  */
 
 const axios = require('axios');
-const { CONFIG } = require('./config');
+const { getRuntimeSettings } = require('./runtimeSettings');
 
 const dedupeCache = new Map();
 let barkSendErrorLogged = false;
@@ -35,13 +35,23 @@ function pruneDedupeCache(ttlMs, now) {
     }
 }
 
-async function pushBark(title, body, dedupeKey) {
-    const baseUrl = normalizePushBaseUrl(CONFIG.barkPushUrl);
+async function pushBark(title, body, dedupeKey, opts = {}) {
+    const category = String(opts.category || 'business');
+    const force = Boolean(opts.force);
+    const barkSettings = opts.settings || getRuntimeSettings().bark;
+    if (!barkSettings) return false;
+
+    if (!force) {
+        if (!barkSettings.enabled) return false;
+        if (barkSettings.categories && barkSettings.categories[category] === false) return false;
+    }
+
+    const baseUrl = normalizePushBaseUrl(barkSettings.pushUrl);
     if (!baseUrl) return false;
 
     const safeTitle = String(title || 'QQ农场通知').trim().slice(0, 200);
     const safeBody = String(body || '').trim().slice(0, 1000) || '无详情';
-    const ttlSec = Number(CONFIG.barkDedupSeconds) > 0 ? Number(CONFIG.barkDedupSeconds) : 60;
+    const ttlSec = Number(barkSettings.dedupSeconds) >= 0 ? Number(barkSettings.dedupSeconds) : 60;
     const ttlMs = ttlSec * 1000;
 
     const now = Date.now();
@@ -57,7 +67,7 @@ async function pushBark(title, body, dedupeKey) {
     const pushUrl = `${baseUrl}${encodeURIComponent(safeTitle)}/${encodeURIComponent(safeBody)}`;
     try {
         await axios.get(pushUrl, {
-            params: { group: CONFIG.barkGroup || 'qq-farm-bot' },
+            params: { group: barkSettings.group || 'qq-farm-bot' },
             timeout: 6000,
         });
         return true;
@@ -70,10 +80,12 @@ async function pushBark(title, body, dedupeKey) {
     }
 }
 
-function pushWarn(tag, msg) {
+function pushWarn(tag, msg, opts = {}) {
     const safeTag = String(tag || '系统').trim() || '系统';
     const safeMsg = String(msg || '').trim() || '未知异常';
-    return pushBark(`QQ农场异常: ${safeTag}`, safeMsg, `${safeTag}|${safeMsg}`);
+    return pushBark(`QQ农场异常: ${safeTag}`, safeMsg, `${safeTag}|${safeMsg}`, {
+        category: opts.category || 'business',
+    });
 }
 
 module.exports = {

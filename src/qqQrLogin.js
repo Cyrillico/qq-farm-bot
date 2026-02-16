@@ -1,5 +1,6 @@
 const axios = require('axios');
 const qrcodeTerminal = require('qrcode-terminal');
+const { emitUiEvent } = require('./uiEvents');
 
 const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const QUA = 'V1_HT5_QDT_0.70.2209190_x64_0_DEV_D';
@@ -76,23 +77,28 @@ async function getQQFarmCodeByScan(options = {}) {
 
     const { loginCode, url } = await requestLoginCode();
     printQr(url);
+    emitUiEvent('qr', { phase: 'waiting', qrUrl: url });
 
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
         const status = await queryScanStatus(loginCode);
         if (status.status === 'OK') {
             const authCode = await getAuthCode(status.ticket);
+            emitUiEvent('qr', { phase: 'confirmed', qrUrl: url });
             return authCode;
         }
         if (status.status === 'Used') {
+            emitUiEvent('qr', { phase: 'expired', qrUrl: url, message: '二维码已失效，请重试' });
             throw new Error('二维码已失效，请重试');
         }
         if (status.status === 'Error') {
+            emitUiEvent('qr', { phase: 'error', qrUrl: url, message: '扫码状态查询失败，请重试' });
             throw new Error('扫码状态查询失败，请重试');
         }
         await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
     }
 
+    emitUiEvent('qr', { phase: 'timeout', qrUrl: url, message: '扫码超时，请重试' });
     throw new Error('扫码超时，请重试');
 }
 

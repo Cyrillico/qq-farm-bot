@@ -21,9 +21,11 @@ const { initStatusBar, cleanupStatusBar, setStatusPlatform } = require('./src/st
 const { startSellLoop, stopSellLoop, debugSellFruits } = require('./src/warehouse');
 const { processInviteCodes } = require('./src/invite');
 const { verifyMode, decodeMode } = require('./src/decode');
-const { emitRuntimeHint, sleep } = require('./src/utils');
+const { emitRuntimeHint } = require('./src/utils');
 const { getQQFarmCodeByScan } = require('./src/qqQrLogin');
 const { pushBark } = require('./src/bark');
+const { emitUiEvent } = require('./src/uiEvents');
+const { updateRuntimeBarkSettings } = require('./src/runtimeSettings');
 
 // ============ 帮助信息 ============
 function showHelp() {
@@ -109,12 +111,36 @@ function formatErrorDetail(err) {
     }
 }
 
+function emitProcessState(state, payload = {}) {
+    emitUiEvent('process', {
+        state,
+        ...payload,
+    });
+}
+
+function getRunMode(args) {
+    if (args.includes('--verify')) return 'verify';
+    if (args.includes('--decode')) return 'decode';
+    return 'run';
+}
+
+function registerIpcHandlers() {
+    process.on('message', (msg) => {
+        if (!msg || typeof msg !== 'object') return;
+        if (msg.type === 'settings:bark') {
+            updateRuntimeBarkSettings(msg.payload || {});
+            emitProcessState('settingsUpdated', { scope: 'bark' });
+        }
+    });
+}
+
 let fatalExitInProgress = false;
 function registerGlobalErrorHandlers() {
     process.on('unhandledRejection', (reason) => {
         const detail = formatErrorDetail(reason);
         console.error('[致命] unhandledRejection:', reason);
-        void pushBark('QQ农场致命异常', `unhandledRejection: ${detail}`, `fatal:unhandledRejection:${detail}`);
+        emitProcessState('error', { kind: 'unhandledRejection', fatal: true, message: detail });
+        void pushBark('QQ农场致命异常', `unhandledRejection: ${detail}`, `fatal:unhandledRejection:${detail}`, { category: 'fatal' });
     });
 
     process.on('uncaughtException', async (err) => {
@@ -122,8 +148,9 @@ function registerGlobalErrorHandlers() {
         fatalExitInProgress = true;
         const detail = formatErrorDetail(err);
         console.error('[致命] uncaughtException:', err);
+        emitProcessState('error', { kind: 'uncaughtException', fatal: true, message: detail });
         try {
-            await pushBark('QQ农场致命异常', `uncaughtException: ${detail}`, `fatal:uncaughtException:${detail}`);
+            await pushBark('QQ农场致命异常', `uncaughtException: ${detail}`, `fatal:uncaughtException:${detail}`, { category: 'fatal' });
         } finally {
             process.exit(1);
         }
@@ -133,7 +160,9 @@ function registerGlobalErrorHandlers() {
 // ============ 主函数 ============
 async function main() {
     const args = process.argv.slice(2);
+    const mode = getRunMode(args);
     let usedQrLogin = false;
+    emitProcessState('starting', { mode });
 
     // 加载 proto 定义
     await loadProto();
@@ -141,12 +170,14 @@ async function main() {
     // 验证模式
     if (args.includes('--verify')) {
         await verifyMode();
+        emitProcessState('stopped', { mode: 'verify', reason: 'completed' });
         return;
     }
 
     // 解码模式
     if (args.includes('--decode')) {
         await decodeMode(args);
+        emitProcessState('stopped', { mode: 'decode', reason: 'completed' });
         return;
     }
 
@@ -199,10 +230,12 @@ async function main() {
         // 启动时立即检查一次背包
         setTimeout(() => debugSellFruits(), 5000);
         startSellLoop(60000);  // 每分钟自动出售仓库果实
+        emitProcessState('running', { mode: 'run' });
     });
 
     // 退出处理
     process.on('SIGINT', () => {
+        emitProcessState('stopping', { mode: 'run', reason: 'signal' });
         cleanupStatusBar();
         console.log('\n[退出] 正在断开...');
         stopFarmCheckLoop();
@@ -213,15 +246,18 @@ async function main() {
         markManualClose();
         const ws = getWs();
         if (ws) ws.close();
+        emitProcessState('stopped', { mode: 'run', reason: 'signal' });
         process.exit(0);
     });
 }
 
+registerIpcHandlers();
 registerGlobalErrorHandlers();
 
 main().catch(async (err) => {
     console.error('启动失败:', err);
     const detail = formatErrorDetail(err);
-    await pushBark('QQ农场启动失败', detail, `fatal:startup:${detail}`);
+    emitProcessState('error', { kind: 'startup', fatal: true, message: detail });
+    await pushBark('QQ农场启动失败', detail, `fatal:startup:${detail}`, { category: 'fatal' });
     process.exit(1);
 });

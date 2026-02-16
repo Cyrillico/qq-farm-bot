@@ -5,6 +5,7 @@
 const Long = require('long');
 const { RUNTIME_HINT_MASK, RUNTIME_HINT_DATA } = require('./config');
 const { pushWarn } = require('./bark');
+const { emitUiEvent, isUiEventsEnabled } = require('./uiEvents');
 
 // ============ 服务器时间状态 ============
 let serverTimeMs = 0;
@@ -50,13 +51,41 @@ function toTimeSec(val) {
 }
 
 // ============ 日志 ============
-function log(tag, msg) {
-    console.log(`[${now()}] [${tag}] ${msg}`);
+function classifyWarnCategory(tag) {
+    const t = String(tag || '').trim();
+    if (['WS', '登录', '心跳', '错误', '解码'].includes(t)) {
+        return 'network';
+    }
+    return 'business';
 }
 
-function logWarn(tag, msg) {
-    console.log(`[${now()}] [${tag}] ⚠ ${msg}`);
-    void pushWarn(tag, msg);
+function log(tag, msg) {
+    const text = `[${now()}] [${tag}] ${msg}`;
+    emitUiEvent('log', {
+        level: 'info',
+        tag: String(tag || ''),
+        message: String(msg || ''),
+        text,
+    });
+    if (!isUiEventsEnabled()) {
+        console.log(text);
+    }
+}
+
+function logWarn(tag, msg, category) {
+    const pickedCategory = category || classifyWarnCategory(tag);
+    const text = `[${now()}] [${tag}] ⚠ ${msg}`;
+    emitUiEvent('log', {
+        level: 'warn',
+        tag: String(tag || ''),
+        message: String(msg || ''),
+        category: pickedCategory,
+        text,
+    });
+    if (!isUiEventsEnabled()) {
+        console.log(text);
+    }
+    void pushWarn(tag, msg, { category: pickedCategory });
 }
 
 // ============ 异步工具 ============
@@ -87,6 +116,6 @@ function emitRuntimeHint(force = false) {
 module.exports = {
     toLong, toNum, now,
     getServerTimeSec, syncServerTime, toTimeSec,
-    log, logWarn, sleep,
+    log, logWarn, classifyWarnCategory, sleep,
     emitRuntimeHint,
 };

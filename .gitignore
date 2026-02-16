@@ -4,3 +4,6 @@ node_modules
 package-lock.json
 game.js
 /game
+.qq-farm-ui-settings.json
+.env
+.env.*

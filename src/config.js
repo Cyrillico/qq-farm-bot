@@ -11,7 +11,7 @@ const CONFIG = {
     farmCheckInterval: 1000,    // 自己农场巡查完成后等待间隔 (可通过 --interval 修改, 最低1秒)
     friendCheckInterval: 10000,   // 好友巡查完成后等待间隔 (可通过 --friend-interval 修改, 最低1秒)
     forceLowestLevelCrop: false,  // 开启后固定种最低等级作物（通常是白萝卜），跳过经验效率分析
-    barkPushUrl: 'https://api.day.app/zu5iBDxxzi8GPnjXaBsMKV/',
+    barkPushUrl: '',             // 通过 Web 控制台前端设置并写入本地 settings 文件
     barkDedupSeconds: 60,         // 同类错误推送去重时间窗口（秒）
     barkGroup: 'qq-farm-bot',
     device_info: {

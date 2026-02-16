@@ -9,6 +9,8 @@ const { sendMsgAsync, getUserState, networkEvents } = require('./network');
 const { toLong, toNum, getServerTimeSec, toTimeSec, log, logWarn, sleep } = require('./utils');
 const { getPlantNameBySeedId, getPlantName, getPlantExp, formatGrowTime, getPlantGrowTime, getItemName } = require('./gameConfig');
 const { getPlantingRecommendation } = require('../tools/calc-exp-yield');
+const { buildBestCropPair } = require('./cropAdvisor');
+const { emitUiEvent, isUiEventsEnabled } = require('./uiEvents');
 
 // ============ 内部状态 ============
 let isCheckingFarm = false;
@@ -173,6 +175,13 @@ async function findBestSeed(landsCount) {
     }
 
     const state = getUserState();
+    const safeLandsCount = landsCount == null ? 18 : landsCount;
+    const levelBestPair = isUiEventsEnabled()
+        ? buildBestCropPair({
+            level: state.level || 1,
+            landsCount: safeLandsCount,
+        })
+        : { currentLevelBest: null, nextLevelBest: null };
     const available = [];
     for (const goods of shopReply.goods_list) {
         if (!goods.unlocked) continue;
@@ -211,29 +220,68 @@ async function findBestSeed(landsCount) {
 
     if (CONFIG.forceLowestLevelCrop) {
         available.sort((a, b) => a.requiredLevel - b.requiredLevel || a.price - b.price);
-        return available[0];
+        const picked = available[0];
+        emitUiEvent('bestCrop', {
+            source: 'forceLowestLevelCrop',
+            level: state.level,
+            landsCount: safeLandsCount,
+            seedId: picked.seedId,
+            seedName: getPlantNameBySeedId(picked.seedId),
+            requiredLevel: picked.requiredLevel,
+            price: picked.price,
+            currentLevelBest: levelBestPair.currentLevelBest,
+            nextLevelBest: levelBestPair.nextLevelBest,
+        });
+        return picked;
     }
 
     try {
-        log('商店', `等级: ${state.level}，土地数量: ${landsCount}`);
+        log('商店', `等级: ${state.level}，土地数量: ${safeLandsCount}`);
         
-        const rec = getPlantingRecommendation(state.level, landsCount == null ? 18 : landsCount, { top: 50 });
+        const rec = getPlantingRecommendation(state.level, safeLandsCount, { top: 50 });
         const rankedSeedIds = rec.candidatesNormalFert.map(x => x.seedId);
         for (const seedId of rankedSeedIds) {
             const hit = available.find(x => x.seedId === seedId);
-            if (hit) return hit;
+            if (hit) {
+                const recHit = rec.candidatesNormalFert.find(x => x.seedId === seedId) || null;
+                emitUiEvent('bestCrop', {
+                    source: 'recommendation',
+                    level: state.level,
+                    landsCount: safeLandsCount,
+                    seedId: hit.seedId,
+                    seedName: getPlantNameBySeedId(hit.seedId),
+                    requiredLevel: hit.requiredLevel,
+                    price: hit.price,
+                    expPerHour: recHit ? recHit.expPerHour : undefined,
+                    currentLevelBest: levelBestPair.currentLevelBest,
+                    nextLevelBest: levelBestPair.nextLevelBest,
+                });
+                return hit;
+            }
         }
     } catch (e) {
         logWarn('商店', `经验效率推荐失败，使用兜底策略: ${e.message}`);
     }
 
     // 兜底：等级在28级以前还是白萝卜比较好，28级以上选最高等级的种子
-    if(state.level && state.level <= 28){
+    if (state.level && state.level <= 28) {
         available.sort((a, b) => a.requiredLevel - b.requiredLevel);
-    }else{
+    } else {
         available.sort((a, b) => b.requiredLevel - a.requiredLevel);
     }
-    return available[0];
+    const picked = available[0];
+    emitUiEvent('bestCrop', {
+        source: 'fallback',
+        level: state.level,
+        landsCount: safeLandsCount,
+        seedId: picked.seedId,
+        seedName: getPlantNameBySeedId(picked.seedId),
+        requiredLevel: picked.requiredLevel,
+        price: picked.price,
+        currentLevelBest: levelBestPair.currentLevelBest,
+        nextLevelBest: levelBestPair.nextLevelBest,
+    });
+    return picked;
 }
 
 async function autoPlantEmptyLands(deadLandIds, emptyLandIds, unlockedLandCount) {

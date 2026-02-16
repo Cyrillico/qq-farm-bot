@@ -3,6 +3,7 @@
  */
 
 const { getLevelExpTable, getLevelExpProgress } = require('./gameConfig');
+const { emitUiEvent } = require('./uiEvents');
 
 // ============ 状态数据 ============
 const statusData = {
@@ -130,6 +131,24 @@ function renderStatusBar() {
     process.stdout.write(RESTORE_CURSOR);
 }
 
+function buildStatusUiPayload(inputStatus = statusData) {
+    const payload = { ...inputStatus };
+    payload.expCurrent = 0;
+    payload.expNeeded = 0;
+    payload.expToNext = 0;
+
+    if (payload.level > 0 && payload.exp >= 0) {
+        const levelExpTable = getLevelExpTable();
+        if (levelExpTable) {
+            const progress = getLevelExpProgress(payload.level, payload.exp);
+            payload.expCurrent = progress.current;
+            payload.expNeeded = progress.needed;
+            payload.expToNext = Math.max(0, progress.needed - progress.current);
+        }
+    }
+    return payload;
+}
+
 /**
  * 更新状态数据并刷新显示
  */
@@ -140,6 +159,9 @@ function updateStatus(data) {
             statusData[key] = data[key];
             changed = true;
         }
+    }
+    if (changed) {
+        emitUiEvent('status', buildStatusUiPayload(statusData));
     }
     if (changed && statusEnabled) {
         renderStatusBar();
@@ -184,6 +206,7 @@ function updateStatusLevel(level, exp) {
 module.exports = {
     initStatusBar,
     cleanupStatusBar,
+    buildStatusUiPayload,
     updateStatus,
     setStatusPlatform,
     updateStatusFromLogin,

@@ -30,6 +30,7 @@
 - **经验进度** — 显示当前等级经验进度
 - **心跳保活** — 自动维持 WebSocket 连接
 - **Bark 异常推送** — 连接失败/运行异常自动推送到手机，同类错误默认 60 秒去重
+- **Web 控制台** — 局域网网页实时查看日志/状态，支持多账号并发（QQ/WX/多个WX）、QQ扫码、Bark 可视化配置
 
 ### 开发工具
 - **[PB 解码工具](#pb-解码工具)** — 内置 Protobuf 数据解码器，方便调试分析
@@ -71,6 +72,79 @@ node client.js --code <你的登录code> --wx
 # 农场巡查间隔 5 秒，好友巡查间隔 2 秒
 node client.js --code <code> --interval 5 --friend-interval 2
 ```
+
+### Web 控制台（推荐）
+
+```bash
+npm run ui
+```
+
+启动后可通过以下地址访问：
+
+- 本机：`http://127.0.0.1:3210`
+- 局域网：`http://<你的局域网IP>:3210`
+
+Web 控制台支持：
+
+- 多账号并发管理（按 `accountId` 启动/停止独立会话）
+- 运行模式切换（run / verify / decode）
+- QQ 扫码二维码页面内展示
+- 实时日志滚动（每账号最多保留 5000 行，可切换查看单账号/全部账号）
+- 账号状态实时展示（平台/昵称/等级/经验/金币/升级还差经验，按账号切换）
+- 最佳作物实时展示（当前选种、当前等级最优、下一级最优）
+- Bark 链接与通知分类设置（fatal/network/business）并立即生效
+- Bark 一键测试推送
+
+多账号使用示例：
+1. 在 Web 页面把 `accountId` 填为 `qq-main`，平台选 QQ，启动。
+2. 再把 `accountId` 改为 `wx-main`，平台选微信并填对应 code，启动。
+3. 会话列表可看到两个独立进程，并可分别查看日志与停止。
+
+### Web 控制台登录鉴权（推荐开启）
+
+通过环境变量开启账号密码登录：
+
+```bash
+WEB_UI_AUTH_USERNAME=admin
+WEB_UI_AUTH_PASSWORD=change-me
+WEB_UI_AUTH_SECRET=change-me-to-a-long-random-string
+```
+
+- 设置了 `WEB_UI_AUTH_USERNAME` + `WEB_UI_AUTH_PASSWORD` 后，前端会先显示登录页。
+- 登录成功后才可调用 `/api/*`（包含 SSE）。
+- 建议同时把 `WEB_UI_HOST` 设为 `127.0.0.1`，减少暴露面。
+
+> 默认监听 `0.0.0.0`，如未开启鉴权会有明显安全风险，请勿直接暴露公网。
+
+### Vercel 部署说明（重要）
+
+当前项目核心能力依赖：
+- 常驻进程
+- 子进程 `fork` 多账号运行
+- 持续 WebSocket 与 SSE
+
+这与 Vercel 的 Serverless 运行模型不匹配，因此**不能稳定承载完整挂机能力**。  
+如果需要公网可访问控制台，建议使用 VPS / Docker 常驻部署（再配反向代理和 HTTPS）。
+
+### VPS 一键部署（推荐）
+
+仓库内置一键脚本：
+
+```bash
+sudo bash deploy/vps-oneclick.sh \
+  --domain farm.example.com \
+  --repo https://github.com/Cyrillico/qq-farm-bot.git \
+  --branch main \
+  --auth-user admin
+```
+
+脚本会自动完成：
+- HTTPS 证书 + Caddy 反代
+- systemd 常驻运行
+- UFW 防火墙 + fail2ban + 自动安全更新
+- Web 控制台账号密码鉴权环境变量写入
+
+完整说明见：`docs/vps-oneclick.md`
 
 ### 参数说明
 
@@ -143,10 +217,24 @@ node tools/calc-exp-yield.js --input tools/seed-shop-merged-export.json
 <summary>点击展开项目结构</summary>
 
 ```
-├── client.js              # 入口文件 - 参数解析与启动调度
+├── client.js              # CLI 入口文件 - 参数解析与启动调度
+├── web-ui.js              # Web 控制台启动入口
+├── web/
+│   ├── server.js          # HTTP API + SSE + 静态资源服务
+│   ├── auth.js            # Web 控制台鉴权（环境变量账号密码 + Cookie 会话）
+│   ├── session-runner.js  # 子进程会话桥接（fork + IPC）
+│   ├── state-store.js     # 内存状态与日志缓存
+│   ├── settings-store.js  # Bark 设置读写与校验
+│   └── public/
+│       ├── index.html     # Web 控制台页面
+│       ├── app.js         # 前端交互逻辑
+│       └── styles.css     # 前端样式
 ├── src/
 │   ├── config.js          # 配置常量与生长阶段枚举
 │   ├── bark.js            # Bark 推送工具（告警发送+去重）
+│   ├── cropAdvisor.js     # 当前等级/下一级最佳作物推荐摘要
+│   ├── runtimeSettings.js # 运行时可热更新设置（Bark）
+│   ├── uiEvents.js        # Web UI 结构化事件输出
 │   ├── utils.js           # 工具函数 (类型转换/日志/时间同步/sleep)
 │   ├── proto.js           # Protobuf 加载与消息类型管理
 │   ├── network.js         # WebSocket 连接/消息编解码/登录/心跳
@@ -172,8 +260,14 @@ node tools/calc-exp-yield.js --input tools/seed-shop-merged-export.json
 ├── gameConfig/            # 游戏配置数据
 │   ├── RoleLevel.json     # 等级经验表
 │   └── Plant.json         # 植物数据（名称/生长时间/经验等）
+├── deploy/
+│   └── vps-oneclick.sh    # VPS 一键部署脚本（HTTPS + 反代 + 基础防护）
+├── docs/
+│   └── vps-oneclick.md    # VPS 一键部署详细说明
 ├── tools/                 # 辅助工具
 │   └── analyze-exp-*.js   # 经验效率分析脚本
+├── .qq-farm-ui-settings.example.json # Web UI Bark 设置示例
+├── .env.example           # Web UI 环境变量示例（含登录鉴权）
 └── package.json
 ```
 
@@ -225,7 +319,7 @@ const CONFIG = {
     farmCheckInterval: 1000,     // 农场巡查完成后等待间隔
     friendCheckInterval: 10000,  // 好友巡查完成后等待间隔
     forceLowestLevelCrop: false, // true: 固定最低等级作物（白萝卜优先），跳过经验效率分析
-    barkPushUrl: 'https://api.day.app/zu5iBDxxzi8GPnjXaBsMKV/', // Bark 推送地址
+    barkPushUrl: '',             // 不在源码写入，改为 Web 控制台前端设置
     barkDedupSeconds: 60,         // 同类异常去重时间窗口（秒）
     barkGroup: 'qq-farm-bot',     // Bark 通知分组
 };
@@ -243,6 +337,17 @@ const CONFIG = {
 ```bash
 node -e "const { pushBark } = require('./src/bark'); pushBark('测试', '连通性验证').then(()=>process.exit(0));"
 ```
+
+### Bark Web 可视化设置
+
+- 持久化文件：`/Users/cyril/qq-farm-bot/.qq-farm-ui-settings.json`
+- 示例文件：`/Users/cyril/qq-farm-bot/.qq-farm-ui-settings.example.json`
+- 页面保存后立即生效（运行中的进程无需重启）
+- 建议：公开仓库场景下不要把 Bark 链接写入任何 tracked 文件，只在前端页面设置
+- 通知分类：
+  - `fatal`：启动失败、未捕获异常等致命问题
+  - `network`：WS/登录/心跳/协议解码相关
+  - `business`：农场/好友/仓库/任务等业务告警
 
 ### src/friend.js
 
