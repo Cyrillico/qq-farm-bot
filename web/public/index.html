@@ -172,6 +172,20 @@
             <button id="stopBtn" class="btn btn-danger">停止</button>
             <button id="clearLogsBtn" class="btn">清空日志</button>
           </div>
+          <div class="cards">
+            <article class="card">
+              <h3>QQ 扫码</h3>
+              <p id="qrPhase">状态：-</p>
+              <img id="qrImage" class="qr-image hidden" alt="QQ扫码二维码" />
+              <a id="qrLink" class="hidden" target="_blank" rel="noreferrer">打开扫码链接</a>
+              <div class="actions">
+                <button id="refreshQrBtn" class="btn" type="button">刷新二维码</button>
+                <button id="switchQrBtn" class="btn hidden" type="button">切换备用二维码</button>
+              </div>
+              <div id="qrAltLinks" class="qr-alt-links"></div>
+              <p id="qrMessage"></p>
+            </article>
+          </div>
           <div class="stack feature-settings">
             <p class="mini-title">运行功能开关（立即生效）</p>
             <div class="grid two">
@@ -212,18 +226,6 @@
               <p id="bestCropNext">下一级最优：-</p>
               <p id="bestCropExp">当前等级最优效率：-</p>
               <p id="bestCropSource">来源：-</p>
-            </article>
-            <article class="card">
-              <h3>QQ 扫码</h3>
-              <p id="qrPhase">状态：-</p>
-              <img id="qrImage" class="qr-image hidden" alt="QQ扫码二维码" />
-              <a id="qrLink" class="hidden" target="_blank" rel="noreferrer">打开扫码链接</a>
-              <div class="actions">
-                <button id="refreshQrBtn" class="btn" type="button">刷新二维码</button>
-                <button id="switchQrBtn" class="btn hidden" type="button">切换备用二维码</button>
-              </div>
-              <div id="qrAltLinks" class="qr-alt-links"></div>
-              <p id="qrMessage"></p>
             </article>
           </div>
         </section>

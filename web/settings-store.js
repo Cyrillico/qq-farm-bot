@@ -12,7 +12,7 @@ function defaultAccountFeatureSettings() {
         sellEnabled: true,
         forceLowestLevelCrop: false,
         helpOnlyWithExp: true,
-        enablePutBadThings: false,
+        enablePutBadThings: true,
     };
 }
 

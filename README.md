@@ -393,12 +393,12 @@ PUT /api/settings/account?accountId=qq-main
   "sellEnabled": true,
   "forceLowestLevelCrop": false,
   "helpOnlyWithExp": true,
-  "enablePutBadThings": false
+  "enablePutBadThings": true
 }
 ```
 
 - 运行中的账号会通过 IPC 即时应用，无需重启。
-- `enablePutBadThings=false` 时，手动与自动都会拒绝放虫/放草/捣乱动作。
+- `enablePutBadThings=true` 为默认值；关闭后手动与自动都会拒绝放虫/放草/捣乱动作。
 - `forceLowestLevelCrop=true` 时，会覆盖经验效率推荐，固定选择最低等级可用作物。
 
 ### 土地详情 API（Web）
