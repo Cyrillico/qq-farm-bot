@@ -4,9 +4,9 @@ const THEME_STORAGE_KEY = 'qq-farm-ui-theme';
 const FRIEND_DANGEROUS_ACTIONS = new Set(['putBug', 'putWeed', 'bad']);
 const VIEW_META = {
   dashboard: { title: '控制台总览', hint: '查看整体运行概览与账号状态分布' },
-  'account-home': { title: '账号主页', hint: '查看等级/经验/金币、最佳作物与扫码状态' },
+  'account-home': { title: '账号主页', hint: '查看等级/经验/金币与最佳作物状态' },
   'account-lands': { title: '土地详情', hint: '查看每块土地作物、生长阶段与需处理状态' },
-  'account-settings': { title: '账号设置', hint: '配置账号、平台、模式并启动/停止会话' },
+  'account-settings': { title: '账号设置', hint: '配置账号、平台、模式、QQ扫码并启动/停止会话' },
   'account-friends': { title: '好友操作', hint: '执行好友列表操作与高风险开关配置' },
   'account-bark': { title: 'Bark 通知', hint: '配置 Bark 链接、分类开关和测试推送' },
   'account-logs': { title: '账号日志', hint: '按条件筛选日志并加载历史记录' },
@@ -30,7 +30,7 @@ const DEFAULT_ACCOUNT_SETTINGS = Object.freeze({
   sellEnabled: true,
   forceLowestLevelCrop: false,
   helpOnlyWithExp: true,
-  enablePutBadThings: false,
+  enablePutBadThings: true,
 });
 
 const state = {
@@ -429,6 +429,13 @@ function applyModeVisibility() {
   const mode = els.mode.value;
   els.runFields.classList.toggle('hidden', mode !== 'run');
   els.decodeFields.classList.toggle('hidden', mode !== 'decode');
+}
+
+function syncPlatformQrDefaults() {
+  const platform = String(els.platform.value || 'qq').trim().toLowerCase();
+  const isQq = platform !== 'wx';
+  els.useQr.checked = isQq;
+  els.useQr.disabled = !isQq;
 }
 
 function renderSessionList() {
@@ -1672,6 +1679,9 @@ function bindEvents() {
   }
 
   els.mode.addEventListener('change', applyModeVisibility);
+  els.platform.addEventListener('change', () => {
+    syncPlatformQrDefaults();
+  });
   els.loginBtn.addEventListener('click', onLogin);
   els.logoutBtn.addEventListener('click', onLogout);
   els.authPassword.addEventListener('keydown', (event) => {
@@ -1738,6 +1748,7 @@ function onHashChange() {
 async function main() {
   loadThemeFromStorage();
   applyModeVisibility();
+  syncPlatformQrDefaults();
   renderView();
   bindEvents();
   window.addEventListener('hashchange', onHashChange);

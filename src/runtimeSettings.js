@@ -35,7 +35,7 @@ function defaultAccountRuntimeSettings() {
         sellEnabled: true,
         forceLowestLevelCrop: false,
         helpOnlyWithExp: true,
-        enablePutBadThings: false,
+        enablePutBadThings: true,
     };
 }
 
