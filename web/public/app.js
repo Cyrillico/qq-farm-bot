@@ -843,13 +843,25 @@ function renderLands() {
     if (land.needs && land.needs.weed) tags.push('<span class="land-tag tag-danger">有草</span>');
     if (land.needs && land.needs.bug) tags.push('<span class="land-tag tag-danger">有虫</span>');
     if (land.isEmpty) tags.push('<span class="land-tag">空地</span>');
+    const requirementType = String(land.requirementType || '').toLowerCase();
+    let requirementText = '-';
+    if (requirementType === 'unlock' || requirementType === 'upgrade') {
+      const label = land.requirementLabel || (requirementType === 'unlock' ? '解锁需' : '升级需');
+      const levelText = Number.isFinite(Number(land.needLevel)) && Number(land.needLevel) > 0
+        ? `Lv${land.needLevel}`
+        : 'Lv-';
+      const goldText = Number.isFinite(Number(land.needGold)) && Number(land.needGold) > 0
+        ? `${land.needGold}`
+        : '-';
+      requirementText = `${label} ${levelText} / ${goldText} 金币`;
+    }
     return `
       <article class="land-item">
         <div class="land-head">
           <h3>土地 #${land.id}</h3>
           <p>${escapeHtml(land.plantName || '-')} | ${escapeHtml(land.phaseName || '-')}</p>
         </div>
-        <p class="land-meta">地块等级：${land.landLevel ?? 0}${land.maxLandLevel ? `/${land.maxLandLevel}` : ''} | 解锁需 Lv${land.needLevel ?? 0} / ${land.needGold ?? 0} 金币</p>
+        <p class="land-meta">地块等级：${land.landLevel ?? 0}${land.maxLandLevel ? `/${land.maxLandLevel}` : ''} | ${escapeHtml(requirementText)}</p>
         <p class="land-meta">下阶段：${escapeHtml(land.nextPhaseName || '-')} | 剩余：${formatRemainSeconds(land.nextPhaseInSec)}</p>
         <div class="land-tags">${tags.join('')}</div>
       </article>

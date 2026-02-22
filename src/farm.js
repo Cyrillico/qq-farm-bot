@@ -787,24 +787,147 @@ function getNextPhase(phases, nowSec) {
     return picked;
 }
 
+function pickFirstPositiveNumber(values = []) {
+    for (const value of values) {
+        const n = Number(toNum(value));
+        if (Number.isFinite(n) && n > 0) return n;
+    }
+    return 0;
+}
+
+function parseLandRequirementCondition(condition = {}) {
+    const cond = condition && typeof condition === 'object' ? condition : {};
+    let needLevel = pickFirstPositiveNumber([
+        cond.need_level,
+        cond.needLevel,
+        cond.need_lv,
+        cond.needLv,
+        cond.level,
+        cond.lv,
+    ]);
+    let needGold = pickFirstPositiveNumber([
+        cond.need_gold,
+        cond.needGold,
+        cond.need_coin,
+        cond.needCoin,
+        cond.gold,
+        cond.coin,
+        cond.cost_gold,
+        cond.costGold,
+    ]);
+
+    const condItems = Array.isArray(cond.conds) ? cond.conds : [];
+    for (const item of condItems) {
+        const type = Number(toNum(item && (item.type ?? item.cond_type ?? item.id)));
+        const value = pickFirstPositiveNumber([
+            item && item.param,
+            item && item.value,
+            item && item.count,
+            item && item.num,
+            item && item.need_num,
+            item && item.need_count,
+        ]);
+        const text = String(item && (item.name || item.desc || item.key || '')).toLowerCase();
+
+        if (!needLevel && value > 0 && (type === 1 || text.includes('level') || text.includes('lv') || text.includes('等级'))) {
+            needLevel = value;
+            continue;
+        }
+        if (!needGold && value > 0 && (type === 2 || text.includes('gold') || text.includes('coin') || text.includes('金币'))) {
+            needGold = value;
+        }
+    }
+
+    const resourceItems = Array.isArray(cond.items)
+        ? cond.items
+        : (Array.isArray(cond.need_items) ? cond.need_items : []);
+    for (const item of resourceItems) {
+        if (needGold > 0) break;
+        const itemId = Number(toNum(item && (item.id ?? item.item_id ?? item.itemId)));
+        const count = pickFirstPositiveNumber([
+            item && item.count,
+            item && item.num,
+            item && item.value,
+            item && item.need_num,
+        ]);
+        if (itemId === 1 && count > 0) {
+            needGold = count;
+        }
+    }
+
+    return { needLevel, needGold };
+}
+
+function resolveLandRequirementMeta(land, unlocked) {
+    const landLevel = toNum(land && land.level);
+    const maxLandLevel = toNum(land && land.max_level);
+    const couldUnlock = Boolean(land && land.could_unlock);
+    const couldUpgrade = Boolean(land && land.could_upgrade);
+
+    if (!unlocked) {
+        const parsed = parseLandRequirementCondition((land && land.unlock_condition) || {});
+        return {
+            type: 'unlock',
+            label: '解锁需',
+            needLevel: parsed.needLevel,
+            needGold: parsed.needGold,
+            couldUnlock,
+            couldUpgrade: false,
+            landLevel,
+            maxLandLevel,
+        };
+    }
+
+    const parsedUpgrade = parseLandRequirementCondition((land && land.upgrade_condition) || {});
+    const hasUpgradeNeed = couldUpgrade
+        || (maxLandLevel > 0 && landLevel < maxLandLevel)
+        || parsedUpgrade.needLevel > 0
+        || parsedUpgrade.needGold > 0;
+    if (hasUpgradeNeed) {
+        return {
+            type: 'upgrade',
+            label: '升级需',
+            needLevel: parsedUpgrade.needLevel,
+            needGold: parsedUpgrade.needGold,
+            couldUnlock: false,
+            couldUpgrade,
+            landLevel,
+            maxLandLevel,
+        };
+    }
+
+    return {
+        type: 'none',
+        label: '无要求',
+        needLevel: 0,
+        needGold: 0,
+        couldUnlock: false,
+        couldUpgrade: false,
+        landLevel,
+        maxLandLevel,
+    };
+}
+
 function buildLandUiItem(land, nowSec) {
     const id = toNum(land && land.id);
     const unlocked = Boolean(land && land.unlocked);
     const plant = (land && land.plant) || null;
+    const requirement = resolveLandRequirementMeta(land, unlocked);
     if (!unlocked) {
-        const unlockCondition = (land && land.unlock_condition) || {};
         return {
             id,
             unlocked: false,
             isEmpty: true,
             phase: 0,
             phaseName: '未解锁',
-            couldUnlock: Boolean(land && land.could_unlock),
-            couldUpgrade: false,
-            landLevel: 0,
-            maxLandLevel: 0,
-            needLevel: toNum(unlockCondition.need_level),
-            needGold: toNum(unlockCondition.need_gold),
+            couldUnlock: requirement.couldUnlock,
+            couldUpgrade: requirement.couldUpgrade,
+            landLevel: requirement.landLevel,
+            maxLandLevel: requirement.maxLandLevel,
+            needLevel: requirement.needLevel,
+            needGold: requirement.needGold,
+            requirementType: requirement.type,
+            requirementLabel: requirement.label,
             seedId: 0,
             plantId: 0,
             plantName: '',
@@ -826,12 +949,14 @@ function buildLandUiItem(land, nowSec) {
             isEmpty: true,
             phase: 0,
             phaseName: '空地',
-            couldUnlock: false,
-            couldUpgrade: Boolean(land && land.could_upgrade),
-            landLevel: toNum(land && land.level),
-            maxLandLevel: toNum(land && land.max_level),
-            needLevel: toNum((land && land.upgrade_condition && land.upgrade_condition.need_level) || 0),
-            needGold: toNum((land && land.upgrade_condition && land.upgrade_condition.need_gold) || 0),
+            couldUnlock: requirement.couldUnlock,
+            couldUpgrade: requirement.couldUpgrade,
+            landLevel: requirement.landLevel,
+            maxLandLevel: requirement.maxLandLevel,
+            needLevel: requirement.needLevel,
+            needGold: requirement.needGold,
+            requirementType: requirement.type,
+            requirementLabel: requirement.label,
             seedId: 0,
             plantId: 0,
             plantName: '',
@@ -872,12 +997,14 @@ function buildLandUiItem(land, nowSec) {
         isEmpty: false,
         phase,
         phaseName,
-        couldUnlock: false,
-        couldUpgrade: Boolean(land && land.could_upgrade),
-        landLevel: toNum(land && land.level),
-        maxLandLevel: toNum(land && land.max_level),
-        needLevel: toNum((land && land.upgrade_condition && land.upgrade_condition.need_level) || 0),
-        needGold: toNum((land && land.upgrade_condition && land.upgrade_condition.need_gold) || 0),
+        couldUnlock: requirement.couldUnlock,
+        couldUpgrade: requirement.couldUpgrade,
+        landLevel: requirement.landLevel,
+        maxLandLevel: requirement.maxLandLevel,
+        needLevel: requirement.needLevel,
+        needGold: requirement.needGold,
+        requirementType: requirement.type,
+        requirementLabel: requirement.label,
         seedId,
         plantId,
         plantName,
@@ -1069,5 +1196,8 @@ module.exports = {
     getFarmRuntimeSettings,
     __private: {
         pickLandActionTargets,
+        parseLandRequirementCondition,
+        resolveLandRequirementMeta,
+        buildLandUiItem,
     },
 };
