@@ -36,6 +36,9 @@ class RpcRunner extends EventEmitter {
         if (method === 'friends.op') {
             return Promise.resolve({ ok: true, action: payload.action });
         }
+        if (method === 'farm.lands') {
+            return Promise.resolve({ lands: [{ id: 1, phaseName: '成熟' }] });
+        }
         return Promise.reject(new Error('unsupported'));
     }
 }
@@ -53,6 +56,10 @@ test('session manager forwards friends.list and friends.op to runner rpc', async
     const ret = await manager.runFriendOp('qq-main', { gid: '1', action: 'steal' });
     assert.equal(ret.ok, true);
     assert.equal(ret.action, 'steal');
+
+    const lands = await manager.listLands('qq-main');
+    assert.equal(Array.isArray(lands.lands), true);
+    assert.equal(lands.lands[0].id, 1);
 });
 
 test('session manager friend rpc throws when session is not running', async () => {

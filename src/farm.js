@@ -524,6 +524,138 @@ function analyzeLands(lands) {
     return result;
 }
 
+function getNextPhase(phases, nowSec) {
+    if (!Array.isArray(phases) || phases.length === 0) return null;
+    let picked = null;
+    for (const phase of phases) {
+        const beginTime = toTimeSec(phase.begin_time);
+        if (!beginTime || beginTime <= nowSec) continue;
+        if (!picked || beginTime < toTimeSec(picked.begin_time)) {
+            picked = phase;
+        }
+    }
+    return picked;
+}
+
+function buildLandUiItem(land, nowSec) {
+    const id = toNum(land && land.id);
+    const unlocked = Boolean(land && land.unlocked);
+    const plant = (land && land.plant) || null;
+    if (!unlocked) {
+        return {
+            id,
+            unlocked: false,
+            isEmpty: true,
+            phase: 0,
+            phaseName: '未解锁',
+            seedId: 0,
+            plantId: 0,
+            plantName: '',
+            exp: 0,
+            needs: {
+                water: false,
+                weed: false,
+                bug: false,
+            },
+            nextPhaseName: '',
+            nextPhaseInSec: 0,
+        };
+    }
+
+    if (!plant || !Array.isArray(plant.phases) || plant.phases.length === 0) {
+        return {
+            id,
+            unlocked: true,
+            isEmpty: true,
+            phase: 0,
+            phaseName: '空地',
+            seedId: 0,
+            plantId: 0,
+            plantName: '',
+            exp: 0,
+            needs: {
+                water: false,
+                weed: false,
+                bug: false,
+            },
+            nextPhaseName: '',
+            nextPhaseInSec: 0,
+        };
+    }
+
+    const currentPhase = getCurrentPhase(plant.phases, false, `土地#${id}`) || {};
+    const phase = toNum(currentPhase.phase);
+    const phaseName = PHASE_NAMES[phase] || `阶段${phase}`;
+    const nextPhase = getNextPhase(plant.phases, nowSec);
+    const nextPhaseBegin = nextPhase ? toTimeSec(nextPhase.begin_time) : 0;
+    const nextPhaseInSec = nextPhaseBegin > nowSec ? (nextPhaseBegin - nowSec) : 0;
+    const nextPhaseName = nextPhase ? (PHASE_NAMES[nextPhase.phase] || `阶段${toNum(nextPhase.phase)}`) : '';
+    const weedOwners = Array.isArray(plant.weed_owners) ? plant.weed_owners : [];
+    const insectOwners = Array.isArray(plant.insect_owners) ? plant.insect_owners : [];
+    const dryTime = toTimeSec(currentPhase.dry_time);
+    const weedsTime = toTimeSec(currentPhase.weeds_time);
+    const insectTime = toTimeSec(currentPhase.insect_time);
+    const needsWater = toNum(plant.dry_num) > 0 || (dryTime > 0 && dryTime <= nowSec);
+    const needsWeed = weedOwners.length > 0 || (weedsTime > 0 && weedsTime <= nowSec);
+    const needsBug = insectOwners.length > 0 || (insectTime > 0 && insectTime <= nowSec);
+    const plantId = toNum(plant.id);
+    const plantName = getPlantName(plantId) || plant.name || '未知作物';
+    const seedId = toNum(plant.seed_id);
+    const exp = getPlantExp(plantId);
+
+    return {
+        id,
+        unlocked: true,
+        isEmpty: false,
+        phase,
+        phaseName,
+        seedId,
+        plantId,
+        plantName,
+        exp,
+        stealable: Boolean(plant.stealable),
+        needs: {
+            water: needsWater,
+            weed: needsWeed,
+            bug: needsBug,
+        },
+        nextPhaseName,
+        nextPhaseInSec,
+    };
+}
+
+async function listLandsForUi() {
+    const state = getUserState();
+    if (!toNum(state.gid)) {
+        throw new Error('not logged in');
+    }
+
+    const landsReply = await getAllLands();
+    const lands = Array.isArray(landsReply.lands) ? landsReply.lands : [];
+    const nowSec = getServerTimeSec();
+    const summary = analyzeLands(lands);
+    const items = lands
+        .filter((land) => Boolean(land && land.unlocked))
+        .map((land) => buildLandUiItem(land, nowSec))
+        .sort((a, b) => a.id - b.id);
+
+    return {
+        serverTimeSec: nowSec,
+        summary: {
+            total: lands.length,
+            unlocked: items.length,
+            harvestable: summary.harvestable.length,
+            growing: summary.growing.length,
+            empty: summary.empty.length,
+            dead: summary.dead.length,
+            needWater: summary.needWater.length,
+            needWeed: summary.needWeed.length,
+            needBug: summary.needBug.length,
+        },
+        lands: items,
+    };
+}
+
 // ============ 巡田主循环 ============
 
 async function checkFarm() {
@@ -656,5 +788,6 @@ function stopFarmCheckLoop() {
 module.exports = {
     checkFarm, startFarmCheckLoop, stopFarmCheckLoop,
     getCurrentPhase,
+    listLandsForUi,
     setOperationLimitsCallback,
 };

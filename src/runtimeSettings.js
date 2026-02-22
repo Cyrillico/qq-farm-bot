@@ -27,6 +27,18 @@ function defaultBarkSettings() {
     };
 }
 
+function defaultAccountRuntimeSettings() {
+    return {
+        farmEnabled: true,
+        friendEnabled: true,
+        taskEnabled: true,
+        sellEnabled: true,
+        forceLowestLevelCrop: false,
+        helpOnlyWithExp: true,
+        enablePutBadThings: false,
+    };
+}
+
 function mergeBarkSettings(base, patch = {}) {
     const next = {
         ...base,
@@ -46,9 +58,25 @@ function mergeBarkSettings(base, patch = {}) {
     return next;
 }
 
+function mergeAccountRuntimeSettings(base, patch = {}) {
+    const next = {
+        ...base,
+        ...patch,
+    };
+    next.farmEnabled = Boolean(next.farmEnabled);
+    next.friendEnabled = Boolean(next.friendEnabled);
+    next.taskEnabled = Boolean(next.taskEnabled);
+    next.sellEnabled = Boolean(next.sellEnabled);
+    next.forceLowestLevelCrop = Boolean(next.forceLowestLevelCrop);
+    next.helpOnlyWithExp = Boolean(next.helpOnlyWithExp);
+    next.enablePutBadThings = Boolean(next.enablePutBadThings);
+    return next;
+}
+
 function buildDefaultRuntimeSettings() {
     return {
         bark: defaultBarkSettings(),
+        account: defaultAccountRuntimeSettings(),
     };
 }
 
@@ -63,10 +91,18 @@ function updateRuntimeBarkSettings(patch = {}) {
     return getRuntimeSettings();
 }
 
+function updateRuntimeAccountSettings(patch = {}) {
+    runtimeSettings.account = mergeAccountRuntimeSettings(runtimeSettings.account, patch);
+    return getRuntimeSettings();
+}
+
 function setRuntimeSettings(next = {}) {
     runtimeSettings = buildDefaultRuntimeSettings();
     if (next.bark) {
         runtimeSettings.bark = mergeBarkSettings(runtimeSettings.bark, next.bark);
+    }
+    if (next.account) {
+        runtimeSettings.account = mergeAccountRuntimeSettings(runtimeSettings.account, next.account);
     }
     return getRuntimeSettings();
 }
@@ -77,8 +113,10 @@ function resetRuntimeSettingsForTest() {
 
 module.exports = {
     defaultBarkSettings,
+    defaultAccountRuntimeSettings,
     getRuntimeSettings,
     updateRuntimeBarkSettings,
+    updateRuntimeAccountSettings,
     setRuntimeSettings,
     resetRuntimeSettingsForTest,
 };

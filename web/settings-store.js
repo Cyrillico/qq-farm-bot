@@ -4,6 +4,45 @@ const { defaultBarkSettings } = require('../src/runtimeSettings');
 
 const DEFAULT_SETTINGS_PATH = path.join(__dirname, '..', '.qq-farm-ui-settings.json');
 
+function defaultAccountFeatureSettings() {
+    return {
+        farmEnabled: true,
+        friendEnabled: true,
+        taskEnabled: true,
+        sellEnabled: true,
+        forceLowestLevelCrop: false,
+        helpOnlyWithExp: true,
+        enablePutBadThings: false,
+    };
+}
+
+function normalizeAccountIdKey(raw) {
+    const text = String(raw || '').trim();
+    if (!text) return '';
+    const normalized = text.replace(/[^a-zA-Z0-9._-]/g, '-').slice(0, 64);
+    return normalized || '';
+}
+
+function mergeAccountFeatureSettings(base, patch = {}) {
+    const defaults = defaultAccountFeatureSettings();
+    return {
+        ...defaults,
+        ...(base || {}),
+        ...(patch || {}),
+    };
+}
+
+function normalizeAccountFeaturesMap(rawMap = {}) {
+    const next = {};
+    if (!rawMap || typeof rawMap !== 'object') return next;
+    for (const [rawAccountId, value] of Object.entries(rawMap)) {
+        const accountId = normalizeAccountIdKey(rawAccountId);
+        if (!accountId || !value || typeof value !== 'object') continue;
+        next[accountId] = mergeAccountFeatureSettings(next[accountId], value);
+    }
+    return next;
+}
+
 function getDefaultSettings() {
     return {
         bark: defaultBarkSettings(),
@@ -13,6 +52,7 @@ function getDefaultSettings() {
                 confirmDangerous: true,
             },
         },
+        accountFeatures: {},
     };
 }
 
@@ -57,6 +97,15 @@ function validateBarkSettings(bark = {}) {
 function mergeSettings(base, patch = {}) {
     const baseUi = base.ui || {};
     const baseFriendOps = baseUi.friendOps || {};
+    const baseAccountFeatures = normalizeAccountFeaturesMap(base.accountFeatures || {});
+    const patchAccountFeatures = normalizeAccountFeaturesMap(patch.accountFeatures || {});
+    const mergedAccountFeatures = { ...baseAccountFeatures };
+    for (const [accountId, accountSettings] of Object.entries(patchAccountFeatures)) {
+        mergedAccountFeatures[accountId] = mergeAccountFeatureSettings(
+            baseAccountFeatures[accountId],
+            accountSettings
+        );
+    }
     const merged = {
         ...base,
         ...patch,
@@ -76,6 +125,7 @@ function mergeSettings(base, patch = {}) {
                 ...((patch.ui && patch.ui.friendOps) || {}),
             },
         },
+        accountFeatures: mergedAccountFeatures,
     };
     return merged;
 }
@@ -106,10 +156,56 @@ function validateUiSettings(ui = {}) {
     };
 }
 
+function validateAccountFeatureSettings(account = {}, options = {}) {
+    const errors = [];
+    const allowPartial = Boolean(options.allowPartial);
+    if (!account || typeof account !== 'object') {
+        return {
+            ok: false,
+            errors: ['account settings must be object'],
+        };
+    }
+
+    const keys = [
+        'farmEnabled',
+        'friendEnabled',
+        'taskEnabled',
+        'sellEnabled',
+        'forceLowestLevelCrop',
+        'helpOnlyWithExp',
+        'enablePutBadThings',
+    ];
+
+    for (const key of keys) {
+        if (!allowPartial && typeof account[key] !== 'boolean') {
+            errors.push(`${key} must be boolean`);
+            continue;
+        }
+        if (allowPartial && key in account && typeof account[key] !== 'boolean') {
+            errors.push(`${key} must be boolean`);
+        }
+    }
+
+    return {
+        ok: errors.length === 0,
+        errors,
+    };
+}
+
 function normalizeSettings(input = {}) {
     const defaults = getDefaultSettings();
     const merged = mergeSettings(defaults, input);
-    return mergeSettings(defaults, merged);
+    const normalized = mergeSettings(defaults, merged);
+    normalized.accountFeatures = normalizeAccountFeaturesMap(normalized.accountFeatures || {});
+    return normalized;
+}
+
+function getAccountFeatureSettings(settings = {}, accountId) {
+    const defaults = defaultAccountFeatureSettings();
+    const normalizedId = normalizeAccountIdKey(accountId);
+    if (!normalizedId) return { ...defaults };
+    const map = normalizeAccountFeaturesMap(settings.accountFeatures || {});
+    return mergeAccountFeatureSettings(defaults, map[normalizedId] || {});
 }
 
 function loadSettings(filePath = DEFAULT_SETTINGS_PATH) {
@@ -137,8 +233,12 @@ function saveSettings(filePath = DEFAULT_SETTINGS_PATH, nextSettings = {}) {
 module.exports = {
     DEFAULT_SETTINGS_PATH,
     getDefaultSettings,
+    defaultAccountFeatureSettings,
+    getAccountFeatureSettings,
     validateBarkSettings,
     validateUiSettings,
+    validateAccountFeatureSettings,
+    normalizeAccountIdKey,
     mergeSettings,
     normalizeSettings,
     loadSettings,

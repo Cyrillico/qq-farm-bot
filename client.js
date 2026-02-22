@@ -14,8 +14,14 @@
 const { CONFIG } = require('./src/config');
 const { loadProto } = require('./src/proto');
 const { connect, cleanup, getWs, markManualClose } = require('./src/network');
-const { startFarmCheckLoop, stopFarmCheckLoop } = require('./src/farm');
-const { startFriendCheckLoop, stopFriendCheckLoop, listFriendsForUi, runManualFriendOp } = require('./src/friend');
+const { startFarmCheckLoop, stopFarmCheckLoop, listLandsForUi } = require('./src/farm');
+const {
+    startFriendCheckLoop,
+    stopFriendCheckLoop,
+    listFriendsForUi,
+    runManualFriendOp,
+    updateFriendRuntimeSettings,
+} = require('./src/friend');
 const { initTaskSystem, cleanupTaskSystem } = require('./src/task');
 const { initStatusBar, cleanupStatusBar, setStatusPlatform } = require('./src/status');
 const { startSellLoop, stopSellLoop, debugSellFruits } = require('./src/warehouse');
@@ -25,7 +31,10 @@ const { emitRuntimeHint } = require('./src/utils');
 const { getQQFarmCodeByScan } = require('./src/qqQrLogin');
 const { pushBark } = require('./src/bark');
 const { emitUiEvent } = require('./src/uiEvents');
-const { updateRuntimeBarkSettings } = require('./src/runtimeSettings');
+const {
+    updateRuntimeBarkSettings,
+    updateRuntimeAccountSettings,
+} = require('./src/runtimeSettings');
 
 // ============ 帮助信息 ============
 function showHelp() {
@@ -124,12 +133,107 @@ function getRunMode(args) {
     return 'run';
 }
 
+const subsystemState = {
+    farmLoopStarted: false,
+    friendLoopStarted: false,
+    taskSystemStarted: false,
+    sellLoopStarted: false,
+};
+let runtimeSubsystemsReady = false;
+
+function setFarmSubsystemEnabled(enabled) {
+    if (enabled) {
+        if (!subsystemState.farmLoopStarted) {
+            startFarmCheckLoop();
+            subsystemState.farmLoopStarted = true;
+        }
+        return;
+    }
+    if (subsystemState.farmLoopStarted) {
+        stopFarmCheckLoop();
+        subsystemState.farmLoopStarted = false;
+    }
+}
+
+function setFriendSubsystemEnabled(enabled) {
+    if (enabled) {
+        if (!subsystemState.friendLoopStarted) {
+            startFriendCheckLoop();
+            subsystemState.friendLoopStarted = true;
+        }
+        return;
+    }
+    if (subsystemState.friendLoopStarted) {
+        stopFriendCheckLoop();
+        subsystemState.friendLoopStarted = false;
+    }
+}
+
+function setTaskSubsystemEnabled(enabled) {
+    if (enabled) {
+        if (!subsystemState.taskSystemStarted) {
+            initTaskSystem();
+            subsystemState.taskSystemStarted = true;
+        }
+        return;
+    }
+    if (subsystemState.taskSystemStarted) {
+        cleanupTaskSystem();
+        subsystemState.taskSystemStarted = false;
+    }
+}
+
+function setSellSubsystemEnabled(enabled) {
+    if (enabled) {
+        if (!subsystemState.sellLoopStarted) {
+            startSellLoop(60000);
+            subsystemState.sellLoopStarted = true;
+        }
+        return;
+    }
+    if (subsystemState.sellLoopStarted) {
+        stopSellLoop();
+        subsystemState.sellLoopStarted = false;
+    }
+}
+
+function applyRuntimeAccountSettings(patch = {}, options = {}) {
+    const silent = Boolean(options.silent);
+    const runtime = updateRuntimeAccountSettings(patch);
+    const account = runtime.account || {};
+
+    CONFIG.forceLowestLevelCrop = Boolean(account.forceLowestLevelCrop);
+    updateFriendRuntimeSettings({
+        helpOnlyWithExp: account.helpOnlyWithExp,
+        enablePutBadThings: account.enablePutBadThings,
+    });
+
+    if (runtimeSubsystemsReady) {
+        setFarmSubsystemEnabled(Boolean(account.farmEnabled));
+        setFriendSubsystemEnabled(Boolean(account.friendEnabled));
+        setTaskSubsystemEnabled(Boolean(account.taskEnabled));
+        setSellSubsystemEnabled(Boolean(account.sellEnabled));
+    }
+
+    if (!silent) {
+        emitProcessState('settingsUpdated', {
+            scope: 'account',
+            account,
+        });
+    }
+    return account;
+}
+
 function registerIpcHandlers() {
     process.on('message', (msg) => {
         if (!msg || typeof msg !== 'object') return;
         if (msg.type === 'settings:bark') {
             updateRuntimeBarkSettings(msg.payload || {});
             emitProcessState('settingsUpdated', { scope: 'bark' });
+            return;
+        }
+        if (msg.type === 'settings:account') {
+            applyRuntimeAccountSettings(msg.payload || {});
             return;
         }
         if (msg.type === 'rpc:req') {
@@ -150,6 +254,8 @@ async function handleRpcRequest(msg) {
             result = await listFriendsForUi();
         } else if (method === 'friends.op') {
             result = await runManualFriendOp(payload);
+        } else if (method === 'farm.lands') {
+            result = await listLandsForUi();
         } else {
             throw new Error(`unsupported rpc method: ${method}`);
         }
@@ -257,14 +363,14 @@ async function main() {
     connect(options.code, async () => {
         // 处理邀请码 (仅微信环境)
         await processInviteCodes();
-        
-        startFarmCheckLoop();
-        startFriendCheckLoop();
-        initTaskSystem();
-        
-        // 启动时立即检查一次背包
-        setTimeout(() => debugSellFruits(), 5000);
-        startSellLoop(60000);  // 每分钟自动出售仓库果实
+
+        runtimeSubsystemsReady = true;
+        const accountRuntime = applyRuntimeAccountSettings({}, { silent: true });
+
+        // 启动时可选检查一次背包（仅自动出售开启时）
+        if (accountRuntime.sellEnabled) {
+            setTimeout(() => debugSellFruits(), 5000);
+        }
         emitProcessState('running', { mode: 'run' });
     });
 
@@ -273,10 +379,11 @@ async function main() {
         emitProcessState('stopping', { mode: 'run', reason: 'signal' });
         cleanupStatusBar();
         console.log('\n[退出] 正在断开...');
-        stopFarmCheckLoop();
-        stopFriendCheckLoop();
-        cleanupTaskSystem();
-        stopSellLoop();
+        setFarmSubsystemEnabled(false);
+        setFriendSubsystemEnabled(false);
+        setTaskSubsystemEnabled(false);
+        setSellSubsystemEnabled(false);
+        runtimeSubsystemsReady = false;
         cleanup();
         markManualClose();
         const ws = getWs();

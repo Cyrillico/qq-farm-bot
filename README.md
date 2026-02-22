@@ -95,17 +95,23 @@ Web 控制台支持：
 - 日志后端筛选查询（账号/级别/tag/关键字/action）+ 游标分页“加载更多”
 - 账号状态实时展示（平台/昵称/等级/经验/金币/升级还差经验，按账号切换）
 - 最佳作物实时展示（当前选种、当前等级最优、下一级最优）
+- 土地详情视图（每块地阶段、下一阶段剩余时间、缺水/草/虫状态）
 - 好友列表与单好友一键操作（偷/浇水/除草/除虫/放虫/放草/捣乱）
 - 高风险好友操作开关（`allowBadOps`）与二次确认（`confirmDangerous`）
+- 账号级功能开关（自动巡田/好友巡查/任务领取/自动出售/最低等级作物/经验优先帮助/放虫放草）并运行中即时生效
 - Bark 链接与通知分类设置（fatal/network/business）并立即生效
 - Bark 一键测试推送
+- 深色/浅色主题切换（浏览器本地持久化）
 
 新增 API：
 - `GET /api/friends?accountId=<id>`
 - `POST /api/friends/op`
+- `GET /api/lands?accountId=<id>`
 - `GET /api/logs/query`
 - `GET /api/settings/ui`
 - `PUT /api/settings/ui`
+- `GET /api/settings/account?accountId=<id>`
+- `PUT /api/settings/account?accountId=<id>`
 
 多账号使用示例：
 1. 在 Web 页面把 `accountId` 填为 `qq-main`，平台选 QQ，启动。
@@ -226,7 +232,7 @@ node tools/calc-exp-yield.js --input tools/seed-shop-merged-export.json
 │   ├── auth.js            # Web 控制台鉴权（环境变量账号密码 + Cookie 会话）
 │   ├── session-runner.js  # 子进程会话桥接（fork + IPC）
 │   ├── state-store.js     # 内存状态与日志缓存
-│   ├── settings-store.js  # Bark 设置读写与校验
+│   ├── settings-store.js  # Bark/UI/账号功能设置读写与校验
 │   └── public/
 │       ├── index.html     # Web 控制台页面
 │       ├── app.js         # 前端交互逻辑
@@ -235,7 +241,7 @@ node tools/calc-exp-yield.js --input tools/seed-shop-merged-export.json
 │   ├── config.js          # 配置常量与生长阶段枚举
 │   ├── bark.js            # Bark 推送工具（告警发送+去重）
 │   ├── cropAdvisor.js     # 当前等级/下一级最佳作物推荐摘要
-│   ├── runtimeSettings.js # 运行时可热更新设置（Bark）
+│   ├── runtimeSettings.js # 运行时可热更新设置（Bark + 账号功能开关）
 │   ├── uiEvents.js        # Web UI 结构化事件输出
 │   ├── utils.js           # 工具函数 (类型转换/日志/时间同步/sleep)
 │   ├── proto.js           # Protobuf 加载与消息类型管理
@@ -268,7 +274,7 @@ node tools/calc-exp-yield.js --input tools/seed-shop-merged-export.json
 │   └── vps-oneclick.md    # VPS 一键部署详细说明
 ├── tools/                 # 辅助工具
 │   └── analyze-exp-*.js   # 经验效率分析脚本
-├── .qq-farm-ui-settings.example.json # Web UI Bark/UI 设置示例
+├── .qq-farm-ui-settings.example.json # Web UI Bark/UI/账号功能设置示例
 ├── .env.example           # Web UI 环境变量示例（含登录鉴权）
 └── package.json
 ```
@@ -370,12 +376,35 @@ node -e "const { pushBark } = require('./src/bark'); pushBark('测试', '连通�
 - `confirmDangerous=true` 时，前端执行高风险操作会弹确认框。
 - 手动好友操作会写入日志 `action=friend_manual`，可被日志筛选命中。
 
-### src/friend.js
+### 账号级功能开关（Web）
 
 ```javascript
-const HELP_ONLY_WITH_EXP = true;      // 只在有经验时帮助好友（已更新可用）
-const ENABLE_PUT_BAD_THINGS = false;  // 自动巡查中的放虫放草开关（默认关闭）；手动操作由 Web 设置 allowBadOps 控制
+GET /api/settings/account?accountId=qq-main
+PUT /api/settings/account?accountId=qq-main
 ```
+
+`PUT` 请求体（全布尔值，可部分提交，保存后立即下发到运行中的子进程）：
+
+```json
+{
+  "farmEnabled": true,
+  "friendEnabled": true,
+  "taskEnabled": true,
+  "sellEnabled": true,
+  "forceLowestLevelCrop": false,
+  "helpOnlyWithExp": true,
+  "enablePutBadThings": false
+}
+```
+
+- 运行中的账号会通过 IPC 即时应用，无需重启。
+- `enablePutBadThings=false` 时，手动与自动都会拒绝放虫/放草/捣乱动作。
+- `forceLowestLevelCrop=true` 时，会覆盖经验效率推荐，固定选择最低等级可用作物。
+
+### 土地详情 API（Web）
+
+- `GET /api/lands?accountId=<id>`
+- 返回：当前账号已解锁土地列表、每块地阶段与下一阶段剩余时间、缺水/草/虫状态、汇总计数。
 
 ### 公开仓库安全检查
 

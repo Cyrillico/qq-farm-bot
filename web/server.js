@@ -13,6 +13,8 @@ const {
     saveSettings,
     validateBarkSettings,
     validateUiSettings,
+    validateAccountFeatureSettings,
+    getAccountFeatureSettings,
     mergeSettings,
 } = require('./settings-store');
 const {
@@ -199,6 +201,7 @@ function startServer(options = {}) {
         });
         publish('process', stateStore.getAccountSnapshot(accountId).session, accountId);
         sessionManager.applyBarkSettings(accountId, settings.bark);
+        sessionManager.applyAccountSettings(accountId, getAccountFeatureSettings(settings, accountId));
         appendLog(accountId, {
             level: 'info',
             tag: 'WebUI',
@@ -520,6 +523,23 @@ function startServer(options = {}) {
             }
         }
 
+        if (req.method === 'GET' && pathname === '/api/lands') {
+            const rawAccountId = String(reqUrl.searchParams.get('accountId') || '').trim();
+            if (!rawAccountId) {
+                return sendJson(res, 400, { ok: false, error: 'accountId is required' });
+            }
+            const accountId = normalizeAccountId(rawAccountId);
+            try {
+                const data = await sessionManager.listLands(accountId);
+                return sendJson(res, 200, { ok: true, data, accountId });
+            } catch (e) {
+                if (/session not running|runner rpc unavailable/i.test(String(e.message || ''))) {
+                    return sendJson(res, 409, { ok: false, error: e.message });
+                }
+                return sendJson(res, 500, { ok: false, error: e.message });
+            }
+        }
+
         if (req.method === 'POST' && pathname === '/api/friends/op') {
             try {
                 const body = await readJsonBody(req);
@@ -610,6 +630,52 @@ function startServer(options = {}) {
                     force: true,
                 });
                 return sendJson(res, 200, { ok: true, sent });
+            } catch (e) {
+                return sendJson(res, 500, { ok: false, error: e.message });
+            }
+        }
+
+        if (req.method === 'GET' && pathname === '/api/settings/account') {
+            const rawAccountId = String(reqUrl.searchParams.get('accountId') || '').trim();
+            if (!rawAccountId) {
+                return sendJson(res, 400, { ok: false, error: 'accountId is required' });
+            }
+            const accountId = normalizeAccountId(rawAccountId);
+            const accountSettings = getAccountFeatureSettings(settings, accountId);
+            return sendJson(res, 200, { ok: true, accountId, accountSettings });
+        }
+
+        if (req.method === 'PUT' && pathname === '/api/settings/account') {
+            try {
+                const rawAccountId = String(reqUrl.searchParams.get('accountId') || '').trim();
+                if (!rawAccountId) {
+                    return sendJson(res, 400, { ok: false, error: 'accountId is required' });
+                }
+                const accountId = normalizeAccountId(rawAccountId);
+                const body = await readJsonBody(req);
+                const incoming = body && typeof body === 'object' ? body : {};
+                const partialCheck = validateAccountFeatureSettings(incoming, { allowPartial: true });
+                if (!partialCheck.ok) {
+                    return sendJson(res, 400, { ok: false, errors: partialCheck.errors });
+                }
+                const current = getAccountFeatureSettings(settings, accountId);
+                const nextAccountSettings = {
+                    ...current,
+                    ...incoming,
+                };
+                const finalCheck = validateAccountFeatureSettings(nextAccountSettings);
+                if (!finalCheck.ok) {
+                    return sendJson(res, 400, { ok: false, errors: finalCheck.errors });
+                }
+
+                settings = saveSettings(settingsPath, mergeSettings(settings, {
+                    accountFeatures: {
+                        [accountId]: nextAccountSettings,
+                    },
+                }));
+                sessionManager.applyAccountSettings(accountId, nextAccountSettings);
+                publish('settings', { scope: 'account', accountId, accountSettings: nextAccountSettings }, accountId);
+                return sendJson(res, 200, { ok: true, accountId, accountSettings: nextAccountSettings });
             } catch (e) {
                 return sendJson(res, 500, { ok: false, error: e.message });
             }

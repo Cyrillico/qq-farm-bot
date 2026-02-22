@@ -99,6 +99,14 @@ class SessionManager extends EventEmitter {
         return applied;
     }
 
+    applyAccountSettings(accountId, accountSettings) {
+        const id = normalizeAccountId(accountId);
+        const runner = this.runners.get(id);
+        if (!runner) return false;
+        if (typeof runner.applyAccountSettings !== 'function') return false;
+        return runner.applyAccountSettings(accountSettings || {});
+    }
+
     async listFriends(accountId) {
         const id = normalizeAccountId(accountId);
         const runner = this.runners.get(id);
@@ -121,6 +129,18 @@ class SessionManager extends EventEmitter {
             throw new Error('runner rpc unavailable');
         }
         return runner.callRpc('friends.op', payload || {}, 15000);
+    }
+
+    async listLands(accountId) {
+        const id = normalizeAccountId(accountId);
+        const runner = this.runners.get(id);
+        if (!runner || !runner.isRunning()) {
+            throw new Error('session not running');
+        }
+        if (typeof runner.callRpc !== 'function') {
+            throw new Error('runner rpc unavailable');
+        }
+        return runner.callRpc('farm.lands', {}, 10000);
     }
 
     #bindRunner(accountId, runner) {

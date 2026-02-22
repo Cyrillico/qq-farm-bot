@@ -15,5 +15,16 @@
       "allowBadOps": true,
       "confirmDangerous": true
     }
+  },
+  "accountFeatures": {
+    "qq-main": {
+      "farmEnabled": true,
+      "friendEnabled": true,
+      "taskEnabled": true,
+      "sellEnabled": true,
+      "forceLowestLevelCrop": false,
+      "helpOnlyWithExp": true,
+      "enablePutBadThings": false
+    }
   }
 }

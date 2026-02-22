@@ -54,3 +54,13 @@ test('session runner callRpc rejects when rpc response returns error', async () 
 
     await assert.rejects(() => pending, /not allowed/);
 });
+
+test('session runner can send account settings over ipc', () => {
+    const runner = new SessionRunner({ rootDir: process.cwd() });
+    const child = createFakeChild();
+    runner.child = child;
+    const ok = runner.applyAccountSettings({ farmEnabled: false });
+    assert.equal(ok, true);
+    assert.equal(child.sent[0].type, 'settings:account');
+    assert.equal(child.sent[0].payload.farmEnabled, false);
+});

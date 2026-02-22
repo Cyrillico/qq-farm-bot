@@ -6,8 +6,11 @@ const path = require('node:path');
 
 const {
     getDefaultSettings,
+    defaultAccountFeatureSettings,
+    getAccountFeatureSettings,
     validateBarkSettings,
     validateUiSettings,
+    validateAccountFeatureSettings,
     loadSettings,
     saveSettings,
 } = require('../web/settings-store');
@@ -123,4 +126,43 @@ test('validateUiSettings rejects invalid friendOps switches', () => {
         },
     });
     assert.equal(good.ok, true);
+});
+
+test('default settings should include account feature map and defaults', () => {
+    const defaults = getDefaultSettings();
+    assert.deepEqual(defaults.accountFeatures, {});
+    const accountDefaults = defaultAccountFeatureSettings();
+    assert.equal(accountDefaults.farmEnabled, true);
+    assert.equal(accountDefaults.forceLowestLevelCrop, false);
+});
+
+test('getAccountFeatureSettings merges defaults and persisted account values', () => {
+    const defaults = getDefaultSettings();
+    defaults.accountFeatures['qq-main'] = {
+        farmEnabled: false,
+        sellEnabled: false,
+    };
+    const merged = getAccountFeatureSettings(defaults, 'qq-main');
+    assert.equal(merged.farmEnabled, false);
+    assert.equal(merged.sellEnabled, false);
+    assert.equal(merged.friendEnabled, true);
+});
+
+test('validateAccountFeatureSettings supports full and partial checks', () => {
+    const badPartial = validateAccountFeatureSettings({ farmEnabled: 'x' }, { allowPartial: true });
+    assert.equal(badPartial.ok, false);
+
+    const goodPartial = validateAccountFeatureSettings({ farmEnabled: false }, { allowPartial: true });
+    assert.equal(goodPartial.ok, true);
+
+    const goodFull = validateAccountFeatureSettings({
+        farmEnabled: true,
+        friendEnabled: true,
+        taskEnabled: true,
+        sellEnabled: true,
+        forceLowestLevelCrop: false,
+        helpOnlyWithExp: true,
+        enablePutBadThings: false,
+    });
+    assert.equal(goodFull.ok, true);
 });

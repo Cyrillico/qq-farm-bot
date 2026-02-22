@@ -5,6 +5,7 @@ const {
     resetRuntimeSettingsForTest,
     getRuntimeSettings,
     updateRuntimeBarkSettings,
+    updateRuntimeAccountSettings,
 } = require('../src/runtimeSettings');
 
 test('runtime bark settings can be updated partially', () => {
@@ -39,4 +40,16 @@ test('default bark pushUrl should be empty to avoid secret in repository', () =>
     resetRuntimeSettingsForTest();
     const current = getRuntimeSettings();
     assert.equal(current.bark.pushUrl, '');
+});
+
+test('runtime account settings can be updated partially', () => {
+    resetRuntimeSettingsForTest();
+    updateRuntimeAccountSettings({
+        farmEnabled: false,
+        forceLowestLevelCrop: true,
+    });
+    const current = getRuntimeSettings();
+    assert.equal(current.account.farmEnabled, false);
+    assert.equal(current.account.forceLowestLevelCrop, true);
+    assert.equal(current.account.friendEnabled, true);
 });

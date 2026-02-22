@@ -1,22 +1,46 @@
 const MAX_LOG_LINES = 5000;
 const LOG_QUERY_LIMIT = 200;
+const THEME_STORAGE_KEY = 'qq-farm-ui-theme';
 const FRIEND_DANGEROUS_ACTIONS = new Set(['putBug', 'putWeed', 'bad']);
 const VIEW_META = {
   dashboard: { title: '控制台总览', hint: '查看整体运行概览与账号状态分布' },
-  control: { title: '启动控制', hint: '配置账号、平台、模式并启动/停止会话' },
-  status: { title: '账号状态', hint: '查看等级/经验/金币、最佳作物与扫码状态' },
-  friends: { title: '好友操作', hint: '执行好友列表操作与高风险开关配置' },
-  bark: { title: 'Bark 通知', hint: '配置 Bark 链接、分类开关和测试推送' },
-  logs: { title: '日志中心', hint: '按条件筛选日志并加载历史记录' },
+  'account-home': { title: '账号主页', hint: '查看等级/经验/金币、最佳作物与扫码状态' },
+  'account-lands': { title: '土地详情', hint: '查看每块土地作物、生长阶段与需处理状态' },
+  'account-settings': { title: '账号设置', hint: '配置账号、平台、模式并启动/停止会话' },
+  'account-friends': { title: '好友操作', hint: '执行好友列表操作与高风险开关配置' },
+  'account-bark': { title: 'Bark 通知', hint: '配置 Bark 链接、分类开关和测试推送' },
+  'account-logs': { title: '账号日志', hint: '按条件筛选日志并加载历史记录' },
+};
+const VIEW_ALIASES = {
+  lands: 'account-lands',
+  control: 'account-settings',
+  settings: 'account-settings',
+  status: 'account-home',
+  home: 'account-home',
+  friends: 'account-friends',
+  bark: 'account-bark',
+  logs: 'account-logs',
 };
 const DEFAULT_VIEW = 'dashboard';
 const VALID_VIEWS = new Set(Object.keys(VIEW_META));
+const DEFAULT_ACCOUNT_SETTINGS = Object.freeze({
+  farmEnabled: true,
+  friendEnabled: true,
+  taskEnabled: true,
+  sellEnabled: true,
+  forceLowestLevelCrop: false,
+  helpOnlyWithExp: true,
+  enablePutBadThings: false,
+});
 
 const state = {
   sessions: {},
   selectedAccountId: 'default',
   currentView: DEFAULT_VIEW,
+  theme: 'dark',
   bark: null,
+  accountSettings: {},
+  lands: {},
   startPayloads: {},
   ui: {
     friendOps: {
@@ -45,6 +69,8 @@ const els = {
   sideNav: document.getElementById('sideNav'),
   viewTitle: document.getElementById('viewTitle'),
   viewHint: document.getElementById('viewHint'),
+  sidebarAccountList: document.getElementById('sidebarAccountList'),
+  themeToggleBtn: document.getElementById('themeToggleBtn'),
   viewPanels: Array.from(document.querySelectorAll('.view-panel')),
   sideNavButtons: Array.from(document.querySelectorAll('[data-view-nav]')),
   overviewTotal: document.getElementById('overviewTotal'),
@@ -75,6 +101,15 @@ const els = {
   startBtn: document.getElementById('startBtn'),
   stopBtn: document.getElementById('stopBtn'),
   clearLogsBtn: document.getElementById('clearLogsBtn'),
+  featureFarmEnabled: document.getElementById('featureFarmEnabled'),
+  featureFriendEnabled: document.getElementById('featureFriendEnabled'),
+  featureTaskEnabled: document.getElementById('featureTaskEnabled'),
+  featureSellEnabled: document.getElementById('featureSellEnabled'),
+  featureForceLowestLevelCrop: document.getElementById('featureForceLowestLevelCrop'),
+  featureHelpOnlyWithExp: document.getElementById('featureHelpOnlyWithExp'),
+  featureEnablePutBadThings: document.getElementById('featureEnablePutBadThings'),
+  saveAccountSettingsBtn: document.getElementById('saveAccountSettingsBtn'),
+  accountSettingsStatus: document.getElementById('accountSettingsStatus'),
   sessionStatus: document.getElementById('sessionStatus'),
   metricPlatform: document.getElementById('metricPlatform'),
   metricName: document.getElementById('metricName'),
@@ -108,6 +143,10 @@ const els = {
   refreshFriendsBtn: document.getElementById('refreshFriendsBtn'),
   friendUiStatus: document.getElementById('friendUiStatus'),
   friendList: document.getElementById('friendList'),
+  refreshLandsBtn: document.getElementById('refreshLandsBtn'),
+  landsStatus: document.getElementById('landsStatus'),
+  landsSummary: document.getElementById('landsSummary'),
+  landsList: document.getElementById('landsList'),
   logLevel: document.getElementById('logLevel'),
   logTag: document.getElementById('logTag'),
   logKeyword: document.getElementById('logKeyword'),
@@ -131,8 +170,42 @@ function setConsoleVisible(visible) {
   els.consoleShell.classList.toggle('hidden', !visible);
 }
 
-function normalizeViewKey(raw) {
+function normalizeTheme(raw) {
   const value = String(raw || '').trim().toLowerCase();
+  return value === 'light' ? 'light' : 'dark';
+}
+
+function applyTheme(theme) {
+  const next = normalizeTheme(theme);
+  state.theme = next;
+  document.body.setAttribute('data-theme', next);
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, next);
+  } catch (e) {
+  }
+  setText(els.themeToggleBtn, next === 'dark' ? '切换浅色' : '切换深色');
+}
+
+function loadThemeFromStorage() {
+  let picked = 'dark';
+  try {
+    picked = normalizeTheme(localStorage.getItem(THEME_STORAGE_KEY));
+  } catch (e) {
+  }
+  applyTheme(picked);
+}
+
+function getAccountSettingsFor(accountId) {
+  const id = normalizeAccountId(accountId);
+  return {
+    ...DEFAULT_ACCOUNT_SETTINGS,
+    ...(state.accountSettings[id] || {}),
+  };
+}
+
+function normalizeViewKey(raw) {
+  const input = String(raw || '').trim().toLowerCase();
+  const value = VIEW_ALIASES[input] || input;
   if (VALID_VIEWS.has(value)) return value;
   return DEFAULT_VIEW;
 }
@@ -214,6 +287,12 @@ function setCurrentView(view, replace = false) {
   syncHashState(false);
   if (!changed) {
     renderView();
+  }
+  if (nextView === 'account-lands') {
+    loadLands(state.selectedAccountId);
+  }
+  if (nextView === 'account-settings') {
+    loadAccountSettings(state.selectedAccountId);
   }
 }
 
@@ -397,6 +476,38 @@ function renderSessionList() {
   els.sessionList.innerHTML = html;
 }
 
+function renderSidebarAccountList() {
+  if (!els.sidebarAccountList) return;
+  const ids = getSortedAccountIds();
+  if (ids.length === 0) {
+    els.sidebarAccountList.innerHTML = '<p class="sidebar-account-empty">暂无账号</p>';
+    return;
+  }
+
+  const html = ids.map((accountId) => {
+    const item = ensureSession(accountId);
+    const status = item.session || {};
+    const profile = item.status || {};
+    const stateType = getSessionStateType(status);
+    const dotClass = stateType === 'running'
+      ? 'dot-running'
+      : stateType === 'error'
+        ? 'dot-error'
+        : 'dot-stopped';
+    const active = accountId === state.selectedAccountId ? ' active' : '';
+    const level = Number.isFinite(profile.level) ? profile.level : '-';
+    const name = profile.name ? ` · ${escapeHtml(profile.name)}` : '';
+    return `
+      <button class="sidebar-account-item${active}" type="button" data-sidebar-account-id="${escapeHtml(accountId)}">
+        <span class="session-dot ${dotClass}"></span>
+        <span class="sidebar-account-main">${escapeHtml(accountId)}${name}</span>
+        <span class="sidebar-account-level">Lv${level}</span>
+      </button>
+    `;
+  }).join('');
+  els.sidebarAccountList.innerHTML = html;
+}
+
 function renderSession() {
   const current = getCurrentSession();
   const s = current.session || {};
@@ -575,6 +686,29 @@ function renderUiSettings() {
   els.confirmDangerous.checked = Boolean(friendOps.confirmDangerous);
 }
 
+function renderAccountSettings() {
+  const account = getAccountSettingsFor(state.selectedAccountId);
+  els.featureFarmEnabled.checked = Boolean(account.farmEnabled);
+  els.featureFriendEnabled.checked = Boolean(account.friendEnabled);
+  els.featureTaskEnabled.checked = Boolean(account.taskEnabled);
+  els.featureSellEnabled.checked = Boolean(account.sellEnabled);
+  els.featureForceLowestLevelCrop.checked = Boolean(account.forceLowestLevelCrop);
+  els.featureHelpOnlyWithExp.checked = Boolean(account.helpOnlyWithExp);
+  els.featureEnablePutBadThings.checked = Boolean(account.enablePutBadThings);
+}
+
+function collectAccountSettingsPayload() {
+  return {
+    farmEnabled: els.featureFarmEnabled.checked,
+    friendEnabled: els.featureFriendEnabled.checked,
+    taskEnabled: els.featureTaskEnabled.checked,
+    sellEnabled: els.featureSellEnabled.checked,
+    forceLowestLevelCrop: els.featureForceLowestLevelCrop.checked,
+    helpOnlyWithExp: els.featureHelpOnlyWithExp.checked,
+    enablePutBadThings: els.featureEnablePutBadThings.checked,
+  };
+}
+
 function renderFriendList() {
   const accountId = normalizeAccountId(state.selectedAccountId);
   const friends = state.friends[accountId] || [];
@@ -609,6 +743,63 @@ function renderFriendList() {
   els.friendList.innerHTML = html;
 }
 
+function formatRemainSeconds(sec) {
+  const n = Number(sec || 0);
+  if (!Number.isFinite(n) || n <= 0) return '-';
+  if (n < 60) return `${n}s`;
+  const m = Math.floor(n / 60);
+  const s = n % 60;
+  if (m < 60) return `${m}m ${s}s`;
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${h}h ${mm}m`;
+}
+
+function renderLands() {
+  const accountId = normalizeAccountId(state.selectedAccountId);
+  const data = state.lands[accountId] || null;
+  if (!data || !Array.isArray(data.lands) || data.lands.length === 0) {
+    els.landsSummary.innerHTML = '<p class="friend-empty">暂无土地数据，点击“刷新土地详情”加载</p>';
+    els.landsList.innerHTML = '';
+    return;
+  }
+
+  const summary = data.summary || {};
+  els.landsSummary.innerHTML = `
+    <div class="cards lands-summary-cards">
+      <article class="card"><h3>已解锁</h3><p>${summary.unlocked ?? '-'}</p></article>
+      <article class="card"><h3>可收获</h3><p>${summary.harvestable ?? '-'}</p></article>
+      <article class="card"><h3>空地</h3><p>${summary.empty ?? '-'}</p></article>
+      <article class="card"><h3>枯死</h3><p>${summary.dead ?? '-'}</p></article>
+      <article class="card"><h3>缺水</h3><p>${summary.needWater ?? '-'}</p></article>
+      <article class="card"><h3>有草</h3><p>${summary.needWeed ?? '-'}</p></article>
+      <article class="card"><h3>有虫</h3><p>${summary.needBug ?? '-'}</p></article>
+      <article class="card"><h3>生长中</h3><p>${summary.growing ?? '-'}</p></article>
+    </div>
+  `;
+
+  const html = data.lands.map((land) => {
+    const tags = [];
+    if (land.phase === 6) tags.push('<span class="land-tag tag-ok">可收获</span>');
+    if (land.phase === 7) tags.push('<span class="land-tag tag-danger">枯死</span>');
+    if (land.needs && land.needs.water) tags.push('<span class="land-tag tag-water">缺水</span>');
+    if (land.needs && land.needs.weed) tags.push('<span class="land-tag tag-danger">有草</span>');
+    if (land.needs && land.needs.bug) tags.push('<span class="land-tag tag-danger">有虫</span>');
+    if (land.isEmpty) tags.push('<span class="land-tag">空地</span>');
+    return `
+      <article class="land-item">
+        <div class="land-head">
+          <h3>土地 #${land.id}</h3>
+          <p>${escapeHtml(land.plantName || '-')} | ${escapeHtml(land.phaseName || '-')}</p>
+        </div>
+        <p class="land-meta">下阶段：${escapeHtml(land.nextPhaseName || '-')} | 剩余：${formatRemainSeconds(land.nextPhaseInSec)}</p>
+        <div class="land-tags">${tags.join('')}</div>
+      </article>
+    `;
+  }).join('');
+  els.landsList.innerHTML = html;
+}
+
 function renderBarkSettings() {
   const bark = state.bark;
   if (!bark) return;
@@ -622,14 +813,19 @@ function renderBarkSettings() {
 }
 
 function refreshAccountDependentData(accountId) {
+  loadAccountSettings(accountId);
   resetLogView();
   queryLogsFromApi({ append: false });
   if (shouldLoadFriends(accountId)) {
     loadFriends();
+    loadLands(accountId);
   } else {
     state.friends[accountId] = [];
+    state.lands[accountId] = null;
     renderFriendList();
+    renderLands();
     setText(els.friendUiStatus, '账号未进入运行状态，登录成功后再刷新好友');
+    setText(els.landsStatus, '账号未运行，无法获取土地详情');
   }
 }
 
@@ -653,12 +849,15 @@ function refreshPanels() {
   renderView();
   renderOverview();
   renderSessionList();
+  renderSidebarAccountList();
   renderSession();
+  renderAccountSettings();
   renderStatus();
   renderBestCrop();
   renderQr();
   renderUiSettings();
   renderFriendList();
+  renderLands();
   renderLogs();
   renderLogsStatus();
 }
@@ -883,14 +1082,20 @@ async function bootstrap() {
     : state.ui;
   renderBarkSettings();
   renderUiSettings();
+  await loadAccountSettings(state.selectedAccountId);
   refreshPanels();
   resetLogView();
   await queryLogsFromApi({ append: false });
   if (shouldLoadFriends(state.selectedAccountId)) {
-    await loadFriends();
+    await Promise.all([
+      loadFriends(state.selectedAccountId),
+      loadLands(state.selectedAccountId),
+    ]);
   } else {
     state.friends[state.selectedAccountId] = [];
+    state.lands[state.selectedAccountId] = null;
     setText(els.friendUiStatus, '账号未进入运行状态，登录成功后再刷新好友');
+    setText(els.landsStatus, '账号未运行，无法获取土地详情');
   }
 
   setText(els.serverMeta, `服务监听：${initial.meta.host}:${initial.meta.port}`);
@@ -1007,6 +1212,19 @@ function connectEvents() {
         return;
       }
 
+      if (type === 'settings' && payload.scope === 'account' && payload.accountId && payload.accountSettings) {
+        const sid = normalizeAccountId(payload.accountId);
+        state.accountSettings[sid] = {
+          ...DEFAULT_ACCOUNT_SETTINGS,
+          ...payload.accountSettings,
+        };
+        if (sid === state.selectedAccountId) {
+          renderAccountSettings();
+          setText(els.accountSettingsStatus, '账号功能设置已同步');
+        }
+        return;
+      }
+
       if (type === 'logsCleared') {
         if (frame.accountId) {
           ensureSession(accountId).logs = [];
@@ -1026,6 +1244,8 @@ function connectEvents() {
           const deletedId = normalizeAccountId(rawDeletedId);
           delete state.sessions[deletedId];
           delete state.friends[deletedId];
+          delete state.lands[deletedId];
+          delete state.accountSettings[deletedId];
           delete state.startPayloads[deletedId];
           if (state.selectedAccountId === deletedId) {
             const ids = Object.keys(state.sessions);
@@ -1122,28 +1342,104 @@ async function onClearLogs() {
   }
 }
 
-async function loadFriends() {
+async function loadAccountSettings(accountId = state.selectedAccountId) {
+  const id = normalizeAccountId(accountId);
+  try {
+    const ret = await fetchJson(`/api/settings/account?accountId=${encodeURIComponent(id)}`);
+    state.accountSettings[id] = {
+      ...DEFAULT_ACCOUNT_SETTINGS,
+      ...((ret && ret.accountSettings) || {}),
+    };
+    if (id === state.selectedAccountId) {
+      renderAccountSettings();
+      setText(els.accountSettingsStatus, '');
+    }
+  } catch (e) {
+    if (id === state.selectedAccountId) {
+      setText(els.accountSettingsStatus, `加载账号设置失败：${e.message}`);
+    }
+  }
+}
+
+async function onSaveAccountSettings() {
   const accountId = normalizeAccountId(state.selectedAccountId);
-  if (!shouldLoadFriends(accountId)) {
-    state.friends[accountId] = [];
-    renderFriendList();
-    setText(els.friendUiStatus, '账号未进入运行状态，登录成功后再刷新好友');
+  try {
+    els.saveAccountSettingsBtn.disabled = true;
+    const payload = collectAccountSettingsPayload();
+    const ret = await fetchJson(`/api/settings/account?accountId=${encodeURIComponent(accountId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    state.accountSettings[accountId] = {
+      ...DEFAULT_ACCOUNT_SETTINGS,
+      ...((ret && ret.accountSettings) || {}),
+    };
+    renderAccountSettings();
+    setText(els.accountSettingsStatus, '账号功能设置已保存并立即生效');
+  } catch (e) {
+    setText(els.accountSettingsStatus, `保存失败：${e.message}`);
+  } finally {
+    els.saveAccountSettingsBtn.disabled = false;
+  }
+}
+
+async function loadLands(accountId = state.selectedAccountId) {
+  const id = normalizeAccountId(accountId);
+  if (!shouldLoadFriends(id)) {
+    state.lands[id] = null;
+    if (id === state.selectedAccountId) {
+      renderLands();
+      setText(els.landsStatus, '账号未运行，无法获取土地详情');
+    }
+    return;
+  }
+  try {
+    els.refreshLandsBtn.disabled = true;
+    const ret = await fetchJson(`/api/lands?accountId=${encodeURIComponent(id)}`);
+    state.lands[id] = ret.data || null;
+    if (id === state.selectedAccountId) {
+      renderLands();
+      const count = Array.isArray((ret.data || {}).lands) ? ret.data.lands.length : 0;
+      setText(els.landsStatus, `已加载 ${count} 块已解锁土地`);
+    }
+  } catch (e) {
+    if (id === state.selectedAccountId) {
+      setText(els.landsStatus, `加载土地失败：${e.message}`);
+      renderLands();
+    }
+  } finally {
+    els.refreshLandsBtn.disabled = false;
+  }
+}
+
+async function loadFriends(accountId = state.selectedAccountId) {
+  const id = normalizeAccountId(accountId);
+  if (!shouldLoadFriends(id)) {
+    state.friends[id] = [];
+    if (id === state.selectedAccountId) {
+      renderFriendList();
+      setText(els.friendUiStatus, '账号未进入运行状态，登录成功后再刷新好友');
+    }
     return;
   }
   try {
     els.refreshFriendsBtn.disabled = true;
-    const ret = await fetchJson(`/api/friends?accountId=${encodeURIComponent(accountId)}`);
-    state.friends[accountId] = Array.isArray(ret.data) ? ret.data : [];
-    renderFriendList();
-    setText(els.friendUiStatus, `已加载 ${state.friends[accountId].length} 位好友`);
+    const ret = await fetchJson(`/api/friends?accountId=${encodeURIComponent(id)}`);
+    state.friends[id] = Array.isArray(ret.data) ? ret.data : [];
+    if (id === state.selectedAccountId) {
+      renderFriendList();
+      setText(els.friendUiStatus, `已加载 ${state.friends[id].length} 位好友`);
+    }
   } catch (e) {
     const raw = String(e && e.message ? e.message : '');
-    if (/\(404\)/.test(raw)) {
-      setText(els.friendUiStatus, '加载好友失败：后端不支持 /api/friends（请更新并重启 VPS 服务）');
-    } else {
-      setText(els.friendUiStatus, `加载好友失败：${raw}`);
+    if (id === state.selectedAccountId) {
+      if (/\(404\)/.test(raw)) {
+        setText(els.friendUiStatus, '加载好友失败：后端不支持 /api/friends（请更新并重启 VPS 服务）');
+      } else {
+        setText(els.friendUiStatus, `加载好友失败：${raw}`);
+      }
+      renderFriendList();
     }
-    renderFriendList();
   } finally {
     els.refreshFriendsBtn.disabled = false;
   }
@@ -1306,6 +1602,8 @@ function onSessionListClick(event) {
         if (ret && ret.removed) {
           delete state.sessions[accountId];
           delete state.friends[accountId];
+          delete state.lands[accountId];
+          delete state.accountSettings[accountId];
           delete state.startPayloads[accountId];
           const ids = Object.keys(state.sessions);
           const next = ids[0] || 'default';
@@ -1358,6 +1656,20 @@ function bindEvents() {
       setCurrentView(btn.dataset.viewNav);
     });
   }
+  if (els.sidebarAccountList) {
+    els.sidebarAccountList.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-sidebar-account-id]');
+      if (!btn) return;
+      const accountId = normalizeAccountId(btn.dataset.sidebarAccountId);
+      setSelectedAccount(accountId, { syncHash: true, loadData: true });
+    });
+  }
+  if (els.themeToggleBtn) {
+    els.themeToggleBtn.addEventListener('click', () => {
+      const next = state.theme === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+    });
+  }
 
   els.mode.addEventListener('change', applyModeVisibility);
   els.loginBtn.addEventListener('click', onLogin);
@@ -1371,10 +1683,12 @@ function bindEvents() {
   els.startBtn.addEventListener('click', onStart);
   els.stopBtn.addEventListener('click', onStop);
   els.clearLogsBtn.addEventListener('click', onClearLogs);
+  els.saveAccountSettingsBtn.addEventListener('click', onSaveAccountSettings);
   els.saveBarkBtn.addEventListener('click', onSaveBark);
   els.testBarkBtn.addEventListener('click', onTestBark);
   els.saveFriendUiBtn.addEventListener('click', onSaveFriendUi);
   els.refreshFriendsBtn.addEventListener('click', loadFriends);
+  els.refreshLandsBtn.addEventListener('click', () => loadLands(state.selectedAccountId));
   els.refreshQrBtn.addEventListener('click', onRefreshQr);
   els.switchQrBtn.addEventListener('click', onSwitchQr);
   els.applyLogFiltersBtn.addEventListener('click', onApplyLogFilters);
@@ -1411,10 +1725,18 @@ function onHashChange() {
   refreshPanels();
   if (ret.accountChanged) {
     refreshAccountDependentData(state.selectedAccountId);
+    return;
+  }
+  if (ret.viewChanged && state.currentView === 'account-lands') {
+    loadLands(state.selectedAccountId);
+  }
+  if (ret.viewChanged && state.currentView === 'account-settings') {
+    loadAccountSettings(state.selectedAccountId);
   }
 }
 
 async function main() {
+  loadThemeFromStorage();
   applyModeVisibility();
   renderView();
   bindEvents();

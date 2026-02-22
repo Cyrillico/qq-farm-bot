@@ -48,6 +48,11 @@ class FakeRunner extends EventEmitter {
         this.applied.push(settings);
         return true;
     }
+
+    applyAccountSettings(settings) {
+        this.applied.push(settings);
+        return true;
+    }
 }
 
 test('session manager supports multi-account start and bark broadcast', async () => {

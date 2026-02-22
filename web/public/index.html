@@ -16,7 +16,10 @@
     <header class="hero">
       <div class="hero-row">
         <h1>QQ 农场 Web 控制台</h1>
-        <button id="logoutBtn" class="btn hidden" type="button">退出登录</button>
+        <div class="hero-actions">
+          <button id="themeToggleBtn" class="btn" type="button">切换浅色</button>
+          <button id="logoutBtn" class="btn hidden" type="button">退出登录</button>
+        </div>
       </div>
       <p>侧边栏菜单管理模式（Phase A）</p>
     </header>
@@ -46,12 +49,17 @@
         </div>
         <nav id="sideNav" class="side-nav">
           <button class="side-item active" type="button" data-view-nav="dashboard">总览</button>
-          <button class="side-item" type="button" data-view-nav="control">启动控制</button>
-          <button class="side-item" type="button" data-view-nav="status">账号状态</button>
-          <button class="side-item" type="button" data-view-nav="friends">好友操作</button>
-          <button class="side-item" type="button" data-view-nav="bark">Bark 通知</button>
-          <button class="side-item" type="button" data-view-nav="logs">日志中心</button>
+          <button class="side-item" type="button" data-view-nav="account-home">账号主页</button>
+          <button class="side-item" type="button" data-view-nav="account-lands">土地详情</button>
+          <button class="side-item" type="button" data-view-nav="account-settings">账号设置</button>
+          <button class="side-item" type="button" data-view-nav="account-friends">好友操作</button>
+          <button class="side-item" type="button" data-view-nav="account-bark">Bark 通知</button>
+          <button class="side-item" type="button" data-view-nav="account-logs">账号日志</button>
         </nav>
+        <section class="sidebar-accounts">
+          <h3>账号列表</h3>
+          <div id="sidebarAccountList" class="sidebar-account-list"></div>
+        </section>
         <div class="sidebar-meta">
           <p id="serverMeta">准备连接...</p>
         </div>
@@ -88,8 +96,8 @@
           <p class="status-line">建议流程：先在“启动控制”启动账号，再到“账号状态/日志中心”查看运行信息。</p>
         </section>
 
-        <section class="panel control-panel view-panel" data-view="control">
-          <h2>启动控制</h2>
+        <section class="panel control-panel view-panel" data-view="account-settings">
+          <h2>账号设置</h2>
           <div class="grid two">
             <label>
               账号标识（accountId）
@@ -164,13 +172,29 @@
             <button id="stopBtn" class="btn btn-danger">停止</button>
             <button id="clearLogsBtn" class="btn">清空日志</button>
           </div>
+          <div class="stack feature-settings">
+            <p class="mini-title">运行功能开关（立即生效）</p>
+            <div class="grid two">
+              <label class="checkbox"><input id="featureFarmEnabled" type="checkbox" /><span>自动巡田</span></label>
+              <label class="checkbox"><input id="featureFriendEnabled" type="checkbox" /><span>自动好友巡查</span></label>
+              <label class="checkbox"><input id="featureTaskEnabled" type="checkbox" /><span>自动任务领取</span></label>
+              <label class="checkbox"><input id="featureSellEnabled" type="checkbox" /><span>自动仓库出售</span></label>
+              <label class="checkbox"><input id="featureForceLowestLevelCrop" type="checkbox" /><span>固定最低等级作物</span></label>
+              <label class="checkbox"><input id="featureHelpOnlyWithExp" type="checkbox" /><span>仅有经验时帮好友</span></label>
+              <label class="checkbox"><input id="featureEnablePutBadThings" type="checkbox" /><span>允许放虫放草捣乱</span></label>
+            </div>
+            <div class="actions">
+              <button id="saveAccountSettingsBtn" class="btn">保存账号功能设置</button>
+            </div>
+            <p id="accountSettingsStatus" class="status-line"></p>
+          </div>
           <p id="sessionStatus" class="status-line">状态：idle</p>
           <div id="sessionList" class="session-list"></div>
           <p class="status-line">提示：点击账号卡片可快速切换，绿点=运行中，红点=未运行/异常</p>
         </section>
 
-        <section class="panel metrics view-panel" data-view="status">
-          <h2>账号状态</h2>
+        <section class="panel metrics view-panel" data-view="account-home">
+          <h2>账号主页</h2>
           <div class="cards">
             <article class="card">
               <h3>实时信息</h3>
@@ -204,7 +228,7 @@
           </div>
         </section>
 
-        <section class="panel friend-panel view-panel" data-view="friends">
+        <section class="panel friend-panel view-panel" data-view="account-friends">
           <h2>好友操作</h2>
           <div class="grid two">
             <label class="checkbox">
@@ -224,7 +248,17 @@
           <div id="friendList" class="friend-list"></div>
         </section>
 
-        <section class="panel bark-panel view-panel" data-view="bark">
+        <section class="panel lands-panel view-panel" data-view="account-lands">
+          <h2>土地详情</h2>
+          <div class="actions">
+            <button id="refreshLandsBtn" class="btn btn-primary" type="button">刷新土地详情</button>
+          </div>
+          <p id="landsStatus" class="status-line"></p>
+          <div id="landsSummary" class="lands-summary"></div>
+          <div id="landsList" class="lands-list"></div>
+        </section>
+
+        <section class="panel bark-panel view-panel" data-view="account-bark">
           <h2>Bark 设置</h2>
           <div class="grid two">
             <label class="checkbox">
@@ -261,7 +295,7 @@
           <p id="barkStatus" class="status-line"></p>
         </section>
 
-        <section class="panel logs-panel view-panel" data-view="logs">
+        <section class="panel logs-panel view-panel" data-view="account-logs">
           <h2>实时日志</h2>
           <div class="grid four">
             <label>
