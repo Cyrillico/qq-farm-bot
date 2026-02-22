@@ -194,6 +194,24 @@ function canOperateAny(opIds) {
     return known.some((id) => canOperate(id));
 }
 
+function pickBestOpId(opIds) {
+    const ids = Array.isArray(opIds) ? opIds : [];
+    const known = ids.filter((id) => operationLimits.has(id));
+    if (known.length === 0) return 0;
+
+    let picked = known[0];
+    let pickedLeft = getRemainingTimes(picked);
+    for (let i = 1; i < known.length; i++) {
+        const id = known[i];
+        const left = getRemainingTimes(id);
+        if (left > pickedLeft) {
+            picked = id;
+            pickedLeft = left;
+        }
+    }
+    return picked;
+}
+
 /**
  * 帮助操作前调用：记录当前 dayExpTimes，操作后对比
  */
@@ -214,15 +232,9 @@ function getRemainingTimes(opId) {
 }
 
 function getRemainingTimesAny(opIds) {
-    const ids = Array.isArray(opIds) ? opIds : [];
-    const known = ids.filter((id) => operationLimits.has(id));
-    if (known.length === 0) return 999;
-    let minLeft = 999;
-    for (const id of known) {
-        const left = getRemainingTimes(id);
-        if (left < minLeft) minLeft = left;
-    }
-    return minLeft;
+    const pickedId = pickBestOpId(opIds);
+    if (!pickedId) return 999;
+    return getRemainingTimes(pickedId);
 }
 
 /**
@@ -345,7 +357,8 @@ function normalizeFriendName(friend, fallbackGid) {
     return friend.remark || friend.name || `GID:${fallbackGid}`;
 }
 
-function analyzeFriendLands(lands, myGid, friendName = '') {
+function analyzeFriendLands(lands, myGid, friendName = '', options = {}) {
+    const relaxedBadOps = Boolean(options && options.relaxedBadOps);
     const result = {
         stealable: [],   // 可偷
         stealableInfo: [],  // 可偷植物信息 { landId, plantId, name }
@@ -411,10 +424,16 @@ function analyzeFriendLands(lands, myGid, friendName = '') {
         const weedWindowReady = weedsTime > 0 && weedsTime <= nowSec;
         const insectWindowReady = insectTime > 0 && insectTime <= nowSec;
 
-        if (weedOwners.length === 0 && weedWindowReady && !iAlreadyPutWeed) {
+        // 严格模式: 仅在时窗到达且当前无草/虫时尝试
+        // 宽松模式(手动操作回退): 当严格模式筛空时，允许按“未被我放过 + 拥有者<2”再尝试一次
+        const canPutWeedStrict = weedOwners.length === 0 && weedWindowReady;
+        const canPutBugStrict = insectOwners.length === 0 && insectWindowReady;
+        const canPutWeedRelaxed = weedOwners.length < 2;
+        const canPutBugRelaxed = insectOwners.length < 2;
+        if (!iAlreadyPutWeed && (canPutWeedStrict || (relaxedBadOps && canPutWeedRelaxed))) {
             result.canPutWeed.push(id);
         }
-        if (insectOwners.length === 0 && insectWindowReady && !iAlreadyPutBug) {
+        if (!iAlreadyPutBug && (canPutBugStrict || (relaxedBadOps && canPutBugRelaxed))) {
             result.canPutBug.push(id);
         }
     }
@@ -534,6 +553,9 @@ async function runManualFriendOpCore({ gid, action }) {
     try {
         const lands = enterReply.lands || [];
         const status = analyzeFriendLands(lands, myGid, friendName);
+        const relaxedStatus = (pickedAction === 'putBug' || pickedAction === 'putWeed' || pickedAction === 'bad')
+            ? analyzeFriendLands(lands, myGid, friendName, { relaxedBadOps: true })
+            : null;
 
         if (pickedAction === 'steal') {
             counts.steal = await executeLandBatch(targetGid, status.stealable, stealHarvest);
@@ -547,22 +569,34 @@ async function runManualFriendOpCore({ gid, action }) {
             markExpCheck(10006);
             counts.insecticide = await executeLandBatch(targetGid, status.needBug, helpInsecticide);
         } else if (pickedAction === 'putBug') {
+            const baseIds = status.canPutBug.length > 0
+                ? status.canPutBug
+                : ((relaxedStatus && relaxedStatus.canPutBug) || []);
             const ids = canOperateAny(BAD_ACTION_LIMIT_IDS.putBug)
-                ? status.canPutBug.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putBug))
+                ? baseIds.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putBug))
                 : [];
             counts.putBug = await executeLandBatch(targetGid, ids, putInsects);
         } else if (pickedAction === 'putWeed') {
+            const baseIds = status.canPutWeed.length > 0
+                ? status.canPutWeed
+                : ((relaxedStatus && relaxedStatus.canPutWeed) || []);
             const ids = canOperateAny(BAD_ACTION_LIMIT_IDS.putWeed)
-                ? status.canPutWeed.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putWeed))
+                ? baseIds.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putWeed))
                 : [];
             counts.putWeed = await executeLandBatch(targetGid, ids, putWeeds);
         } else if (pickedAction === 'bad') {
+            const baseBugIds = status.canPutBug.length > 0
+                ? status.canPutBug
+                : ((relaxedStatus && relaxedStatus.canPutBug) || []);
             const bugIds = canOperateAny(BAD_ACTION_LIMIT_IDS.putBug)
-                ? status.canPutBug.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putBug))
+                ? baseBugIds.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putBug))
                 : [];
             counts.putBug = await executeLandBatch(targetGid, bugIds, putInsects);
+            const baseWeedIds = status.canPutWeed.length > 0
+                ? status.canPutWeed
+                : ((relaxedStatus && relaxedStatus.canPutWeed) || []);
             const weedIds = canOperateAny(BAD_ACTION_LIMIT_IDS.putWeed)
-                ? status.canPutWeed.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putWeed))
+                ? baseWeedIds.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putWeed))
                 : [];
             counts.putWeed = await executeLandBatch(targetGid, weedIds, putWeeds);
         }

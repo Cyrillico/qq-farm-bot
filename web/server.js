@@ -33,6 +33,20 @@ const { updateRuntimeBarkSettings } = require('../src/runtimeSettings');
 const { pushBark } = require('../src/bark');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const SESSION_LIFECYCLE_STATUSES = new Set([
+    'idle',
+    'starting',
+    'running',
+    'stopping',
+    'stopped',
+    'error',
+]);
+
+function normalizeSessionLifecycleStatus(value) {
+    const text = String(value || '').trim().toLowerCase();
+    if (!SESSION_LIFECYCLE_STATUSES.has(text)) return '';
+    return text;
+}
 
 function readJsonBody(req) {
     return new Promise((resolve, reject) => {
@@ -245,8 +259,12 @@ function startServer(options = {}) {
         if (type === 'process') {
             const p = payload || {};
             const next = {};
-            if (p.state) next.status = p.state;
-            if (typeof p.message === 'string') next.lastError = p.message;
+            const normalizedState = normalizeSessionLifecycleStatus(p.state);
+            if (normalizedState) next.status = normalizedState;
+            if (typeof p.message === 'string' && normalizedState === 'error') {
+                next.lastError = p.message;
+            }
+            if (Object.keys(next).length === 0) return;
             stateStore.setSession(accountId, next);
             publish('process', stateStore.getAccountSnapshot(accountId).session, accountId);
             return;

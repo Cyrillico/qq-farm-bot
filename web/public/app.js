@@ -38,6 +38,14 @@ const DEFAULT_ACCOUNT_SETTINGS = Object.freeze({
   autoFertilize: true,
   autoBuyFertilizer: true,
 });
+const SESSION_LIFECYCLE_STATUSES = new Set([
+  'idle',
+  'starting',
+  'running',
+  'stopping',
+  'stopped',
+  'error',
+]);
 
 const state = {
   sessions: {},
@@ -414,15 +422,25 @@ function getCurrentSession() {
   return ensureSession(state.selectedAccountId);
 }
 
+function normalizeSessionLifecycleStatus(value) {
+  const text = String(value || '').trim().toLowerCase();
+  if (!SESSION_LIFECYCLE_STATUSES.has(text)) return '';
+  return text;
+}
+
 function getSessionStateType(session) {
-  const status = String((session && session.status) || 'idle').toLowerCase();
+  const status = normalizeSessionLifecycleStatus((session && session.status) || '');
   if (['starting', 'running', 'stopping'].includes(status)) {
     return 'running';
   }
   if (['error', 'failed', 'crashed'].includes(status)) {
     return 'error';
   }
-  if (session && session.lastError && status !== 'idle') {
+  const pid = Number((session && session.pid) || 0);
+  if (!status && Number.isFinite(pid) && pid > 0) {
+    return 'running';
+  }
+  if (session && session.lastError && status !== 'idle' && status !== 'stopped') {
     return 'error';
   }
   return 'stopped';
@@ -1183,7 +1201,10 @@ function connectEvents() {
         const session = ensureSession(accountId);
         session.session = { ...(session.session || {}), ...payload };
         if (payload && payload.state && !payload.status) {
-          session.session.status = payload.state;
+          const normalizedState = normalizeSessionLifecycleStatus(payload.state);
+          if (normalizedState) {
+            session.session.status = normalizedState;
+          }
         }
         if (payload && payload.state === 'running' && session.qr && session.qr.qrUrl) {
           session.qr = {
