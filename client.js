@@ -13,7 +13,7 @@
 
 const { CONFIG } = require('./src/config');
 const { loadProto } = require('./src/proto');
-const { connect, cleanup, getWs, markManualClose } = require('./src/network');
+const { connect, cleanup, getWs, markManualClose, networkEvents } = require('./src/network');
 const {
     startFarmCheckLoop,
     stopFarmCheckLoop,
@@ -150,6 +150,7 @@ const subsystemState = {
     sellLoopStarted: false,
 };
 let runtimeSubsystemsReady = false;
+let unexpectedWsClosing = false;
 
 function setFarmSubsystemEnabled(enabled) {
     if (enabled) {
@@ -207,6 +208,14 @@ function setSellSubsystemEnabled(enabled) {
     }
 }
 
+function stopRuntimeSubsystems() {
+    setFarmSubsystemEnabled(false);
+    setFriendSubsystemEnabled(false);
+    setTaskSubsystemEnabled(false);
+    setSellSubsystemEnabled(false);
+    runtimeSubsystemsReady = false;
+}
+
 function applyRuntimeAccountSettings(patch = {}, options = {}) {
     const silent = Boolean(options.silent);
     const runtime = updateRuntimeAccountSettings(patch);
@@ -259,6 +268,23 @@ function registerIpcHandlers() {
         if (msg.type === 'rpc:req') {
             void handleRpcRequest(msg);
         }
+    });
+}
+
+function registerNetworkLifecycleHandlers() {
+    networkEvents.on('wsClosed', ({ code, reason, manual } = {}) => {
+        if (manual || unexpectedWsClosing) return;
+        unexpectedWsClosing = true;
+        const reasonPart = reason ? `, reason=${reason}` : '';
+        emitProcessState('error', {
+            kind: 'wsClosed',
+            fatal: true,
+            message: `WS连接关闭 (code=${code || 0}${reasonPart})`,
+        });
+        stopRuntimeSubsystems();
+        cleanup();
+        // 连接意外断开时主动退出，让 WebUI 会话状态立即变红并可一键重启
+        setTimeout(() => process.exit(1), 50);
     });
 }
 
@@ -381,6 +407,7 @@ async function main() {
 
     // 连接并登录，登录成功后启动各功能模块
     connect(options.code, async () => {
+        unexpectedWsClosing = false;
         // 处理邀请码 (仅微信环境)
         await processInviteCodes();
 
@@ -399,15 +426,11 @@ async function main() {
         emitProcessState('stopping', { mode: 'run', reason: 'signal' });
         cleanupStatusBar();
         console.log('\n[退出] 正在断开...');
-        setFarmSubsystemEnabled(false);
-        setFriendSubsystemEnabled(false);
-        setTaskSubsystemEnabled(false);
-        setSellSubsystemEnabled(false);
-        runtimeSubsystemsReady = false;
-        cleanup();
+        stopRuntimeSubsystems();
         markManualClose();
         const ws = getWs();
         if (ws) ws.close();
+        cleanup();
         emitProcessState('stopped', { mode: 'run', reason: 'signal' });
         process.exit(0);
     });
@@ -415,6 +438,7 @@ async function main() {
 
 registerIpcHandlers();
 registerGlobalErrorHandlers();
+registerNetworkLifecycleHandlers();
 
 main().catch(async (err) => {
     console.error('启动失败:', err);
