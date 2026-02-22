@@ -44,3 +44,18 @@ test('analyzeFriendLands should not throw and should only pick actionable bad-op
     assert.deepEqual(status.canPutWeed, [1]);
     assert.deepEqual(status.canPutBug, [1]);
 });
+
+test('analyzeFriendLands relaxed mode should fallback for manual bad-ops when strict window is empty', () => {
+    const lands = [
+        makeGrowingLand({ id: 10, weedsTimeOffsetSec: 3600, insectTimeOffsetSec: 3600 }),
+        makeGrowingLand({ id: 11, weedsTimeOffsetSec: 3600, insectTimeOffsetSec: 3600, weedOwners: [111], insectOwners: [111] }),
+    ];
+
+    const strictStatus = friend.__private.analyzeFriendLands(lands, 111, '测试好友');
+    assert.deepEqual(strictStatus.canPutWeed, []);
+    assert.deepEqual(strictStatus.canPutBug, []);
+
+    const relaxedStatus = friend.__private.analyzeFriendLands(lands, 111, '测试好友', { relaxedBadOps: true });
+    assert.deepEqual(relaxedStatus.canPutWeed, [10]);
+    assert.deepEqual(relaxedStatus.canPutBug, [10]);
+});
