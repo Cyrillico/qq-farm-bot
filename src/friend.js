@@ -382,7 +382,8 @@ function analyzeFriendLands(lands, myGid, friendName = '') {
             console.log(`  [${friendName}] 土地#${id}: phase=${phaseVal} stealable=${plant.stealable} dry=${toNum(plant.dry_num)} weed=${weedOwners.length} bug=${insectOwners.length}`);
         }
 
-        if (phaseVal === PlantPhase.MATURE) {
+        const isMature = phaseVal === PlantPhase.MATURE;
+        if (isMature) {
             if (plant.stealable) {
                 result.stealable.push(id);
                 const plantId = toNum(plant.id);
@@ -391,15 +392,16 @@ function analyzeFriendLands(lands, myGid, friendName = '') {
             } else if (showDebug) {
                 console.log(`  [${friendName}] 土地#${id}: 成熟但stealable=false (可能已被偷过)`);
             }
-            continue;
         }
 
         if (phaseVal === PlantPhase.DEAD) continue;
 
-        // 帮助操作
-        if (toNum(plant.dry_num) > 0) result.needWater.push(id);
-        if (plant.weed_owners && plant.weed_owners.length > 0) result.needWeed.push(id);
-        if (plant.insect_owners && plant.insect_owners.length > 0) result.needBug.push(id);
+        // 帮助操作：保持原逻辑，仅对非成熟阶段执行
+        if (!isMature) {
+            if (toNum(plant.dry_num) > 0) result.needWater.push(id);
+            if (plant.weed_owners && plant.weed_owners.length > 0) result.needWeed.push(id);
+            if (plant.insect_owners && plant.insect_owners.length > 0) result.needBug.push(id);
+        }
 
         // 捣乱操作: 仅对当前阶段已进入杂草/虫害时窗且未被我操作过的土地尝试
         const weedOwners = plant.weed_owners || [];
@@ -432,7 +434,7 @@ function createManualCounts() {
     };
 }
 
-function summarizeManualCounts(counts) {
+function summarizeManualCounts(counts, detail = {}) {
     const parts = [];
     if (counts.steal > 0) parts.push(`偷${counts.steal}`);
     if (counts.water > 0) parts.push(`浇水${counts.water}`);
@@ -440,20 +442,96 @@ function summarizeManualCounts(counts) {
     if (counts.insecticide > 0) parts.push(`除虫${counts.insecticide}`);
     if (counts.putBug > 0) parts.push(`放虫${counts.putBug}`);
     if (counts.putWeed > 0) parts.push(`放草${counts.putWeed}`);
-    if (parts.length === 0) return '无可操作土地';
-    return parts.join('/');
+    if (parts.length > 0) return parts.join('/');
+
+    const attempted = Number(detail.attempted || 0);
+    const failed = Number(detail.failed || 0);
+    const firstError = String(detail.firstError || '').trim();
+    if (attempted > 0 && failed > 0) {
+        const hint = firstError ? `: ${firstError}` : '';
+        return `操作失败(${failed}/${attempted})${hint}`;
+    }
+
+    const action = String(detail.action || '').trim();
+    const canPutBugCount = Number(detail.canPutBugCount || 0);
+    const canPutWeedCount = Number(detail.canPutWeedCount || 0);
+    if (action === 'putBug') {
+        if (detail.limitBlockedBug) return '放虫次数已用尽';
+        return `无可操作土地(可放虫${canPutBugCount})`;
+    }
+    if (action === 'putWeed') {
+        if (detail.limitBlockedWeed) return '放草次数已用尽';
+        return `无可操作土地(可放草${canPutWeedCount})`;
+    }
+    if (action === 'bad') {
+        const reasons = [];
+        if (detail.limitBlockedBug) reasons.push('放虫次数已用尽');
+        if (detail.limitBlockedWeed) reasons.push('放草次数已用尽');
+        if (reasons.length > 0) {
+            return reasons.join('，');
+        }
+        return `无可操作土地(可放虫${canPutBugCount},可放草${canPutWeedCount})`;
+    }
+
+    if (attempted > 0 && failed === 0) return `操作完成(${attempted}/${attempted})`;
+    return '无可操作土地';
+}
+
+function normalizeBatchError(err) {
+    const raw = String((err && err.message) ? err.message : (err || 'unknown error'));
+    const msg = raw.replace(/\s+/g, ' ').trim();
+    if (!msg) return 'unknown error';
+    return msg.length > 120 ? `${msg.slice(0, 120)}...` : msg;
+}
+
+function createManualExecDetail() {
+    return {
+        attempted: 0,
+        failed: 0,
+        firstError: '',
+    };
+}
+
+function mergeManualExecDetail(detail, batch) {
+    if (!batch) return;
+    detail.attempted += Number(batch.attempted || 0);
+    detail.failed += Number(batch.failed || 0);
+    if (!detail.firstError && batch.firstError) {
+        detail.firstError = batch.firstError;
+    }
+}
+
+function createBatchResult(attempted = 0) {
+    return {
+        ok: 0,
+        attempted: Number(attempted || 0),
+        failed: 0,
+        firstError: '',
+    };
 }
 
 async function executeLandBatch(friendGid, landIds, opFn) {
-    let ok = 0;
+    const result = createBatchResult(Array.isArray(landIds) ? landIds.length : 0);
     for (const landId of landIds) {
         try {
             await opFn(friendGid, [landId]);
-            ok++;
-        } catch (e) { /* ignore */ }
+            result.ok++;
+        } catch (e) {
+            result.failed++;
+            if (!result.firstError) {
+                result.firstError = normalizeBatchError(e);
+            }
+        }
         await sleep(100);
     }
-    return ok;
+    return result;
+}
+
+async function applyManualBatch(counts, key, detail, friendGid, landIds, opFn) {
+    const result = await executeLandBatch(friendGid, landIds, opFn);
+    counts[key] += result.ok;
+    mergeManualExecDetail(detail, result);
+    return result;
 }
 
 function normalizeManualAction(action) {
@@ -534,18 +612,29 @@ async function runManualFriendOpCore({ gid, action }) {
     try {
         const lands = enterReply.lands || [];
         const status = analyzeFriendLands(lands, myGid, friendName);
+        const execDetail = createManualExecDetail();
+        const summaryDetail = {
+            action: pickedAction,
+            canPutBugCount: status.canPutBug.length,
+            canPutWeedCount: status.canPutWeed.length,
+            limitBlockedBug: false,
+            limitBlockedWeed: false,
+            attempted: 0,
+            failed: 0,
+            firstError: '',
+        };
 
         if (pickedAction === 'steal') {
-            counts.steal = await executeLandBatch(targetGid, status.stealable, stealHarvest);
+            await applyManualBatch(counts, 'steal', execDetail, targetGid, status.stealable, stealHarvest);
         } else if (pickedAction === 'water') {
             markExpCheck(10007);
-            counts.water = await executeLandBatch(targetGid, status.needWater, helpWater);
+            await applyManualBatch(counts, 'water', execDetail, targetGid, status.needWater, helpWater);
         } else if (pickedAction === 'weed') {
             markExpCheck(10005);
-            counts.weed = await executeLandBatch(targetGid, status.needWeed, helpWeed);
+            await applyManualBatch(counts, 'weed', execDetail, targetGid, status.needWeed, helpWeed);
         } else if (pickedAction === 'insecticide') {
             markExpCheck(10006);
-            counts.insecticide = await executeLandBatch(targetGid, status.needBug, helpInsecticide);
+            await applyManualBatch(counts, 'insecticide', execDetail, targetGid, status.needBug, helpInsecticide);
         } else if (pickedAction === 'putBug') {
             const ids = canOperateAny(BAD_ACTION_LIMIT_IDS.putBug)
                 ? status.canPutBug.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putBug))
@@ -567,8 +656,14 @@ async function runManualFriendOpCore({ gid, action }) {
             counts.putWeed = await executeLandBatch(targetGid, weedIds, putWeeds);
         }
 
-        const summary = summarizeManualCounts(counts);
-        log('好友', `手动操作 ${friendName}: ${pickedAction} -> ${summary}`, {
+        summaryDetail.attempted = execDetail.attempted;
+        summaryDetail.failed = execDetail.failed;
+        summaryDetail.firstError = execDetail.firstError;
+
+        const summary = summarizeManualCounts(counts, summaryDetail);
+        const hasSuccess = Object.values(counts).some((v) => Number(v) > 0);
+        const logFn = execDetail.failed > 0 && !hasSuccess ? logWarn : log;
+        logFn('好友', `手动操作 ${friendName}: ${pickedAction} -> ${summary}`, {
             action: 'friend_manual',
         });
         return {

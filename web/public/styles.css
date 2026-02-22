@@ -772,3 +772,105 @@ body[data-theme="light"] #logs {
   border-color: #c7d7ec;
   color: #1c2b42;
 }
+
+body[data-theme="light"] .auth-panel {
+  border-color: #bfd1e7;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(241, 248, 255, 0.97));
+}
+
+body[data-theme="light"] .sidebar-accounts,
+body[data-theme="light"] .sidebar-meta,
+body[data-theme="light"] .feature-settings {
+  border-color: #c8d8eb;
+}
+
+body[data-theme="light"] .side-item {
+  color: #4b6284;
+}
+
+body[data-theme="light"] .side-item:hover,
+body[data-theme="light"] .sidebar-account-item:hover {
+  border-color: #aac2df;
+  background: #ecf5ff;
+  color: #1c2b42;
+}
+
+body[data-theme="light"] .side-item.active {
+  border-color: #55a9b8;
+  background: linear-gradient(130deg, #d8ecff, #e7f3ff);
+  color: #0e5669;
+  box-shadow: 0 0 0 1px rgba(61, 142, 159, 0.25) inset;
+}
+
+body[data-theme="light"] .sidebar-account-item.active {
+  border-color: #55a9b8;
+  box-shadow: 0 0 0 1px rgba(61, 142, 159, 0.25) inset;
+}
+
+body[data-theme="light"] .sidebar-account-main {
+  color: #1c2b42;
+}
+
+body[data-theme="light"] .btn {
+  background: #eef5ff;
+  border-color: #b7cce7;
+  color: #1c2b42;
+}
+
+body[data-theme="light"] .btn:hover {
+  background: #e4efff;
+}
+
+body[data-theme="light"] .btn-primary {
+  background: linear-gradient(120deg, #0e7f92, #229aab);
+  border-color: #2b9dad;
+  color: #f4fdff;
+}
+
+body[data-theme="light"] .btn-danger {
+  background: #fbe9ed;
+  border-color: #e4a7b4;
+  color: #8a2f43;
+}
+
+body[data-theme="light"] .btn-danger:hover {
+  background: #f6dfe5;
+}
+
+body[data-theme="light"] #qrLink,
+body[data-theme="light"] .qr-alt-links a {
+  color: #1a7893;
+}
+
+body[data-theme="light"] .land-tag {
+  border-color: #bdd1e8;
+  background: #eef5ff;
+  color: #2a4769;
+}
+
+body[data-theme="light"] .land-tag.tag-ok {
+  border-color: #77c099;
+  color: #1f8252;
+}
+
+body[data-theme="light"] .land-tag.tag-danger {
+  border-color: #dd8d9d;
+  color: #a0384f;
+}
+
+body[data-theme="light"] .land-tag.tag-water {
+  border-color: #79bfd2;
+  color: #1d7d97;
+}
+
+body[data-theme="light"] .dot-running {
+  box-shadow: 0 0 0 4px rgba(74, 177, 124, 0.2);
+}
+
+body[data-theme="light"] .dot-stopped {
+  box-shadow: 0 0 0 4px rgba(220, 92, 113, 0.2);
+}
+
+body[data-theme="light"] .dot-error {
+  box-shadow: 0 0 0 4px rgba(230, 140, 92, 0.22);
+}
