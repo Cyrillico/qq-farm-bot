@@ -1,10 +1,21 @@
 const MAX_LOG_LINES = 5000;
 const LOG_QUERY_LIMIT = 200;
 const FRIEND_DANGEROUS_ACTIONS = new Set(['putBug', 'putWeed', 'bad']);
+const VIEW_META = {
+  dashboard: { title: '控制台总览', hint: '查看整体运行概览与账号状态分布' },
+  control: { title: '启动控制', hint: '配置账号、平台、模式并启动/停止会话' },
+  status: { title: '账号状态', hint: '查看等级/经验/金币、最佳作物与扫码状态' },
+  friends: { title: '好友操作', hint: '执行好友列表操作与高风险开关配置' },
+  bark: { title: 'Bark 通知', hint: '配置 Bark 链接、分类开关和测试推送' },
+  logs: { title: '日志中心', hint: '按条件筛选日志并加载历史记录' },
+};
+const DEFAULT_VIEW = 'dashboard';
+const VALID_VIEWS = new Set(Object.keys(VIEW_META));
 
 const state = {
   sessions: {},
   selectedAccountId: 'default',
+  currentView: DEFAULT_VIEW,
   bark: null,
   startPayloads: {},
   ui: {
@@ -25,17 +36,27 @@ const state = {
     authenticated: true,
     username: '',
   },
+  routeInitialized: false,
 };
 
 const els = {
   serverMeta: document.getElementById('serverMeta'),
+  consoleShell: document.getElementById('consoleShell'),
+  sideNav: document.getElementById('sideNav'),
+  viewTitle: document.getElementById('viewTitle'),
+  viewHint: document.getElementById('viewHint'),
+  viewPanels: Array.from(document.querySelectorAll('.view-panel')),
+  sideNavButtons: Array.from(document.querySelectorAll('[data-view-nav]')),
+  overviewTotal: document.getElementById('overviewTotal'),
+  overviewRunning: document.getElementById('overviewRunning'),
+  overviewError: document.getElementById('overviewError'),
+  overviewStopped: document.getElementById('overviewStopped'),
   authPanel: document.getElementById('authPanel'),
   authUsername: document.getElementById('authUsername'),
   authPassword: document.getElementById('authPassword'),
   authStatus: document.getElementById('authStatus'),
   loginBtn: document.getElementById('loginBtn'),
   logoutBtn: document.getElementById('logoutBtn'),
-  consolePanels: Array.from(document.querySelectorAll('.control-panel, .metrics, .friend-panel, .bark-panel, .logs-panel')),
   accountId: document.getElementById('accountId'),
   logScope: document.getElementById('logScope'),
   sessionList: document.getElementById('sessionList'),
@@ -102,12 +123,97 @@ const els = {
 let eventStream = null;
 
 function setText(el, text) {
+  if (!el) return;
   el.textContent = text;
 }
 
 function setConsoleVisible(visible) {
-  for (const panel of els.consolePanels) {
-    panel.classList.toggle('hidden', !visible);
+  els.consoleShell.classList.toggle('hidden', !visible);
+}
+
+function normalizeViewKey(raw) {
+  const value = String(raw || '').trim().toLowerCase();
+  if (VALID_VIEWS.has(value)) return value;
+  return DEFAULT_VIEW;
+}
+
+function parseHashState() {
+  const hash = String(window.location.hash || '').replace(/^#/, '');
+  if (!hash) {
+    return { view: DEFAULT_VIEW, accountId: '' };
+  }
+  const [viewPart, queryPart] = hash.split('?');
+  const view = normalizeViewKey(viewPart);
+  const params = new URLSearchParams(queryPart || '');
+  const accountId = String(params.get('accountId') || '').trim();
+  return { view, accountId };
+}
+
+function applyHashState() {
+  const previousView = state.currentView;
+  const previousAccountId = state.selectedAccountId;
+  const next = parseHashState();
+  state.currentView = next.view;
+  if (next.accountId) {
+    const nextAccountId = normalizeAccountId(next.accountId);
+    state.selectedAccountId = nextAccountId;
+    ensureSession(nextAccountId);
+    if (els.accountId) {
+      els.accountId.value = nextAccountId;
+    }
+  }
+  renderView();
+  return {
+    viewChanged: previousView !== state.currentView,
+    accountChanged: previousAccountId !== state.selectedAccountId,
+  };
+}
+
+function syncHashState(replace = false) {
+  const params = new URLSearchParams();
+  const accountId = normalizeAccountId(state.selectedAccountId);
+  if (accountId) {
+    params.set('accountId', accountId);
+  }
+  const hash = `#${state.currentView}${params.toString() ? `?${params.toString()}` : ''}`;
+  if (replace) {
+    history.replaceState(null, '', hash);
+    return;
+  }
+  if (window.location.hash !== hash) {
+    window.location.hash = hash;
+  }
+}
+
+function renderView() {
+  const view = normalizeViewKey(state.currentView);
+  state.currentView = view;
+
+  for (const panel of els.viewPanels) {
+    const panelView = normalizeViewKey(panel.dataset.view || '');
+    panel.classList.toggle('hidden', panelView !== view);
+  }
+  for (const btn of els.sideNavButtons) {
+    btn.classList.toggle('active', normalizeViewKey(btn.dataset.viewNav) === view);
+  }
+
+  const meta = VIEW_META[view] || VIEW_META[DEFAULT_VIEW];
+  setText(els.viewTitle, meta.title);
+  setText(els.viewHint, meta.hint);
+}
+
+function setCurrentView(view, replace = false) {
+  const nextView = normalizeViewKey(view);
+  const changed = nextView !== state.currentView;
+  state.currentView = nextView;
+  if (replace) {
+    syncHashState(true);
+    renderView();
+    return;
+  }
+  syncHashState(false);
+  if (!changed) {
+    renderView();
   }
 }
 
@@ -214,6 +320,20 @@ function getCurrentSession() {
   return ensureSession(state.selectedAccountId);
 }
 
+function getSessionStateType(session) {
+  const status = String((session && session.status) || 'idle').toLowerCase();
+  if (['starting', 'running', 'stopping'].includes(status)) {
+    return 'running';
+  }
+  if (['error', 'failed', 'crashed'].includes(status)) {
+    return 'error';
+  }
+  if (session && session.lastError && status !== 'idle') {
+    return 'error';
+  }
+  return 'stopped';
+}
+
 function getSortedAccountIds() {
   return Object.keys(state.sessions).sort((a, b) => {
     const sa = ((state.sessions[a] || {}).session || {}).status || 'idle';
@@ -244,9 +364,17 @@ function renderSessionList() {
     const s = item.session || {};
     const st = item.status || {};
     const active = accountId === state.selectedAccountId ? ' active' : '';
-    const running = s.status === 'running';
-    const dotClass = running ? 'dot-running' : 'dot-stopped';
-    const dotText = running ? '运行中' : '未运行';
+    const sessionStateType = getSessionStateType(s);
+    const dotClass = sessionStateType === 'running'
+      ? 'dot-running'
+      : sessionStateType === 'error'
+        ? 'dot-error'
+        : 'dot-stopped';
+    const dotText = sessionStateType === 'running'
+      ? '运行中'
+      : sessionStateType === 'error'
+        ? '异常'
+        : '未运行';
     const desc = `${s.status || 'idle'} | ${st.platform || '-'} | ${st.name || '-'} | Lv${st.level ?? 0}`;
     return `
       <div class="session-item${active}" data-role="session-card" data-account-id="${escapeHtml(accountId)}">
@@ -273,6 +401,33 @@ function renderSession() {
   const current = getCurrentSession();
   const s = current.session || {};
   setText(els.sessionStatus, `当前账号：${state.selectedAccountId} | 状态：${s.status || 'idle'} | PID: ${s.pid || '-'} | 模式: ${s.mode || '-'}`);
+}
+
+function renderOverview() {
+  const ids = Object.keys(state.sessions);
+  const total = ids.length;
+  let running = 0;
+  let error = 0;
+  let stopped = 0;
+
+  for (const id of ids) {
+    const session = ((state.sessions[id] || {}).session) || {};
+    const type = getSessionStateType(session);
+    if (type === 'running') {
+      running += 1;
+      continue;
+    }
+    if (type === 'error') {
+      error += 1;
+      continue;
+    }
+    stopped += 1;
+  }
+
+  setText(els.overviewTotal, String(total));
+  setText(els.overviewRunning, String(running));
+  setText(els.overviewError, String(error));
+  setText(els.overviewStopped, String(stopped));
 }
 
 function renderStatus() {
@@ -466,7 +621,37 @@ function renderBarkSettings() {
   els.catBusiness.checked = Boolean(bark.categories && bark.categories.business);
 }
 
+function refreshAccountDependentData(accountId) {
+  resetLogView();
+  queryLogsFromApi({ append: false });
+  if (shouldLoadFriends(accountId)) {
+    loadFriends();
+  } else {
+    state.friends[accountId] = [];
+    renderFriendList();
+    setText(els.friendUiStatus, '账号未进入运行状态，登录成功后再刷新好友');
+  }
+}
+
+function setSelectedAccount(accountId, { syncHash = true, loadData = false } = {}) {
+  const next = normalizeAccountId(accountId);
+  state.selectedAccountId = next;
+  ensureSession(next);
+  if (els.accountId) {
+    els.accountId.value = next;
+  }
+  if (syncHash) {
+    syncHashState(true);
+  }
+  refreshPanels();
+  if (loadData) {
+    refreshAccountDependentData(next);
+  }
+}
+
 function refreshPanels() {
+  renderView();
+  renderOverview();
   renderSessionList();
   renderSession();
   renderStatus();
@@ -673,6 +858,8 @@ async function bootstrap() {
   const initial = await fetchJson('/api/state');
   const sessions = (initial.state && initial.state.sessions) || {};
   state.sessions = sessions;
+  const routeState = parseHashState();
+  state.currentView = routeState.view;
 
   const ids = Object.keys(state.sessions);
   if (ids.length === 0) {
@@ -683,8 +870,12 @@ async function bootstrap() {
     const s = state.sessions[id].session || {};
     return ['starting', 'running', 'stopping'].includes(s.status);
   });
-  state.selectedAccountId = running || Object.keys(state.sessions)[0] || 'default';
+  state.selectedAccountId = routeState.accountId
+    ? normalizeAccountId(routeState.accountId)
+    : running || Object.keys(state.sessions)[0] || 'default';
+  ensureSession(state.selectedAccountId);
   els.accountId.value = state.selectedAccountId;
+  syncHashState(true);
 
   state.bark = initial.settings && initial.settings.bark ? initial.settings.bark : null;
   state.ui = initial.settings && initial.settings.ui
@@ -746,6 +937,9 @@ function connectEvents() {
       if (type === 'process') {
         const session = ensureSession(accountId);
         session.session = { ...(session.session || {}), ...payload };
+        if (payload && payload.state && !payload.status) {
+          session.session.status = payload.state;
+        }
         if (payload && payload.state === 'running' && session.qr && session.qr.qrUrl) {
           session.qr = {
             ...(session.qr || {}),
@@ -836,11 +1030,7 @@ function connectEvents() {
           if (state.selectedAccountId === deletedId) {
             const ids = Object.keys(state.sessions);
             const next = ids[0] || 'default';
-            state.selectedAccountId = next;
-            ensureSession(next);
-            els.accountId.value = next;
-            resetLogView();
-            queryLogsFromApi({ append: false });
+            setSelectedAccount(next, { syncHash: true, loadData: true });
           }
           refreshPanels();
         }
@@ -873,9 +1063,7 @@ async function onStart() {
     els.startBtn.disabled = true;
     const payload = collectStartPayload();
     state.startPayloads[payload.accountId] = { ...payload };
-    state.selectedAccountId = payload.accountId;
-    ensureSession(payload.accountId);
-    els.accountId.value = payload.accountId;
+    setSelectedAccount(payload.accountId, { syncHash: true, loadData: false });
     await fetchJson('/api/session/start', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -1121,15 +1309,7 @@ function onSessionListClick(event) {
           delete state.startPayloads[accountId];
           const ids = Object.keys(state.sessions);
           const next = ids[0] || 'default';
-          state.selectedAccountId = next;
-          ensureSession(next);
-          els.accountId.value = next;
-          refreshPanels();
-          resetLogView();
-          queryLogsFromApi({ append: false });
-          if (shouldLoadFriends(next)) {
-            loadFriends();
-          }
+          setSelectedAccount(next, { syncHash: true, loadData: true });
           setText(els.sessionStatus, `账号 ${accountId} 已删除`);
         } else {
           setText(els.sessionStatus, `账号 ${accountId} 不存在或已删除`);
@@ -1145,18 +1325,7 @@ function onSessionListClick(event) {
   const card = event.target.closest('[data-role="session-card"][data-account-id]');
   if (!card) return;
   const accountId = normalizeAccountId(card.dataset.accountId);
-  state.selectedAccountId = accountId;
-  els.accountId.value = accountId;
-  refreshPanels();
-  resetLogView();
-  queryLogsFromApi({ append: false });
-  if (shouldLoadFriends(accountId)) {
-    loadFriends();
-  } else {
-    state.friends[accountId] = [];
-    renderFriendList();
-    setText(els.friendUiStatus, '账号未进入运行状态，登录成功后再刷新好友');
-  }
+  setSelectedAccount(accountId, { syncHash: true, loadData: true });
 }
 
 async function onApplyLogFilters() {
@@ -1182,6 +1351,14 @@ function onFriendListClick(event) {
 }
 
 function bindEvents() {
+  if (els.sideNav) {
+    els.sideNav.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-view-nav]');
+      if (!btn) return;
+      setCurrentView(btn.dataset.viewNav);
+    });
+  }
+
   els.mode.addEventListener('change', applyModeVisibility);
   els.loginBtn.addEventListener('click', onLogin);
   els.logoutBtn.addEventListener('click', onLogout);
@@ -1207,18 +1384,7 @@ function bindEvents() {
   els.logAction.addEventListener('change', onApplyLogFilters);
   els.accountId.addEventListener('change', () => {
     const next = normalizeAccountId(els.accountId.value);
-    state.selectedAccountId = next;
-    ensureSession(next);
-    refreshPanels();
-    resetLogView();
-    queryLogsFromApi({ append: false });
-    if (shouldLoadFriends(next)) {
-      loadFriends();
-    } else {
-      state.friends[next] = [];
-      renderFriendList();
-      setText(els.friendUiStatus, '账号未进入运行状态，登录成功后再刷新好友');
-    }
+    setSelectedAccount(next, { syncHash: true, loadData: true });
   });
   els.logScope.addEventListener('change', () => {
     resetLogView();
@@ -1239,14 +1405,26 @@ function bindEvents() {
   els.sessionList.addEventListener('click', onSessionListClick);
 }
 
+function onHashChange() {
+  if (!state.routeInitialized) return;
+  const ret = applyHashState();
+  refreshPanels();
+  if (ret.accountChanged) {
+    refreshAccountDependentData(state.selectedAccountId);
+  }
+}
+
 async function main() {
   applyModeVisibility();
+  renderView();
   bindEvents();
+  window.addEventListener('hashchange', onHashChange);
   const auth = await loadAuthStatus();
   if (auth.enabled && !auth.authenticated) {
     return;
   }
   await bootstrap();
+  state.routeInitialized = true;
   connectEvents();
 }
 

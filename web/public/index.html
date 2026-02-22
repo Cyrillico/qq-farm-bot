@@ -18,7 +18,7 @@
         <h1>QQ 农场 Web 控制台</h1>
         <button id="logoutBtn" class="btn hidden" type="button">退出登录</button>
       </div>
-      <p id="serverMeta">准备连接...</p>
+      <p>侧边栏菜单管理模式（Phase A）</p>
     </header>
 
     <section id="authPanel" class="panel auth-panel hidden">
@@ -39,214 +39,265 @@
       <p id="authStatus" class="status-line"></p>
     </section>
 
-    <section class="panel control-panel">
-      <h2>启动控制</h2>
-      <div class="grid two">
-        <label>
-          账号标识（accountId）
-          <input id="accountId" type="text" placeholder="例如 qq-main / wx-1" />
-        </label>
-        <label>
-          日志视图
-          <select id="logScope">
-            <option value="selected">仅当前账号</option>
-            <option value="all">全部账号</option>
-          </select>
-        </label>
-      </div>
-      <div class="grid two">
-        <label>
-          模式
-          <select id="mode">
-            <option value="run">运行</option>
-            <option value="verify">验证 proto</option>
-            <option value="decode">PB 解码</option>
-          </select>
-        </label>
-        <label>
-          平台
-          <select id="platform">
-            <option value="qq">QQ</option>
-            <option value="wx">微信</option>
-          </select>
-        </label>
-      </div>
-
-      <div id="runFields" class="stack">
-        <div class="grid two">
-          <label>
-            code
-            <input id="code" type="text" placeholder="可留空并勾选QQ扫码" />
-          </label>
-          <label class="checkbox">
-            <input id="useQr" type="checkbox" />
-            <span>QQ 扫码登录（无 code 时）</span>
-          </label>
+    <div id="consoleShell" class="console-shell hidden">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <h2>菜单</h2>
         </div>
-        <div class="grid two">
-          <label>
-            农场间隔（秒）
-            <input id="interval" type="number" min="1" step="1" placeholder="例如 10" />
-          </label>
-          <label>
-            好友间隔（秒）
-            <input id="friendInterval" type="number" min="1" step="1" placeholder="例如 2" />
-          </label>
+        <nav id="sideNav" class="side-nav">
+          <button class="side-item active" type="button" data-view-nav="dashboard">总览</button>
+          <button class="side-item" type="button" data-view-nav="control">启动控制</button>
+          <button class="side-item" type="button" data-view-nav="status">账号状态</button>
+          <button class="side-item" type="button" data-view-nav="friends">好友操作</button>
+          <button class="side-item" type="button" data-view-nav="bark">Bark 通知</button>
+          <button class="side-item" type="button" data-view-nav="logs">日志中心</button>
+        </nav>
+        <div class="sidebar-meta">
+          <p id="serverMeta">准备连接...</p>
         </div>
-      </div>
+      </aside>
 
-      <div id="decodeFields" class="stack hidden">
-        <label>
-          decode 数据
-          <textarea id="decodeData" rows="3" placeholder="输入 base64 或 hex"></textarea>
-        </label>
-        <div class="grid three">
-          <label class="checkbox"><input id="decodeHex" type="checkbox" /><span>--hex</span></label>
-          <label class="checkbox"><input id="decodeGate" type="checkbox" /><span>--gate</span></label>
-          <label>
-            type
-            <input id="decodeType" type="text" placeholder="可选，例如 gatepb.Message" />
-          </label>
-        </div>
-      </div>
+      <section class="console-main">
+        <header class="console-topbar panel">
+          <div>
+            <h2 id="viewTitle">控制台总览</h2>
+            <p id="viewHint" class="status-line">通过左侧菜单切换页面</p>
+          </div>
+        </header>
 
-      <div class="actions">
-        <button id="startBtn" class="btn btn-primary">启动</button>
-        <button id="stopBtn" class="btn btn-danger">停止</button>
-        <button id="clearLogsBtn" class="btn">清空日志</button>
-      </div>
-      <p id="sessionStatus" class="status-line">状态：idle</p>
-      <div id="sessionList" class="session-list"></div>
-      <p class="status-line">提示：点击账号卡片可快速切换，绿点=运行中，红点=未运行/异常</p>
-    </section>
+        <section class="panel overview-panel view-panel" data-view="dashboard">
+          <h2>概览</h2>
+          <div class="cards overview-cards">
+            <article class="card">
+              <h3>账号总数</h3>
+              <p id="overviewTotal">0</p>
+            </article>
+            <article class="card">
+              <h3>运行中</h3>
+              <p id="overviewRunning">0</p>
+            </article>
+            <article class="card">
+              <h3>异常</h3>
+              <p id="overviewError">0</p>
+            </article>
+            <article class="card">
+              <h3>未运行</h3>
+              <p id="overviewStopped">0</p>
+            </article>
+          </div>
+          <p class="status-line">建议流程：先在“启动控制”启动账号，再到“账号状态/日志中心”查看运行信息。</p>
+        </section>
 
-    <section class="panel metrics">
-      <h2>实时信息</h2>
-      <div class="cards">
-        <article class="card">
-          <h3>账号状态</h3>
-          <p id="metricPlatform">平台：-</p>
-          <p id="metricName">昵称：-</p>
-          <p id="metricLevel">等级：-</p>
-          <p id="metricExp">经验：-</p>
-          <p id="metricExpToNext">升级还差：-</p>
-          <p id="metricGold">金币：-</p>
-        </article>
-        <article class="card">
-          <h3>最佳作物</h3>
-          <p id="bestCropName">当前选种：-</p>
-          <p id="bestCropCurrent">当前等级最优：-</p>
-          <p id="bestCropNext">下一级最优：-</p>
-          <p id="bestCropExp">当前等级最优效率：-</p>
-          <p id="bestCropSource">来源：-</p>
-        </article>
-        <article class="card">
-          <h3>QQ 扫码</h3>
-          <p id="qrPhase">状态：-</p>
-          <img id="qrImage" class="qr-image hidden" alt="QQ扫码二维码" />
-          <a id="qrLink" class="hidden" target="_blank" rel="noreferrer">打开扫码链接</a>
+        <section class="panel control-panel view-panel" data-view="control">
+          <h2>启动控制</h2>
+          <div class="grid two">
+            <label>
+              账号标识（accountId）
+              <input id="accountId" type="text" placeholder="例如 qq-main / wx-1" />
+            </label>
+            <label>
+              日志视图
+              <select id="logScope">
+                <option value="selected">仅当前账号</option>
+                <option value="all">全部账号</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid two">
+            <label>
+              模式
+              <select id="mode">
+                <option value="run">运行</option>
+                <option value="verify">验证 proto</option>
+                <option value="decode">PB 解码</option>
+              </select>
+            </label>
+            <label>
+              平台
+              <select id="platform">
+                <option value="qq">QQ</option>
+                <option value="wx">微信</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="runFields" class="stack">
+            <div class="grid two">
+              <label>
+                code
+                <input id="code" type="text" placeholder="可留空并勾选QQ扫码" />
+              </label>
+              <label class="checkbox">
+                <input id="useQr" type="checkbox" />
+                <span>QQ 扫码登录（无 code 时）</span>
+              </label>
+            </div>
+            <div class="grid two">
+              <label>
+                农场间隔（秒）
+                <input id="interval" type="number" min="1" step="1" placeholder="例如 10" />
+              </label>
+              <label>
+                好友间隔（秒）
+                <input id="friendInterval" type="number" min="1" step="1" placeholder="例如 2" />
+              </label>
+            </div>
+          </div>
+
+          <div id="decodeFields" class="stack hidden">
+            <label>
+              decode 数据
+              <textarea id="decodeData" rows="3" placeholder="输入 base64 或 hex"></textarea>
+            </label>
+            <div class="grid three">
+              <label class="checkbox"><input id="decodeHex" type="checkbox" /><span>--hex</span></label>
+              <label class="checkbox"><input id="decodeGate" type="checkbox" /><span>--gate</span></label>
+              <label>
+                type
+                <input id="decodeType" type="text" placeholder="可选，例如 gatepb.Message" />
+              </label>
+            </div>
+          </div>
+
           <div class="actions">
-            <button id="refreshQrBtn" class="btn" type="button">刷新二维码</button>
-            <button id="switchQrBtn" class="btn hidden" type="button">切换备用二维码</button>
+            <button id="startBtn" class="btn btn-primary">启动</button>
+            <button id="stopBtn" class="btn btn-danger">停止</button>
+            <button id="clearLogsBtn" class="btn">清空日志</button>
           </div>
-          <div id="qrAltLinks" class="qr-alt-links"></div>
-          <p id="qrMessage"></p>
-        </article>
-      </div>
-    </section>
+          <p id="sessionStatus" class="status-line">状态：idle</p>
+          <div id="sessionList" class="session-list"></div>
+          <p class="status-line">提示：点击账号卡片可快速切换，绿点=运行中，红点=未运行/异常</p>
+        </section>
 
-    <section class="panel friend-panel">
-      <h2>好友操作</h2>
-      <div class="grid two">
-        <label class="checkbox">
-          <input id="allowBadOps" type="checkbox" />
-          <span>允许高风险操作（放虫/放草/捣乱）</span>
-        </label>
-        <label class="checkbox">
-          <input id="confirmDangerous" type="checkbox" />
-          <span>高风险操作二次确认</span>
-        </label>
-      </div>
-      <div class="actions">
-        <button id="saveFriendUiBtn" class="btn">保存好友设置</button>
-        <button id="refreshFriendsBtn" class="btn btn-primary">刷新好友列表</button>
-      </div>
-      <p id="friendUiStatus" class="status-line"></p>
-      <div id="friendList" class="friend-list"></div>
-    </section>
-
-    <section class="panel bark-panel">
-      <h2>Bark 设置</h2>
-      <div class="grid two">
-        <label class="checkbox">
-          <input id="barkEnabled" type="checkbox" />
-          <span>启用 Bark 推送</span>
-        </label>
-        <label>
-          通知分组
-          <input id="barkGroup" type="text" />
-        </label>
-      </div>
-      <label>
-        Bark 链接
-        <input id="barkPushUrl" type="text" placeholder="https://api.day.app/your-key/" />
-      </label>
-      <div class="grid two">
-        <label>
-          去重秒数（0-3600）
-          <input id="barkDedupSeconds" type="number" min="0" max="3600" step="1" />
-        </label>
-        <div>
-          <p class="mini-title">通知分类</p>
-          <div class="grid three">
-            <label class="checkbox"><input id="catFatal" type="checkbox" /><span>fatal</span></label>
-            <label class="checkbox"><input id="catNetwork" type="checkbox" /><span>network</span></label>
-            <label class="checkbox"><input id="catBusiness" type="checkbox" /><span>business</span></label>
+        <section class="panel metrics view-panel" data-view="status">
+          <h2>账号状态</h2>
+          <div class="cards">
+            <article class="card">
+              <h3>实时信息</h3>
+              <p id="metricPlatform">平台：-</p>
+              <p id="metricName">昵称：-</p>
+              <p id="metricLevel">等级：-</p>
+              <p id="metricExp">经验：-</p>
+              <p id="metricExpToNext">升级还差：-</p>
+              <p id="metricGold">金币：-</p>
+            </article>
+            <article class="card">
+              <h3>最佳作物</h3>
+              <p id="bestCropName">当前选种：-</p>
+              <p id="bestCropCurrent">当前等级最优：-</p>
+              <p id="bestCropNext">下一级最优：-</p>
+              <p id="bestCropExp">当前等级最优效率：-</p>
+              <p id="bestCropSource">来源：-</p>
+            </article>
+            <article class="card">
+              <h3>QQ 扫码</h3>
+              <p id="qrPhase">状态：-</p>
+              <img id="qrImage" class="qr-image hidden" alt="QQ扫码二维码" />
+              <a id="qrLink" class="hidden" target="_blank" rel="noreferrer">打开扫码链接</a>
+              <div class="actions">
+                <button id="refreshQrBtn" class="btn" type="button">刷新二维码</button>
+                <button id="switchQrBtn" class="btn hidden" type="button">切换备用二维码</button>
+              </div>
+              <div id="qrAltLinks" class="qr-alt-links"></div>
+              <p id="qrMessage"></p>
+            </article>
           </div>
-        </div>
-      </div>
-      <div class="actions">
-        <button id="saveBarkBtn" class="btn btn-primary">保存 Bark 设置</button>
-        <button id="testBarkBtn" class="btn">测试推送</button>
-      </div>
-      <p id="barkStatus" class="status-line"></p>
-    </section>
+        </section>
 
-    <section class="panel logs-panel">
-      <h2>实时日志</h2>
-      <div class="grid four">
-        <label>
-          级别
-          <select id="logLevel">
-            <option value="all">all</option>
-            <option value="info">info</option>
-            <option value="warn">warn</option>
-            <option value="error">error</option>
-          </select>
-        </label>
-        <label>
-          标签
-          <input id="logTag" type="text" placeholder="例如 好友/WS" />
-        </label>
-        <label>
-          关键字
-          <input id="logKeyword" type="text" placeholder="支持模糊匹配" />
-        </label>
-        <label>
-          动作
-          <select id="logAction">
-            <option value="">全部</option>
-            <option value="friend_manual">friend_manual</option>
-          </select>
-        </label>
-      </div>
-      <div class="actions">
-        <button id="applyLogFiltersBtn" class="btn btn-primary">应用筛选</button>
-        <button id="loadMoreLogsBtn" class="btn">加载更多</button>
-      </div>
-      <p id="logsStatus" class="status-line"></p>
-      <pre id="logs"></pre>
-    </section>
+        <section class="panel friend-panel view-panel" data-view="friends">
+          <h2>好友操作</h2>
+          <div class="grid two">
+            <label class="checkbox">
+              <input id="allowBadOps" type="checkbox" />
+              <span>允许高风险操作（放虫/放草/捣乱）</span>
+            </label>
+            <label class="checkbox">
+              <input id="confirmDangerous" type="checkbox" />
+              <span>高风险操作二次确认</span>
+            </label>
+          </div>
+          <div class="actions">
+            <button id="saveFriendUiBtn" class="btn">保存好友设置</button>
+            <button id="refreshFriendsBtn" class="btn btn-primary">刷新好友列表</button>
+          </div>
+          <p id="friendUiStatus" class="status-line"></p>
+          <div id="friendList" class="friend-list"></div>
+        </section>
+
+        <section class="panel bark-panel view-panel" data-view="bark">
+          <h2>Bark 设置</h2>
+          <div class="grid two">
+            <label class="checkbox">
+              <input id="barkEnabled" type="checkbox" />
+              <span>启用 Bark 推送</span>
+            </label>
+            <label>
+              通知分组
+              <input id="barkGroup" type="text" />
+            </label>
+          </div>
+          <label>
+            Bark 链接
+            <input id="barkPushUrl" type="text" placeholder="https://api.day.app/your-key/" />
+          </label>
+          <div class="grid two">
+            <label>
+              去重秒数（0-3600）
+              <input id="barkDedupSeconds" type="number" min="0" max="3600" step="1" />
+            </label>
+            <div>
+              <p class="mini-title">通知分类</p>
+              <div class="grid three">
+                <label class="checkbox"><input id="catFatal" type="checkbox" /><span>fatal</span></label>
+                <label class="checkbox"><input id="catNetwork" type="checkbox" /><span>network</span></label>
+                <label class="checkbox"><input id="catBusiness" type="checkbox" /><span>business</span></label>
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="saveBarkBtn" class="btn btn-primary">保存 Bark 设置</button>
+            <button id="testBarkBtn" class="btn">测试推送</button>
+          </div>
+          <p id="barkStatus" class="status-line"></p>
+        </section>
+
+        <section class="panel logs-panel view-panel" data-view="logs">
+          <h2>实时日志</h2>
+          <div class="grid four">
+            <label>
+              级别
+              <select id="logLevel">
+                <option value="all">all</option>
+                <option value="info">info</option>
+                <option value="warn">warn</option>
+                <option value="error">error</option>
+              </select>
+            </label>
+            <label>
+              标签
+              <input id="logTag" type="text" placeholder="例如 好友/WS" />
+            </label>
+            <label>
+              关键字
+              <input id="logKeyword" type="text" placeholder="支持模糊匹配" />
+            </label>
+            <label>
+              动作
+              <select id="logAction">
+                <option value="">全部</option>
+                <option value="friend_manual">friend_manual</option>
+              </select>
+            </label>
+          </div>
+          <div class="actions">
+            <button id="applyLogFiltersBtn" class="btn btn-primary">应用筛选</button>
+            <button id="loadMoreLogsBtn" class="btn">加载更多</button>
+          </div>
+          <p id="logsStatus" class="status-line"></p>
+          <pre id="logs"></pre>
+        </section>
+      </section>
+    </div>
   </main>
 
   <script src="/app.js"></script>
