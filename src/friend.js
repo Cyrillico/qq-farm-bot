@@ -39,9 +39,9 @@ const OP_NAMES = {
 };
 
 const BAD_ACTION_LIMIT_IDS = {
-    // 协议版本存在差异，优先新映射，再兼容旧映射
-    putBug: [10005, 10004],
-    putWeed: [10006, 10003],
+    // 协议版本存在差异，优先常见映射，再兼容旧映射
+    putBug: [10004, 10005],
+    putWeed: [10003, 10006],
 };
 
 const DEFAULT_FRIEND_RUNTIME_SETTINGS = {
@@ -427,8 +427,11 @@ function analyzeFriendLands(lands, myGid, friendName = '', options = {}) {
         }
 
         // 捣乱操作:
-        // 参考对标实现，按“当前草/虫拥有者数量 + 是否我本人已操作”判定。
-        // 不做 weeds_time/insect_time 硬过滤，避免不同端时间字段差异导致全量误判为 0。
+        // 仅在生长中阶段放草/放虫，避免对成熟或枯死土地提交导致参数错误。
+        if (phaseVal >= PlantPhase.MATURE) continue;
+
+        // 按“当前草/虫拥有者数量 + 是否我本人已操作”判定。
+        // 不做 weeds_time/insect_time 硬过滤，避免不同端时间字段差异导致误判。
         const weedOwners = plant.weed_owners || [];
         const insectOwners = plant.insect_owners || [];
         const iAlreadyPutWeed = weedOwners.some((gid) => toIdString(gid) === myGidText);
@@ -643,8 +646,8 @@ async function runManualFriendOpCore({ gid, action }) {
         const execDetail = createManualExecDetail();
         const summaryDetail = {
             action: pickedAction,
-            canPutBugCount: status.canPutBug.length,
-            canPutWeedCount: status.canPutWeed.length,
+            canPutBugCount: 0,
+            canPutWeedCount: 0,
             limitBlockedBug: false,
             limitBlockedWeed: false,
             attempted: 0,
@@ -667,33 +670,45 @@ async function runManualFriendOpCore({ gid, action }) {
             const baseIds = status.canPutBug.length > 0
                 ? status.canPutBug
                 : ((relaxedStatus && relaxedStatus.canPutBug) || []);
-            const ids = canOperateAny(BAD_ACTION_LIMIT_IDS.putBug)
+            summaryDetail.canPutBugCount = baseIds.length;
+            const canPutBug = canOperateAny(BAD_ACTION_LIMIT_IDS.putBug);
+            summaryDetail.limitBlockedBug = !canPutBug;
+            const ids = canPutBug
                 ? baseIds.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putBug))
                 : [];
-            counts.putBug = await executeLandBatch(targetGid, ids, putInsects);
+            await applyManualBatch(counts, 'putBug', execDetail, targetGid, ids, putInsects);
         } else if (pickedAction === 'putWeed') {
             const baseIds = status.canPutWeed.length > 0
                 ? status.canPutWeed
                 : ((relaxedStatus && relaxedStatus.canPutWeed) || []);
-            const ids = canOperateAny(BAD_ACTION_LIMIT_IDS.putWeed)
+            summaryDetail.canPutWeedCount = baseIds.length;
+            const canPutWeed = canOperateAny(BAD_ACTION_LIMIT_IDS.putWeed);
+            summaryDetail.limitBlockedWeed = !canPutWeed;
+            const ids = canPutWeed
                 ? baseIds.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putWeed))
                 : [];
-            counts.putWeed = await executeLandBatch(targetGid, ids, putWeeds);
+            await applyManualBatch(counts, 'putWeed', execDetail, targetGid, ids, putWeeds);
         } else if (pickedAction === 'bad') {
             const baseBugIds = status.canPutBug.length > 0
                 ? status.canPutBug
                 : ((relaxedStatus && relaxedStatus.canPutBug) || []);
-            const bugIds = canOperateAny(BAD_ACTION_LIMIT_IDS.putBug)
+            summaryDetail.canPutBugCount = baseBugIds.length;
+            const canPutBug = canOperateAny(BAD_ACTION_LIMIT_IDS.putBug);
+            summaryDetail.limitBlockedBug = !canPutBug;
+            const bugIds = canPutBug
                 ? baseBugIds.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putBug))
                 : [];
-            counts.putBug = await executeLandBatch(targetGid, bugIds, putInsects);
+            await applyManualBatch(counts, 'putBug', execDetail, targetGid, bugIds, putInsects);
             const baseWeedIds = status.canPutWeed.length > 0
                 ? status.canPutWeed
                 : ((relaxedStatus && relaxedStatus.canPutWeed) || []);
-            const weedIds = canOperateAny(BAD_ACTION_LIMIT_IDS.putWeed)
+            summaryDetail.canPutWeedCount = baseWeedIds.length;
+            const canPutWeed = canOperateAny(BAD_ACTION_LIMIT_IDS.putWeed);
+            summaryDetail.limitBlockedWeed = !canPutWeed;
+            const weedIds = canPutWeed
                 ? baseWeedIds.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putWeed))
                 : [];
-            counts.putWeed = await executeLandBatch(targetGid, weedIds, putWeeds);
+            await applyManualBatch(counts, 'putWeed', execDetail, targetGid, weedIds, putWeeds);
         }
 
         summaryDetail.attempted = execDetail.attempted;

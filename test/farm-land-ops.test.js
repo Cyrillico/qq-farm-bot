@@ -37,6 +37,20 @@ test('farm land requirement parser should support direct and conds fields', () =
     assert.equal(conds.needGold, 780000);
 });
 
+test('farm land requirement parser should expand conds gold in wan-unit text', () => {
+    assert.ok(typeof farm.__private.parseLandRequirementCondition === 'function');
+
+    const parsed = farm.__private.parseLandRequirementCondition({
+        conds: [
+            { type: 1, param: 18, desc: '等级达到18级' },
+            { type: 2, param: 49, desc: '需要49万金币' },
+        ],
+    });
+
+    assert.equal(parsed.needLevel, 18);
+    assert.equal(parsed.needGold, 490000);
+});
+
 test('farm land requirement meta should choose unlock vs upgrade labels correctly', () => {
     assert.ok(typeof farm.__private.resolveLandRequirementMeta === 'function');
 
