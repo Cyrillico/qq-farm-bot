@@ -375,19 +375,20 @@ function analyzeFriendLands(lands, myGid, friendName = '') {
         if (plant.weed_owners && plant.weed_owners.length > 0) result.needWeed.push(id);
         if (plant.insect_owners && plant.insect_owners.length > 0) result.needBug.push(id);
 
-        // 捣乱操作: 检查是否可以放草/放虫
-        // 条件: 没有草且我没放过草
-        const weedOwners = plant.weed_owners || [];
-        const insectOwners = plant.insect_owners || [];
-        const iAlreadyPutWeed = weedOwners.some(gid => toNum(gid) === myGid);
-        const iAlreadyPutBug = insectOwners.some(gid => toNum(gid) === myGid);
+        // 捣乱操作: 仅在生长期尝试，避免成熟/枯死地块触发参数错误
+        if (!isMature) {
+            const weedOwners = plant.weed_owners || [];
+            const insectOwners = plant.insect_owners || [];
+            const iAlreadyPutWeed = weedOwners.some(gid => toNum(gid) === myGid);
+            const iAlreadyPutBug = insectOwners.some(gid => toNum(gid) === myGid);
 
-        // 每块地最多2个草/虫，且我没放过
-        if (weedOwners.length < 2 && !iAlreadyPutWeed) {
-            result.canPutWeed.push(id);
-        }
-        if (insectOwners.length < 2 && !iAlreadyPutBug) {
-            result.canPutBug.push(id);
+            // 每块地最多2个草/虫，且我没放过
+            if (weedOwners.length < 2 && !iAlreadyPutWeed) {
+                result.canPutWeed.push(id);
+            }
+            if (insectOwners.length < 2 && !iAlreadyPutBug) {
+                result.canPutBug.push(id);
+            }
         }
     }
     return result;
