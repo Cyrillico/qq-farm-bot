@@ -13,12 +13,35 @@ let localTimeAtSync = 0;
 
 // ============ 类型转换 ============
 function toLong(val) {
-    return Long.fromNumber(val);
+    if (Long.isLong(val)) return val;
+    if (typeof val === 'bigint') return Long.fromString(val.toString(), false);
+    if (typeof val === 'string') {
+        const text = val.trim();
+        if (!text) return Long.ZERO;
+        if (!/^-?\d+$/.test(text)) return Long.ZERO;
+        return Long.fromString(text, false);
+    }
+    const n = Number(val);
+    if (!Number.isFinite(n)) return Long.ZERO;
+    return Long.fromNumber(n);
 }
 
 function toNum(val) {
     if (Long.isLong(val)) return val.toNumber();
     return val || 0;
+}
+
+function toIdString(val) {
+    if (Long.isLong(val)) return val.toString();
+    if (typeof val === 'bigint') return val.toString();
+    if (typeof val === 'string') {
+        const text = val.trim();
+        if (/^-?\d+$/.test(text)) return text;
+        return '';
+    }
+    const n = Number(val);
+    if (!Number.isFinite(n)) return '';
+    return String(Math.trunc(n));
 }
 
 // ============ 时间相关 ============
@@ -124,7 +147,7 @@ function emitRuntimeHint(force = false) {
 }
 
 module.exports = {
-    toLong, toNum, now,
+    toLong, toNum, toIdString, now,
     getServerTimeSec, syncServerTime, toTimeSec,
     log, logWarn, classifyWarnCategory, sleep,
     emitRuntimeHint,

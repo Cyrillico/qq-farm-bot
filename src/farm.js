@@ -18,6 +18,30 @@ let isFirstFarmCheck = true;
 let farmCheckTimer = null;
 let farmLoopRunning = false;
 
+const DEFAULT_FARM_RUNTIME_SETTINGS = {
+    autoUnlockLands: true,
+    autoUpgradeLands: true,
+    autoFertilize: true,
+    autoBuyFertilizer: true,
+};
+let farmRuntimeSettings = { ...DEFAULT_FARM_RUNTIME_SETTINGS };
+
+function updateFarmRuntimeSettings(patch = {}) {
+    farmRuntimeSettings = {
+        ...farmRuntimeSettings,
+        ...patch,
+    };
+    farmRuntimeSettings.autoUnlockLands = Boolean(farmRuntimeSettings.autoUnlockLands);
+    farmRuntimeSettings.autoUpgradeLands = Boolean(farmRuntimeSettings.autoUpgradeLands);
+    farmRuntimeSettings.autoFertilize = Boolean(farmRuntimeSettings.autoFertilize);
+    farmRuntimeSettings.autoBuyFertilizer = Boolean(farmRuntimeSettings.autoBuyFertilizer);
+    return { ...farmRuntimeSettings };
+}
+
+function getFarmRuntimeSettings() {
+    return { ...farmRuntimeSettings };
+}
+
 // ============ 农场 API ============
 
 // 操作限制更新回调 (由 friend.js 设置)
@@ -80,6 +104,23 @@ async function insecticide(landIds) {
 
 // 普通肥料 ID
 const NORMAL_FERTILIZER_ID = 1011;
+const FERTILIZER_MIN_BUY = 30;
+const SHOP_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const LAND_ACTION_SUPPORT = {
+    unlock: 'unknown',
+    upgrade: 'unknown',
+};
+const LAND_ACTION_METHODS = {
+    unlock: ['UnlockLand', 'Unlock', 'UnlockLands'],
+    upgrade: ['UpgradeLand', 'Upgrade', 'UpgradeLands'],
+};
+let fertilizerGoodsCache = {
+    expiresAt: 0,
+    goodsId: 0,
+    price: 0,
+    itemCount: 1,
+};
 
 /**
  * 施肥 - 必须逐块进行，服务器不支持批量
@@ -130,6 +171,210 @@ async function buyGoods(goodsId, num, price) {
     })).finish();
     const { body: replyBody } = await sendMsgAsync('gamepb.shoppb.ShopService', 'BuyGoods', body);
     return types.BuyGoodsReply.decode(replyBody);
+}
+
+async function getShopProfiles() {
+    const body = types.ShopProfilesRequest.encode(types.ShopProfilesRequest.create({})).finish();
+    const { body: replyBody } = await sendMsgAsync('gamepb.shoppb.ShopService', 'ShopProfiles', body);
+    return types.ShopProfilesReply.decode(replyBody);
+}
+
+async function getBag() {
+    const body = types.BagRequest.encode(types.BagRequest.create({})).finish();
+    const { body: replyBody } = await sendMsgAsync('gamepb.itempb.ItemService', 'Bag', body);
+    return types.BagReply.decode(replyBody);
+}
+
+function getBagItems(bagReply) {
+    if (bagReply.item_bag && Array.isArray(bagReply.item_bag.items)) return bagReply.item_bag.items;
+    if (Array.isArray(bagReply.items)) return bagReply.items;
+    return [];
+}
+
+function countBagItem(items, itemId) {
+    for (const item of items) {
+        if (toNum(item.id) === itemId) return toNum(item.count);
+    }
+    return 0;
+}
+
+function isMethodUnsupportedError(err) {
+    const text = String((err && err.message) || '').toLowerCase();
+    return text.includes('method') && (text.includes('not') || text.includes('unknown') || text.includes('unsupported') || text.includes('unimplemented'));
+}
+
+function encodeSingleInt64Field(fieldNo, value) {
+    const writer = protobuf.Writer.create();
+    writer.uint32((fieldNo << 3) | 0).int64(toLong(value));
+    return writer.finish();
+}
+
+function encodePackedInt64Field(fieldNo, values = []) {
+    const writer = protobuf.Writer.create();
+    const fork = writer.uint32((fieldNo << 3) | 2).fork();
+    for (const v of values) fork.int64(toLong(v));
+    fork.ldelim();
+    return writer.finish();
+}
+
+async function sendLandActionRequest(action, landId) {
+    const methods = LAND_ACTION_METHODS[action] || [];
+    const payloadBuilders = [
+        () => encodeSingleInt64Field(1, landId),
+        () => encodePackedInt64Field(1, [landId]),
+        () => encodeSingleInt64Field(2, landId),
+    ];
+    let lastErr = null;
+    let unsupportedCount = 0;
+    for (const method of methods) {
+        for (const buildBody of payloadBuilders) {
+            try {
+                const body = buildBody();
+                const ret = await sendMsgAsync('gamepb.plantpb.PlantService', method, body);
+                LAND_ACTION_SUPPORT[action] = 'supported';
+                return ret;
+            } catch (e) {
+                lastErr = e;
+                if (isMethodUnsupportedError(e)) {
+                    unsupportedCount++;
+                    continue;
+                }
+                throw e;
+            }
+        }
+    }
+    if (unsupportedCount > 0 && methods.length > 0) {
+        LAND_ACTION_SUPPORT[action] = 'unsupported';
+    }
+    throw lastErr || new Error(`${action} failed`);
+}
+
+function pickLandActionTargets(lands = []) {
+    const unlockLandIds = [];
+    const upgradeLandIds = [];
+    for (const land of lands || []) {
+        const id = toNum(land && land.id);
+        if (!id) continue;
+        const unlocked = Boolean(land && land.unlocked);
+        const couldUnlock = Boolean(land && land.could_unlock);
+        const couldUpgrade = Boolean(land && land.could_upgrade);
+        const level = toNum(land && land.level);
+        const maxLevel = toNum(land && land.max_level);
+        if (!unlocked && couldUnlock) {
+            unlockLandIds.push(id);
+            continue;
+        }
+        if (unlocked && couldUpgrade && (maxLevel <= 0 || level < maxLevel)) {
+            upgradeLandIds.push(id);
+        }
+    }
+    return { unlockLandIds, upgradeLandIds };
+}
+
+async function tryAutoUnlockAndUpgradeLands(lands = []) {
+    const { unlockLandIds, upgradeLandIds } = pickLandActionTargets(lands);
+
+    if (farmRuntimeSettings.autoUnlockLands && LAND_ACTION_SUPPORT.unlock !== 'unsupported' && unlockLandIds.length > 0) {
+        let ok = 0;
+        for (const landId of unlockLandIds) {
+            try {
+                await sendLandActionRequest('unlock', landId);
+                ok++;
+                await sleep(120);
+            } catch (e) {
+                if (isMethodUnsupportedError(e)) {
+                    LAND_ACTION_SUPPORT.unlock = 'unsupported';
+                    logWarn('土地', '当前协议未识别到解锁接口，自动解锁已跳过');
+                    break;
+                }
+                logWarn('土地', `解锁土地#${landId} 失败: ${e.message}`);
+            }
+        }
+        if (ok > 0) {
+            log('土地', `自动解锁 ${ok} 块土地`);
+        }
+    }
+
+    if (farmRuntimeSettings.autoUpgradeLands && LAND_ACTION_SUPPORT.upgrade !== 'unsupported' && upgradeLandIds.length > 0) {
+        let ok = 0;
+        for (const landId of upgradeLandIds) {
+            try {
+                await sendLandActionRequest('upgrade', landId);
+                ok++;
+                await sleep(120);
+            } catch (e) {
+                if (isMethodUnsupportedError(e)) {
+                    LAND_ACTION_SUPPORT.upgrade = 'unsupported';
+                    logWarn('土地', '当前协议未识别到升级接口，自动升级已跳过');
+                    break;
+                }
+                logWarn('土地', `升级土地#${landId} 失败: ${e.message}`);
+            }
+        }
+        if (ok > 0) {
+            log('土地', `自动升级 ${ok} 块土地`);
+        }
+    }
+}
+
+async function resolveFertilizerGoods() {
+    const now = Date.now();
+    if (fertilizerGoodsCache.goodsId > 0 && fertilizerGoodsCache.expiresAt > now) {
+        return { ...fertilizerGoodsCache };
+    }
+    let picked = null;
+    const profilesReply = await getShopProfiles();
+    const profiles = profilesReply.shop_profiles || [];
+    for (const profile of profiles) {
+        const shopId = toNum(profile.shop_id);
+        if (!shopId) continue;
+        let info;
+        try {
+            info = await getShopInfo(shopId);
+        } catch (e) {
+            continue;
+        }
+        for (const goods of (info.goods_list || [])) {
+            if (!goods.unlocked) continue;
+            if (toNum(goods.item_id) !== NORMAL_FERTILIZER_ID) continue;
+            const limitCount = toNum(goods.limit_count);
+            const boughtNum = toNum(goods.bought_num);
+            if (limitCount > 0 && boughtNum >= limitCount) continue;
+            const candidate = {
+                goodsId: toNum(goods.id),
+                price: toNum(goods.price),
+                itemCount: Math.max(1, toNum(goods.item_count)),
+                expiresAt: now + SHOP_CACHE_TTL_MS,
+            };
+            if (!picked || candidate.price < picked.price) {
+                picked = candidate;
+            }
+        }
+    }
+    if (!picked) return null;
+    fertilizerGoodsCache = picked;
+    return { ...picked };
+}
+
+async function ensureFertilizerStock(requiredCount) {
+    const safeRequired = Math.max(0, Number.parseInt(requiredCount, 10) || 0);
+    if (safeRequired <= 0) return 0;
+
+    const bagReply = await getBag();
+    const items = getBagItems(bagReply);
+    const current = countBagItem(items, NORMAL_FERTILIZER_ID);
+    if (current >= safeRequired || !farmRuntimeSettings.autoBuyFertilizer) {
+        return current;
+    }
+    const toBuy = Math.max(FERTILIZER_MIN_BUY, safeRequired - current);
+    const goods = await resolveFertilizerGoods();
+    if (!goods || !goods.goodsId || goods.price <= 0) {
+        return current;
+    }
+    const buyNum = Math.ceil(toBuy / Math.max(1, goods.itemCount));
+    await buyGoods(goods.goodsId, buyNum, goods.price);
+    log('施肥', `自动补充普通肥料 x${buyNum * goods.itemCount}`);
+    return current + (buyNum * goods.itemCount);
 }
 
 // ============ 种植 ============
@@ -364,7 +609,12 @@ async function autoPlantEmptyLands(deadLandIds, emptyLandIds, unlockedLandCount)
     }
 
     // 5. 施肥（逐块拖动，间隔50ms）
-    if (plantedLands.length > 0) {
+    if (plantedLands.length > 0 && farmRuntimeSettings.autoFertilize) {
+        try {
+            await ensureFertilizerStock(plantedLands.length);
+        } catch (e) {
+            logWarn('施肥', `补充肥料失败: ${e.message}`);
+        }
         const fertilized = await fertilize(plantedLands);
         if (fertilized > 0) {
             log('施肥', `已为 ${fertilized}/${plantedLands.length} 块地施肥`);
@@ -542,12 +792,19 @@ function buildLandUiItem(land, nowSec) {
     const unlocked = Boolean(land && land.unlocked);
     const plant = (land && land.plant) || null;
     if (!unlocked) {
+        const unlockCondition = (land && land.unlock_condition) || {};
         return {
             id,
             unlocked: false,
             isEmpty: true,
             phase: 0,
             phaseName: '未解锁',
+            couldUnlock: Boolean(land && land.could_unlock),
+            couldUpgrade: false,
+            landLevel: 0,
+            maxLandLevel: 0,
+            needLevel: toNum(unlockCondition.need_level),
+            needGold: toNum(unlockCondition.need_gold),
             seedId: 0,
             plantId: 0,
             plantName: '',
@@ -569,6 +826,12 @@ function buildLandUiItem(land, nowSec) {
             isEmpty: true,
             phase: 0,
             phaseName: '空地',
+            couldUnlock: false,
+            couldUpgrade: Boolean(land && land.could_upgrade),
+            landLevel: toNum(land && land.level),
+            maxLandLevel: toNum(land && land.max_level),
+            needLevel: toNum((land && land.upgrade_condition && land.upgrade_condition.need_level) || 0),
+            needGold: toNum((land && land.upgrade_condition && land.upgrade_condition.need_gold) || 0),
             seedId: 0,
             plantId: 0,
             plantName: '',
@@ -609,6 +872,12 @@ function buildLandUiItem(land, nowSec) {
         isEmpty: false,
         phase,
         phaseName,
+        couldUnlock: false,
+        couldUpgrade: Boolean(land && land.could_upgrade),
+        landLevel: toNum(land && land.level),
+        maxLandLevel: toNum(land && land.max_level),
+        needLevel: toNum((land && land.upgrade_condition && land.upgrade_condition.need_level) || 0),
+        needGold: toNum((land && land.upgrade_condition && land.upgrade_condition.need_gold) || 0),
         seedId,
         plantId,
         plantName,
@@ -634,8 +903,8 @@ async function listLandsForUi() {
     const lands = Array.isArray(landsReply.lands) ? landsReply.lands : [];
     const nowSec = getServerTimeSec();
     const summary = analyzeLands(lands);
+    const actionTargets = pickLandActionTargets(lands);
     const items = lands
-        .filter((land) => Boolean(land && land.unlocked))
         .map((land) => buildLandUiItem(land, nowSec))
         .sort((a, b) => a.id - b.id);
 
@@ -643,7 +912,9 @@ async function listLandsForUi() {
         serverTimeSec: nowSec,
         summary: {
             total: lands.length,
-            unlocked: items.length,
+            unlocked: lands.filter((land) => Boolean(land && land.unlocked)).length,
+            lockable: actionTargets.unlockLandIds.length,
+            upgradable: actionTargets.upgradeLandIds.length,
             harvestable: summary.harvestable.length,
             growing: summary.growing.length,
             empty: summary.empty.length,
@@ -671,6 +942,10 @@ async function checkFarm() {
         }
 
         const lands = landsReply.lands;
+
+        // 土地管理（解锁/升级）先于常规巡田执行
+        await tryAutoUnlockAndUpgradeLands(lands);
+
         const status = analyzeLands(lands);
         const unlockedLandCount = lands.filter(land => land && land.unlocked).length;
         isFirstFarmCheck = false;
@@ -790,4 +1065,9 @@ module.exports = {
     getCurrentPhase,
     listLandsForUi,
     setOperationLimitsCallback,
+    updateFarmRuntimeSettings,
+    getFarmRuntimeSettings,
+    __private: {
+        pickLandActionTargets,
+    },
 };

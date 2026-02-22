@@ -47,9 +47,17 @@ test('runtime account settings can be updated partially', () => {
     updateRuntimeAccountSettings({
         farmEnabled: false,
         forceLowestLevelCrop: true,
+        autoUnlockLands: false,
+        giftEnabled: false,
     });
     const current = getRuntimeSettings();
     assert.equal(current.account.farmEnabled, false);
     assert.equal(current.account.forceLowestLevelCrop, true);
+    assert.equal(current.account.autoUnlockLands, false);
+    assert.equal(current.account.giftEnabled, false);
     assert.equal(current.account.friendEnabled, true);
+    assert.equal(current.account.autoUpgradeLands, true);
+    assert.equal(current.account.autoFertilize, true);
+    assert.equal(current.account.autoBuyFertilizer, true);
+    assert.equal(current.account.taskActiveEnabled, true);
 });

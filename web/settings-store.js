@@ -13,6 +13,12 @@ function defaultAccountFeatureSettings() {
         forceLowestLevelCrop: false,
         helpOnlyWithExp: true,
         enablePutBadThings: true,
+        autoUnlockLands: true,
+        autoUpgradeLands: true,
+        autoFertilize: true,
+        autoBuyFertilizer: true,
+        taskActiveEnabled: true,
+        giftEnabled: true,
     };
 }
 
@@ -174,6 +180,12 @@ function validateAccountFeatureSettings(account = {}, options = {}) {
         'forceLowestLevelCrop',
         'helpOnlyWithExp',
         'enablePutBadThings',
+        'autoUnlockLands',
+        'autoUpgradeLands',
+        'autoFertilize',
+        'autoBuyFertilizer',
+        'taskActiveEnabled',
+        'giftEnabled',
     ];
 
     for (const key of keys) {

@@ -14,7 +14,12 @@
 const { CONFIG } = require('./src/config');
 const { loadProto } = require('./src/proto');
 const { connect, cleanup, getWs, markManualClose } = require('./src/network');
-const { startFarmCheckLoop, stopFarmCheckLoop, listLandsForUi } = require('./src/farm');
+const {
+    startFarmCheckLoop,
+    stopFarmCheckLoop,
+    listLandsForUi,
+    updateFarmRuntimeSettings,
+} = require('./src/farm');
 const {
     startFriendCheckLoop,
     stopFriendCheckLoop,
@@ -22,7 +27,11 @@ const {
     runManualFriendOp,
     updateFriendRuntimeSettings,
 } = require('./src/friend');
-const { initTaskSystem, cleanupTaskSystem } = require('./src/task');
+const {
+    initTaskSystem,
+    cleanupTaskSystem,
+    updateTaskRuntimeSettings,
+} = require('./src/task');
 const { initStatusBar, cleanupStatusBar, setStatusPlatform } = require('./src/status');
 const { startSellLoop, stopSellLoop, debugSellFruits } = require('./src/warehouse');
 const { processInviteCodes } = require('./src/invite');
@@ -58,11 +67,12 @@ QQ经典农场 挂机脚本
   --decode            解码PB数据 (运行 --decode 无参数查看详细帮助)
 
 功能:
-  - 自动收获成熟作物 → 购买种子 → 种植 → 施肥
+  - 自动收获成熟作物 → 购买种子 → 种植 → 施肥(可自动补肥)
+  - 自动解锁/升级土地（协议支持时）
   - 自动除草、除虫、浇水
   - 自动铲除枯死作物
   - 自动巡查好友农场: 帮忙浇水/除草/除虫 + 偷菜
-  - 自动领取任务奖励 (支持分享翻倍)
+  - 自动领取任务奖励 (支持分享翻倍) + 活跃礼包 + 背包礼包开启
   - 每分钟自动出售仓库果实
   - 启动时读取 share.txt 处理邀请码 (仅微信)
   - 心跳保活
@@ -206,6 +216,16 @@ function applyRuntimeAccountSettings(patch = {}, options = {}) {
     updateFriendRuntimeSettings({
         helpOnlyWithExp: account.helpOnlyWithExp,
         enablePutBadThings: account.enablePutBadThings,
+    });
+    updateFarmRuntimeSettings({
+        autoUnlockLands: account.autoUnlockLands,
+        autoUpgradeLands: account.autoUpgradeLands,
+        autoFertilize: account.autoFertilize,
+        autoBuyFertilizer: account.autoBuyFertilizer,
+    });
+    updateTaskRuntimeSettings({
+        taskActiveEnabled: account.taskActiveEnabled,
+        giftEnabled: account.giftEnabled,
     });
 
     if (runtimeSubsystemsReady) {

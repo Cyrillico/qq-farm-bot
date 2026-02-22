@@ -36,6 +36,12 @@ function defaultAccountRuntimeSettings() {
         forceLowestLevelCrop: false,
         helpOnlyWithExp: true,
         enablePutBadThings: true,
+        autoUnlockLands: true,
+        autoUpgradeLands: true,
+        autoFertilize: true,
+        autoBuyFertilizer: true,
+        taskActiveEnabled: true,
+        giftEnabled: true,
     };
 }
 
@@ -70,6 +76,12 @@ function mergeAccountRuntimeSettings(base, patch = {}) {
     next.forceLowestLevelCrop = Boolean(next.forceLowestLevelCrop);
     next.helpOnlyWithExp = Boolean(next.helpOnlyWithExp);
     next.enablePutBadThings = Boolean(next.enablePutBadThings);
+    next.autoUnlockLands = Boolean(next.autoUnlockLands);
+    next.autoUpgradeLands = Boolean(next.autoUpgradeLands);
+    next.autoFertilize = Boolean(next.autoFertilize);
+    next.autoBuyFertilizer = Boolean(next.autoBuyFertilizer);
+    next.taskActiveEnabled = Boolean(next.taskActiveEnabled);
+    next.giftEnabled = Boolean(next.giftEnabled);
     return next;
 }
 

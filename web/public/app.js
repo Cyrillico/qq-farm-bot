@@ -27,10 +27,16 @@ const DEFAULT_ACCOUNT_SETTINGS = Object.freeze({
   farmEnabled: true,
   friendEnabled: true,
   taskEnabled: true,
+  taskActiveEnabled: true,
+  giftEnabled: true,
   sellEnabled: true,
   forceLowestLevelCrop: false,
   helpOnlyWithExp: true,
   enablePutBadThings: true,
+  autoUnlockLands: true,
+  autoUpgradeLands: true,
+  autoFertilize: true,
+  autoBuyFertilizer: true,
 });
 
 const state = {
@@ -104,10 +110,16 @@ const els = {
   featureFarmEnabled: document.getElementById('featureFarmEnabled'),
   featureFriendEnabled: document.getElementById('featureFriendEnabled'),
   featureTaskEnabled: document.getElementById('featureTaskEnabled'),
+  featureTaskActiveEnabled: document.getElementById('featureTaskActiveEnabled'),
+  featureGiftEnabled: document.getElementById('featureGiftEnabled'),
   featureSellEnabled: document.getElementById('featureSellEnabled'),
   featureForceLowestLevelCrop: document.getElementById('featureForceLowestLevelCrop'),
   featureHelpOnlyWithExp: document.getElementById('featureHelpOnlyWithExp'),
   featureEnablePutBadThings: document.getElementById('featureEnablePutBadThings'),
+  featureAutoUnlockLands: document.getElementById('featureAutoUnlockLands'),
+  featureAutoUpgradeLands: document.getElementById('featureAutoUpgradeLands'),
+  featureAutoFertilize: document.getElementById('featureAutoFertilize'),
+  featureAutoBuyFertilizer: document.getElementById('featureAutoBuyFertilizer'),
   saveAccountSettingsBtn: document.getElementById('saveAccountSettingsBtn'),
   accountSettingsStatus: document.getElementById('accountSettingsStatus'),
   sessionStatus: document.getElementById('sessionStatus'),
@@ -701,10 +713,16 @@ function renderAccountSettings() {
   els.featureFarmEnabled.checked = Boolean(account.farmEnabled);
   els.featureFriendEnabled.checked = Boolean(account.friendEnabled);
   els.featureTaskEnabled.checked = Boolean(account.taskEnabled);
+  els.featureTaskActiveEnabled.checked = Boolean(account.taskActiveEnabled);
+  els.featureGiftEnabled.checked = Boolean(account.giftEnabled);
   els.featureSellEnabled.checked = Boolean(account.sellEnabled);
   els.featureForceLowestLevelCrop.checked = Boolean(account.forceLowestLevelCrop);
   els.featureHelpOnlyWithExp.checked = Boolean(account.helpOnlyWithExp);
   els.featureEnablePutBadThings.checked = Boolean(account.enablePutBadThings);
+  els.featureAutoUnlockLands.checked = Boolean(account.autoUnlockLands);
+  els.featureAutoUpgradeLands.checked = Boolean(account.autoUpgradeLands);
+  els.featureAutoFertilize.checked = Boolean(account.autoFertilize);
+  els.featureAutoBuyFertilizer.checked = Boolean(account.autoBuyFertilizer);
 }
 
 function collectAccountSettingsPayload() {
@@ -712,10 +730,16 @@ function collectAccountSettingsPayload() {
     farmEnabled: els.featureFarmEnabled.checked,
     friendEnabled: els.featureFriendEnabled.checked,
     taskEnabled: els.featureTaskEnabled.checked,
+    taskActiveEnabled: els.featureTaskActiveEnabled.checked,
+    giftEnabled: els.featureGiftEnabled.checked,
     sellEnabled: els.featureSellEnabled.checked,
     forceLowestLevelCrop: els.featureForceLowestLevelCrop.checked,
     helpOnlyWithExp: els.featureHelpOnlyWithExp.checked,
     enablePutBadThings: els.featureEnablePutBadThings.checked,
+    autoUnlockLands: els.featureAutoUnlockLands.checked,
+    autoUpgradeLands: els.featureAutoUpgradeLands.checked,
+    autoFertilize: els.featureAutoFertilize.checked,
+    autoBuyFertilizer: els.featureAutoBuyFertilizer.checked,
   };
 }
 
@@ -778,6 +802,8 @@ function renderLands() {
   els.landsSummary.innerHTML = `
     <div class="cards lands-summary-cards">
       <article class="card"><h3>已解锁</h3><p>${summary.unlocked ?? '-'}</p></article>
+      <article class="card"><h3>可解锁</h3><p>${summary.lockable ?? '-'}</p></article>
+      <article class="card"><h3>可升级</h3><p>${summary.upgradable ?? '-'}</p></article>
       <article class="card"><h3>可收获</h3><p>${summary.harvestable ?? '-'}</p></article>
       <article class="card"><h3>空地</h3><p>${summary.empty ?? '-'}</p></article>
       <article class="card"><h3>枯死</h3><p>${summary.dead ?? '-'}</p></article>
@@ -790,6 +816,9 @@ function renderLands() {
 
   const html = data.lands.map((land) => {
     const tags = [];
+    if (!land.unlocked) tags.push('<span class="land-tag">未解锁</span>');
+    if (land.couldUnlock) tags.push('<span class="land-tag tag-ok">可解锁</span>');
+    if (land.couldUpgrade) tags.push('<span class="land-tag tag-ok">可升级</span>');
     if (land.phase === 6) tags.push('<span class="land-tag tag-ok">可收获</span>');
     if (land.phase === 7) tags.push('<span class="land-tag tag-danger">枯死</span>');
     if (land.needs && land.needs.water) tags.push('<span class="land-tag tag-water">缺水</span>');
@@ -802,6 +831,7 @@ function renderLands() {
           <h3>土地 #${land.id}</h3>
           <p>${escapeHtml(land.plantName || '-')} | ${escapeHtml(land.phaseName || '-')}</p>
         </div>
+        <p class="land-meta">地块等级：${land.landLevel ?? 0}${land.maxLandLevel ? `/${land.maxLandLevel}` : ''} | 解锁需 Lv${land.needLevel ?? 0} / ${land.needGold ?? 0} 金币</p>
         <p class="land-meta">下阶段：${escapeHtml(land.nextPhaseName || '-')} | 剩余：${formatRemainSeconds(land.nextPhaseInSec)}</p>
         <div class="land-tags">${tags.join('')}</div>
       </article>
@@ -1410,7 +1440,7 @@ async function loadLands(accountId = state.selectedAccountId) {
     if (id === state.selectedAccountId) {
       renderLands();
       const count = Array.isArray((ret.data || {}).lands) ? ret.data.lands.length : 0;
-      setText(els.landsStatus, `已加载 ${count} 块已解锁土地`);
+      setText(els.landsStatus, `已加载 ${count} 块土地（含未解锁）`);
     }
   } catch (e) {
     if (id === state.selectedAccountId) {

@@ -163,6 +163,12 @@ test('validateAccountFeatureSettings supports full and partial checks', () => {
         forceLowestLevelCrop: false,
         helpOnlyWithExp: true,
         enablePutBadThings: false,
+        autoUnlockLands: true,
+        autoUpgradeLands: true,
+        autoFertilize: true,
+        autoBuyFertilizer: true,
+        taskActiveEnabled: true,
+        giftEnabled: true,
     });
     assert.equal(goodFull.ok, true);
 });
