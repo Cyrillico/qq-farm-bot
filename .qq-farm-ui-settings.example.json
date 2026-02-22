@@ -21,10 +21,16 @@
       "farmEnabled": true,
       "friendEnabled": true,
       "taskEnabled": true,
+      "taskActiveEnabled": true,
+      "giftEnabled": true,
       "sellEnabled": true,
       "forceLowestLevelCrop": false,
       "helpOnlyWithExp": true,
-      "enablePutBadThings": true
+      "enablePutBadThings": true,
+      "autoUnlockLands": true,
+      "autoUpgradeLands": true,
+      "autoFertilize": true,
+      "autoBuyFertilizer": true
     }
   }
 }

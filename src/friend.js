@@ -5,7 +5,7 @@
 const { CONFIG, PlantPhase, PHASE_NAMES } = require('./config');
 const { types } = require('./proto');
 const { sendMsgAsync, getUserState, networkEvents } = require('./network');
-const { toLong, toNum, getServerTimeSec, log, logWarn, sleep } = require('./utils');
+const { toLong, toNum, toIdString, getServerTimeSec, toTimeSec, log, logWarn, sleep } = require('./utils');
 const { getCurrentPhase, setOperationLimitsCallback } = require('./farm');
 const { getPlantName } = require('./gameConfig');
 
@@ -21,9 +21,9 @@ const expTracker = new Map();       // opId -> 帮助前的 dayExpTimes
 const expExhausted = new Set();     // 经验已耗尽的操作类型
 
 // 操作限制状态 (从服务器响应中更新)
-// 操作类型ID (根据游戏代码):
-// 10001 = 收获, 10002 = 铲除, 10003 = 放草, 10004 = 放虫
-// 10005 = 除草(帮好友), 10006 = 除虫(帮好友), 10007 = 浇水(帮好友), 10008 = 偷菜
+// 操作类型ID (不同版本存在差异)：
+// 常见映射A: 10003=放草 10004=放虫 10005=除草 10006=除虫 10007=浇水 10008=偷菜
+// 常见映射B: 10005=放虫 10006=放草
 const operationLimits = new Map();
 
 // 操作类型名称映射
@@ -36,6 +36,11 @@ const OP_NAMES = {
     10006: '除虫',
     10007: '浇水',
     10008: '偷菜',
+};
+
+const BAD_ACTION_LIMIT_IDS = {
+    putBug: [10004, 10005],
+    putWeed: [10003, 10006],
 };
 
 const DEFAULT_FRIEND_RUNTIME_SETTINGS = {
@@ -182,6 +187,13 @@ function canOperate(opId) {
     return limit.dayTimes < limit.dayTimesLimit;
 }
 
+function canOperateAny(opIds) {
+    const ids = Array.isArray(opIds) ? opIds : [];
+    const known = ids.filter((id) => operationLimits.has(id));
+    if (known.length === 0) return true;
+    return known.some((id) => canOperate(id));
+}
+
 /**
  * 帮助操作前调用：记录当前 dayExpTimes，操作后对比
  */
@@ -201,6 +213,18 @@ function getRemainingTimes(opId) {
     return Math.max(0, limit.dayTimesLimit - limit.dayTimes);
 }
 
+function getRemainingTimesAny(opIds) {
+    const ids = Array.isArray(opIds) ? opIds : [];
+    const known = ids.filter((id) => operationLimits.has(id));
+    if (known.length === 0) return 999;
+    let minLeft = 999;
+    for (const id of known) {
+        const left = getRemainingTimes(id);
+        if (left < minLeft) minLeft = left;
+    }
+    return minLeft;
+}
+
 /**
  * 获取操作限制摘要 (用于日志显示)
  */
@@ -215,8 +239,8 @@ function getOperationLimitsSummary() {
             parts.push(`${name}${expLeft}/${limit.dayExpTimesLimit}`);
         }
     }
-    // 捣乱操作 (10003=放草, 10004=放虫)
-    for (const id of [10003, 10004]) {
+    // 捣乱操作（兼容不同版本 ID）
+    for (const id of [10003, 10004, 10005, 10006]) {
         const limit = operationLimits.get(id);
         if (limit && limit.dayTimesLimit > 0) {
             const name = OP_NAMES[id] || `#${id}`;
@@ -229,7 +253,7 @@ function getOperationLimitsSummary() {
 
 async function helpWater(friendGid, landIds) {
     const body = types.WaterLandRequest.encode(types.WaterLandRequest.create({
-        land_ids: landIds,
+        land_ids: (landIds || []).map((id) => toLong(id)),
         host_gid: toLong(friendGid),
     })).finish();
     const { body: replyBody } = await sendMsgAsync('gamepb.plantpb.PlantService', 'WaterLand', body);
@@ -240,7 +264,7 @@ async function helpWater(friendGid, landIds) {
 
 async function helpWeed(friendGid, landIds) {
     const body = types.WeedOutRequest.encode(types.WeedOutRequest.create({
-        land_ids: landIds,
+        land_ids: (landIds || []).map((id) => toLong(id)),
         host_gid: toLong(friendGid),
     })).finish();
     const { body: replyBody } = await sendMsgAsync('gamepb.plantpb.PlantService', 'WeedOut', body);
@@ -251,7 +275,7 @@ async function helpWeed(friendGid, landIds) {
 
 async function helpInsecticide(friendGid, landIds) {
     const body = types.InsecticideRequest.encode(types.InsecticideRequest.create({
-        land_ids: landIds,
+        land_ids: (landIds || []).map((id) => toLong(id)),
         host_gid: toLong(friendGid),
     })).finish();
     const { body: replyBody } = await sendMsgAsync('gamepb.plantpb.PlantService', 'Insecticide', body);
@@ -262,7 +286,7 @@ async function helpInsecticide(friendGid, landIds) {
 
 async function stealHarvest(friendGid, landIds) {
     const body = types.HarvestRequest.encode(types.HarvestRequest.create({
-        land_ids: landIds,
+        land_ids: (landIds || []).map((id) => toLong(id)),
         host_gid: toLong(friendGid),
         is_all: true,
     })).finish();
@@ -274,7 +298,7 @@ async function stealHarvest(friendGid, landIds) {
 
 async function putInsects(friendGid, landIds) {
     const body = types.PutInsectsRequest.encode(types.PutInsectsRequest.create({
-        land_ids: landIds,
+        land_ids: (landIds || []).map((id) => toLong(id)),
         host_gid: toLong(friendGid),
     })).finish();
     const { body: replyBody } = await sendMsgAsync('gamepb.plantpb.PlantService', 'PutInsects', body);
@@ -285,7 +309,7 @@ async function putInsects(friendGid, landIds) {
 
 async function putWeeds(friendGid, landIds) {
     const body = types.PutWeedsRequest.encode(types.PutWeedsRequest.create({
-        land_ids: landIds,
+        land_ids: (landIds || []).map((id) => toLong(id)),
         host_gid: toLong(friendGid),
     })).finish();
     const { body: replyBody } = await sendMsgAsync('gamepb.plantpb.PlantService', 'PutWeeds', body);
@@ -331,6 +355,8 @@ function analyzeFriendLands(lands, myGid, friendName = '') {
         canPutWeed: [],  // 可以放草
         canPutBug: [],   // 可以放虫
     };
+    const myGidText = toIdString(myGid);
+    const nowSec = getServerTimeSec();
 
     for (const land of lands) {
         const id = toNum(land.id);
@@ -377,20 +403,21 @@ function analyzeFriendLands(lands, myGid, friendName = '') {
             if (plant.insect_owners && plant.insect_owners.length > 0) result.needBug.push(id);
         }
 
-        // 捣乱操作: 仅在生长期尝试，避免成熟/枯死地块触发参数错误
-        if (!isMature) {
-            const weedOwners = plant.weed_owners || [];
-            const insectOwners = plant.insect_owners || [];
-            const iAlreadyPutWeed = weedOwners.some(gid => toNum(gid) === myGid);
-            const iAlreadyPutBug = insectOwners.some(gid => toNum(gid) === myGid);
+        // 捣乱操作: 仅对当前阶段已进入杂草/虫害时窗且未被我操作过的土地尝试
+        const weedOwners = plant.weed_owners || [];
+        const insectOwners = plant.insect_owners || [];
+        const iAlreadyPutWeed = weedOwners.some((gid) => toIdString(gid) === myGidText);
+        const iAlreadyPutBug = insectOwners.some((gid) => toIdString(gid) === myGidText);
+        const weedsTime = toTimeSec(currentPhase.weeds_time);
+        const insectTime = toTimeSec(currentPhase.insect_time);
+        const weedWindowReady = weedsTime > 0 && weedsTime <= nowSec;
+        const insectWindowReady = insectTime > 0 && insectTime <= nowSec;
 
-            // 每块地最多2个草/虫，且我没放过
-            if (weedOwners.length < 2 && !iAlreadyPutWeed) {
-                result.canPutWeed.push(id);
-            }
-            if (insectOwners.length < 2 && !iAlreadyPutBug) {
-                result.canPutBug.push(id);
-            }
+        if (weedOwners.length === 0 && weedWindowReady && !iAlreadyPutWeed) {
+            result.canPutWeed.push(id);
+        }
+        if (insectOwners.length === 0 && insectWindowReady && !iAlreadyPutBug) {
+            result.canPutBug.push(id);
         }
     }
     return result;
@@ -517,7 +544,7 @@ function normalizeManualAction(action) {
 
 async function listFriendsForUi() {
     const state = getUserState();
-    const myGid = toNum(state.gid);
+    const myGid = toIdString(state.gid);
     if (!myGid) {
         throw new Error('not logged in');
     }
@@ -526,11 +553,11 @@ async function listFriendsForUi() {
     const friends = reply.game_friends || [];
     const list = [];
     for (const friend of friends) {
-        const gid = toNum(friend.gid);
+        const gid = toIdString(friend.gid);
         if (!gid || gid === myGid) continue;
         const plant = friend.plant || {};
         list.push({
-            gid: String(gid),
+            gid,
             name: normalizeFriendName(friend, gid),
             level: toNum(friend.level),
             preview: {
@@ -551,13 +578,13 @@ async function listFriendsForUi() {
 
 async function runManualFriendOpCore({ gid, action }) {
     const state = getUserState();
-    const myGid = toNum(state.gid);
+    const myGid = toIdString(state.gid);
     if (!myGid) {
         throw new Error('not logged in');
     }
 
-    const targetGid = Number.parseInt(String(gid || '').trim(), 10);
-    if (!Number.isFinite(targetGid) || targetGid <= 0) {
+    const targetGid = String(gid || '').trim();
+    if (!/^\d+$/.test(targetGid)) {
         throw new Error('invalid gid');
     }
     const pickedAction = normalizeManualAction(action);
@@ -568,7 +595,7 @@ async function runManualFriendOpCore({ gid, action }) {
 
     const reply = await getAllFriends();
     const friends = reply.game_friends || [];
-    const friend = friends.find((f) => toNum(f.gid) === targetGid);
+    const friend = friends.find((f) => toIdString(f.gid) === targetGid);
     if (!friend) {
         throw new Error('friend not found');
     }
@@ -609,24 +636,24 @@ async function runManualFriendOpCore({ gid, action }) {
             markExpCheck(10006);
             await applyManualBatch(counts, 'insecticide', execDetail, targetGid, status.needBug, helpInsecticide);
         } else if (pickedAction === 'putBug') {
-            const canPutBug = canOperate(10004);
-            summaryDetail.limitBlockedBug = !canPutBug;
-            const ids = canPutBug ? status.canPutBug.slice(0, getRemainingTimes(10004)) : [];
-            await applyManualBatch(counts, 'putBug', execDetail, targetGid, ids, putInsects);
+            const ids = canOperateAny(BAD_ACTION_LIMIT_IDS.putBug)
+                ? status.canPutBug.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putBug))
+                : [];
+            counts.putBug = await executeLandBatch(targetGid, ids, putInsects);
         } else if (pickedAction === 'putWeed') {
-            const canPutWeed = canOperate(10003);
-            summaryDetail.limitBlockedWeed = !canPutWeed;
-            const ids = canPutWeed ? status.canPutWeed.slice(0, getRemainingTimes(10003)) : [];
-            await applyManualBatch(counts, 'putWeed', execDetail, targetGid, ids, putWeeds);
+            const ids = canOperateAny(BAD_ACTION_LIMIT_IDS.putWeed)
+                ? status.canPutWeed.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putWeed))
+                : [];
+            counts.putWeed = await executeLandBatch(targetGid, ids, putWeeds);
         } else if (pickedAction === 'bad') {
-            const canPutBug = canOperate(10004);
-            const canPutWeed = canOperate(10003);
-            summaryDetail.limitBlockedBug = !canPutBug;
-            summaryDetail.limitBlockedWeed = !canPutWeed;
-            const bugIds = canPutBug ? status.canPutBug.slice(0, getRemainingTimes(10004)) : [];
-            const weedIds = canPutWeed ? status.canPutWeed.slice(0, getRemainingTimes(10003)) : [];
-            await applyManualBatch(counts, 'putBug', execDetail, targetGid, bugIds, putInsects);
-            await applyManualBatch(counts, 'putWeed', execDetail, targetGid, weedIds, putWeeds);
+            const bugIds = canOperateAny(BAD_ACTION_LIMIT_IDS.putBug)
+                ? status.canPutBug.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putBug))
+                : [];
+            counts.putBug = await executeLandBatch(targetGid, bugIds, putInsects);
+            const weedIds = canOperateAny(BAD_ACTION_LIMIT_IDS.putWeed)
+                ? status.canPutWeed.slice(0, getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putWeed))
+                : [];
+            counts.putWeed = await executeLandBatch(targetGid, weedIds, putWeeds);
         }
 
         summaryDetail.attempted = execDetail.attempted;
@@ -755,24 +782,24 @@ async function visitFriend(friend, totalActions, myGid) {
     }
 
     // 捣乱操作: 放虫(10004)/放草(10003)
-    if (friendRuntimeSettings.enablePutBadThings && status.canPutBug.length > 0 && canOperate(10004)) {
+    if (friendRuntimeSettings.enablePutBadThings && status.canPutBug.length > 0 && canOperateAny(BAD_ACTION_LIMIT_IDS.putBug)) {
         let ok = 0;
-        const remaining = getRemainingTimes(10004);
+        const remaining = getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putBug);
         const toProcess = status.canPutBug.slice(0, remaining);
         for (const landId of toProcess) {
-            if (!canOperate(10004)) break;
+            if (!canOperateAny(BAD_ACTION_LIMIT_IDS.putBug)) break;
             try { await putInsects(gid, [landId]); ok++; } catch (e) { /* ignore */ }
             await sleep(100);
         }
         if (ok > 0) { actions.push(`放虫${ok}`); totalActions.putBug += ok; }
     }
 
-    if (friendRuntimeSettings.enablePutBadThings && status.canPutWeed.length > 0 && canOperate(10003)) {
+    if (friendRuntimeSettings.enablePutBadThings && status.canPutWeed.length > 0 && canOperateAny(BAD_ACTION_LIMIT_IDS.putWeed)) {
         let ok = 0;
-        const remaining = getRemainingTimes(10003);
+        const remaining = getRemainingTimesAny(BAD_ACTION_LIMIT_IDS.putWeed);
         const toProcess = status.canPutWeed.slice(0, remaining);
         for (const landId of toProcess) {
-            if (!canOperate(10003)) break;
+            if (!canOperateAny(BAD_ACTION_LIMIT_IDS.putWeed)) break;
             try { await putWeeds(gid, [landId]); ok++; } catch (e) { /* ignore */ }
             await sleep(100);
         }
@@ -806,7 +833,8 @@ async function checkFriendsCore() {
         // 检查帮助经验是否还有
         const canHelpWithExp = !friendRuntimeSettings.helpOnlyWithExp || canGetExp(10005) || canGetExp(10006) || canGetExp(10007);
         // 检查是否还有捣乱次数 (放虫/放草)
-        const canPutBugOrWeed = canOperate(10004) || canOperate(10003);  // 10004=放虫, 10003=放草
+        const canPutBugOrWeed = canOperateAny(BAD_ACTION_LIMIT_IDS.putBug)
+            || canOperateAny(BAD_ACTION_LIMIT_IDS.putWeed);
 
         // 分两类：有预览信息的优先访问，其他的放后面（用于放虫放草）
         const priorityFriends = [];  // 有可偷/可帮助的好友
@@ -888,7 +916,7 @@ async function checkFriendsCore() {
             }
             await sleep(500);
             // 如果捣乱次数用完了，且没有其他操作，可以提前结束
-            if (!canOperate(10004) && !canOperate(10003)) {  // 10004=放虫, 10003=放草
+            if (!canOperateAny(BAD_ACTION_LIMIT_IDS.putBug) && !canOperateAny(BAD_ACTION_LIMIT_IDS.putWeed)) {
                 // 继续巡查，但不再放虫放草
             }
         }
@@ -957,11 +985,11 @@ function stopFriendCheckLoop() {
  * 处理服务器推送的好友申请
  */
 function onFriendApplicationReceived(applications) {
-    const names = applications.map(a => a.name || `GID:${toNum(a.gid)}`).join(', ');
+    const names = applications.map(a => a.name || `GID:${toIdString(a.gid)}`).join(', ');
     log('申请', `收到 ${applications.length} 个好友申请: ${names}`);
 
     // 自动同意
-    const gids = applications.map(a => toNum(a.gid));
+    const gids = applications.map(a => toIdString(a.gid)).filter(Boolean);
     acceptFriendsWithRetry(gids);
 }
 
@@ -974,10 +1002,10 @@ async function checkAndAcceptApplications() {
         const applications = reply.applications || [];
         if (applications.length === 0) return;
 
-        const names = applications.map(a => a.name || `GID:${toNum(a.gid)}`).join(', ');
+        const names = applications.map(a => a.name || `GID:${toIdString(a.gid)}`).join(', ');
         log('申请', `发现 ${applications.length} 个待处理申请: ${names}`);
 
-        const gids = applications.map(a => toNum(a.gid));
+        const gids = applications.map(a => toIdString(a.gid)).filter(Boolean);
         await acceptFriendsWithRetry(gids);
     } catch (e) {
         // 静默失败，可能是 QQ 平台不支持
@@ -1006,4 +1034,7 @@ module.exports = {
     checkAndAcceptApplications,
     listFriendsForUi, runManualFriendOp,
     updateFriendRuntimeSettings, getFriendRuntimeSettings,
+    __private: {
+        analyzeFriendLands,
+    },
 };
