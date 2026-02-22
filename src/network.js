@@ -440,17 +440,33 @@ function connect(code, onLoginSuccess) {
             const reasonPart = reasonText ? `, reason=${reasonText}` : '';
             logWarn('WS', `连接关闭 (code=${code}${reasonPart})`);
         }
+        networkEvents.emit('wsClosed', {
+            code: toNum(code),
+            reason: reasonText,
+            manual: manualClose,
+        });
         cleanup();
     });
 
     ws.on('error', (err) => {
         logWarn('WS', `错误: ${err.message}`);
+        networkEvents.emit('wsError', {
+            message: err && err.message ? err.message : String(err),
+            manual: manualClose,
+        });
     });
 }
 
 function cleanup() {
     if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
-    pendingCallbacks.clear();
+    if (pendingCallbacks.size > 0) {
+        const err = new Error('连接已关闭');
+        for (const cb of pendingCallbacks.values()) {
+            try { cb(err); } catch (e) { /* ignore */ }
+        }
+        pendingCallbacks.clear();
+    }
+    ws = null;
 }
 
 function getWs() { return ws; }

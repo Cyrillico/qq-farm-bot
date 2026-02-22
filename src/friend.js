@@ -5,7 +5,7 @@
 const { CONFIG, PlantPhase, PHASE_NAMES } = require('./config');
 const { types } = require('./proto');
 const { sendMsgAsync, getUserState, networkEvents } = require('./network');
-const { toLong, toNum, toIdString, getServerTimeSec, toTimeSec, log, logWarn, sleep } = require('./utils');
+const { toLong, toNum, toIdString, log, logWarn, sleep } = require('./utils');
 const { getCurrentPhase, setOperationLimitsCallback } = require('./farm');
 const { getPlantName } = require('./gameConfig');
 
@@ -39,8 +39,9 @@ const OP_NAMES = {
 };
 
 const BAD_ACTION_LIMIT_IDS = {
-    putBug: [10004, 10005],
-    putWeed: [10003, 10006],
+    // 协议版本存在差异，优先新映射，再兼容旧映射
+    putBug: [10005, 10004],
+    putWeed: [10006, 10003],
 };
 
 const DEFAULT_FRIEND_RUNTIME_SETTINGS = {
@@ -191,7 +192,9 @@ function canOperateAny(opIds) {
     const ids = Array.isArray(opIds) ? opIds : [];
     const known = ids.filter((id) => operationLimits.has(id));
     if (known.length === 0) return true;
-    return known.some((id) => canOperate(id));
+    if (known.some((id) => canOperate(id))) return true;
+    // 仅部分 ID 有限制数据时，不要把未知 ID 误判为不可操作
+    return known.length < ids.length;
 }
 
 function pickBestOpId(opIds) {
@@ -232,9 +235,17 @@ function getRemainingTimes(opId) {
 }
 
 function getRemainingTimesAny(opIds) {
-    const pickedId = pickBestOpId(opIds);
-    if (!pickedId) return 999;
-    return getRemainingTimes(pickedId);
+    const ids = Array.isArray(opIds) ? opIds : [];
+    const known = ids.filter((id) => operationLimits.has(id));
+    if (known.length === 0) return 999;
+
+    const pickedId = pickBestOpId(known);
+    const left = pickedId ? getRemainingTimes(pickedId) : 0;
+    if (left > 0) return left;
+
+    // 仅部分 ID 有限制数据且已知 ID 剩余为 0 时，给未知 ID 保留尝试空间
+    if (known.length < ids.length) return 999;
+    return 0;
 }
 
 /**
@@ -369,7 +380,6 @@ function analyzeFriendLands(lands, myGid, friendName = '', options = {}) {
         canPutBug: [],   // 可以放虫
     };
     const myGidText = toIdString(myGid);
-    const nowSec = getServerTimeSec();
 
     for (const land of lands) {
         const id = toNum(land.id);
@@ -416,22 +426,18 @@ function analyzeFriendLands(lands, myGid, friendName = '', options = {}) {
             if (plant.insect_owners && plant.insect_owners.length > 0) result.needBug.push(id);
         }
 
-        // 捣乱操作: 仅对当前阶段已进入杂草/虫害时窗且未被我操作过的土地尝试
+        // 捣乱操作:
+        // 参考对标实现，按“当前草/虫拥有者数量 + 是否我本人已操作”判定。
+        // 不做 weeds_time/insect_time 硬过滤，避免不同端时间字段差异导致全量误判为 0。
         const weedOwners = plant.weed_owners || [];
         const insectOwners = plant.insect_owners || [];
         const iAlreadyPutWeed = weedOwners.some((gid) => toIdString(gid) === myGidText);
         const iAlreadyPutBug = insectOwners.some((gid) => toIdString(gid) === myGidText);
-        const weedsTime = toTimeSec(currentPhase.weeds_time);
-        const insectTime = toTimeSec(currentPhase.insect_time);
-        const weedWindowReady = weedsTime > 0 && weedsTime <= nowSec;
-        const insectWindowReady = insectTime > 0 && insectTime <= nowSec;
-
-        // 严格模式: 仅在时窗到达且当前无草/虫时尝试
-        // 宽松模式(手动操作回退): 当严格模式筛空时，允许按“未被我放过 + 拥有者<2”再尝试一次
-        const canPutWeedStrict = weedOwners.length === 0 && weedWindowReady;
-        const canPutBugStrict = insectOwners.length === 0 && insectWindowReady;
-        const canPutWeedRelaxed = weedOwners.length < 2;
-        const canPutBugRelaxed = insectOwners.length < 2;
+        const canPutWeedStrict = weedOwners.length < 2;
+        const canPutBugStrict = insectOwners.length < 2;
+        // 宽松模式为手动操作兜底：允许拥有者上限放宽到 3，减少误判“可放0”
+        const canPutWeedRelaxed = weedOwners.length < 3;
+        const canPutBugRelaxed = insectOwners.length < 3;
         if (!iAlreadyPutWeed && (canPutWeedStrict || (relaxedBadOps && canPutWeedRelaxed))) {
             result.canPutWeed.push(id);
         }
