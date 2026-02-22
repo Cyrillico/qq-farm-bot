@@ -326,6 +326,9 @@ function escapeHtml(text) {
 }
 
 function normalizeAccountId(raw) {
+  if (raw && typeof raw === 'object') {
+    return normalizeAccountId(state.selectedAccountId);
+  }
   const text = String(raw || '').trim();
   return text || 'default';
 }
@@ -1697,7 +1700,7 @@ function bindEvents() {
   els.saveBarkBtn.addEventListener('click', onSaveBark);
   els.testBarkBtn.addEventListener('click', onTestBark);
   els.saveFriendUiBtn.addEventListener('click', onSaveFriendUi);
-  els.refreshFriendsBtn.addEventListener('click', loadFriends);
+  els.refreshFriendsBtn.addEventListener('click', () => loadFriends(state.selectedAccountId));
   els.refreshLandsBtn.addEventListener('click', () => loadLands(state.selectedAccountId));
   els.refreshQrBtn.addEventListener('click', onRefreshQr);
   els.switchQrBtn.addEventListener('click', onSwitchQr);
