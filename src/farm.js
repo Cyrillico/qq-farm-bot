@@ -807,25 +807,21 @@ function normalizeGoldRequirement(value, text = '', levelHint = 0) {
 
 function parseLandRequirementCondition(condition = {}) {
     const cond = condition && typeof condition === 'object' ? condition : {};
-    let needLevel = pickFirstPositiveNumber([
+    const directNeedLevel = pickFirstPositiveNumber([
         cond.need_level,
         cond.needLevel,
         cond.need_lv,
         cond.needLv,
-        cond.level,
-        cond.lv,
     ]);
-    let needGold = pickFirstPositiveNumber([
+    let directNeedGold = pickFirstPositiveNumber([
         cond.need_gold,
         cond.needGold,
         cond.need_coin,
         cond.needCoin,
-        cond.gold,
-        cond.coin,
         cond.cost_gold,
         cond.costGold,
     ]);
-    if (!needGold) {
+    if (!directNeedGold) {
         const needGoldWan = pickFirstPositiveNumber([
             cond.need_gold_wan,
             cond.needGoldWan,
@@ -833,12 +829,13 @@ function parseLandRequirementCondition(condition = {}) {
             cond.goldWan,
         ]);
         if (needGoldWan > 0) {
-            needGold = needGoldWan * 10000;
+            directNeedGold = needGoldWan * 10000;
         }
     }
-    if (needGold > 0) {
-        needGold = normalizeGoldRequirement(needGold, '', needLevel);
-    }
+    let condNeedLevel = 0;
+    let condNeedGold = 0;
+    let condNeedLevelByType = 0;
+    let condNeedGoldByType = 0;
 
     const condItems = Array.isArray(cond.conds) ? cond.conds : [];
     for (const item of condItems) {
@@ -852,14 +849,30 @@ function parseLandRequirementCondition(condition = {}) {
             item && item.need_count,
         ]);
         const text = String(item && (item.name || item.desc || item.key || '')).toLowerCase();
+        const looksLikeLevelText = text.includes('level') || text.includes('lv') || text.includes('等级') || text.includes('级');
+        const looksLikeGoldText = text.includes('gold') || text.includes('coin') || text.includes('金币');
 
-        if (!needLevel && value > 0 && (type === 1 || text.includes('level') || text.includes('lv') || text.includes('等级'))) {
-            needLevel = value;
+        if (!condNeedLevel && value > 0 && looksLikeLevelText) {
+            condNeedLevel = value;
             continue;
         }
-        if (!needGold && value > 0 && (type === 2 || text.includes('gold') || text.includes('coin') || text.includes('金币'))) {
-            needGold = normalizeGoldRequirement(value, text, needLevel);
+        if (!condNeedGold && value > 0 && looksLikeGoldText) {
+            condNeedGold = value;
+            continue;
         }
+        if (!condNeedLevelByType && value > 0 && type === 1 && !looksLikeGoldText) {
+            condNeedLevelByType = value;
+            continue;
+        }
+        if (!condNeedGoldByType && value > 0 && type === 2 && !looksLikeLevelText) {
+            condNeedGoldByType = value;
+        }
+    }
+
+    let needLevel = condNeedLevel || directNeedLevel || condNeedLevelByType;
+    let needGold = condNeedGold || directNeedGold || condNeedGoldByType;
+    if (needGold > 0) {
+        needGold = normalizeGoldRequirement(needGold, condNeedGold > 0 ? '金币' : '', needLevel);
     }
 
     const resourceItems = Array.isArray(cond.items)
