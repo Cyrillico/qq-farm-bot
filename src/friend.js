@@ -320,25 +320,51 @@ async function stealHarvest(friendGid, landIds) {
 }
 
 async function putInsects(friendGid, landIds) {
-    const body = types.PutInsectsRequest.encode(types.PutInsectsRequest.create({
-        land_ids: (landIds || []).map((id) => toLong(id)),
-        host_gid: toLong(friendGid),
-    })).finish();
-    const { body: replyBody } = await sendMsgAsync('gamepb.plantpb.PlantService', 'PutInsects', body);
-    const reply = types.PutInsectsReply.decode(replyBody);
-    updateOperationLimits(reply.operation_limits);
-    return reply;
+    return sendPutBadThing('PutInsects', types.PutInsectsRequest, types.PutInsectsReply, friendGid, landIds);
 }
 
 async function putWeeds(friendGid, landIds) {
-    const body = types.PutWeedsRequest.encode(types.PutWeedsRequest.create({
-        land_ids: (landIds || []).map((id) => toLong(id)),
-        host_gid: toLong(friendGid),
-    })).finish();
-    const { body: replyBody } = await sendMsgAsync('gamepb.plantpb.PlantService', 'PutWeeds', body);
-    const reply = types.PutWeedsReply.decode(replyBody);
-    updateOperationLimits(reply.operation_limits);
-    return reply;
+    return sendPutBadThing('PutWeeds', types.PutWeedsRequest, types.PutWeedsReply, friendGid, landIds);
+}
+
+function isParamError(err) {
+    const text = String((err && err.message) || '');
+    return /1000020|请求参数错误|invalid argument|bad request/i.test(text);
+}
+
+async function sendPutBadThing(method, RequestType, ReplyType, friendGid, landIds) {
+    const idsLong = (landIds || []).map((id) => toLong(id));
+    const idsRaw = (landIds || []).map((id) => toNum(id));
+    const gidLong = toLong(friendGid);
+    const gidRaw = toNum(friendGid);
+
+    // 同协议在 QQ/WX 端存在字段容忍差异：依次尝试 3 种请求形态。
+    const payloadCandidates = [
+        { land_ids: idsLong, host_gid: gidLong },
+        { land_ids: idsRaw, host_gid: gidRaw },
+        { land_ids: idsLong },
+    ];
+
+    let lastErr = null;
+    for (let i = 0; i < payloadCandidates.length; i++) {
+        try {
+            const body = RequestType.encode(RequestType.create(payloadCandidates[i])).finish();
+            const { body: replyBody } = await sendMsgAsync('gamepb.plantpb.PlantService', method, body);
+            const reply = ReplyType.decode(replyBody);
+            updateOperationLimits(reply.operation_limits);
+            return reply;
+        } catch (e) {
+            lastErr = e;
+            if (!isParamError(e)) {
+                throw e;
+            }
+            // 参数错误才继续切换形态重试；其余错误直接抛出。
+            if (i === payloadCandidates.length - 1) {
+                throw e;
+            }
+        }
+    }
+    throw lastErr || new Error(`${method} failed`);
 }
 
 // ============ 好友土地分析 ============
@@ -436,11 +462,11 @@ function analyzeFriendLands(lands, myGid, friendName = '', options = {}) {
         const insectOwners = plant.insect_owners || [];
         const iAlreadyPutWeed = weedOwners.some((gid) => toIdString(gid) === myGidText);
         const iAlreadyPutBug = insectOwners.some((gid) => toIdString(gid) === myGidText);
-        const canPutWeedStrict = weedOwners.length < 2;
-        const canPutBugStrict = insectOwners.length < 2;
-        // 宽松模式为手动操作兜底：允许拥有者上限放宽到 3，减少误判“可放0”
-        const canPutWeedRelaxed = weedOwners.length < 3;
-        const canPutBugRelaxed = insectOwners.length < 3;
+        const canPutWeedStrict = weedOwners.length === 0;
+        const canPutBugStrict = insectOwners.length === 0;
+        // 宽松模式仅放宽到 1，减少“全失败”概率。
+        const canPutWeedRelaxed = weedOwners.length <= 1;
+        const canPutBugRelaxed = insectOwners.length <= 1;
         if (!iAlreadyPutWeed && (canPutWeedStrict || (relaxedBadOps && canPutWeedRelaxed))) {
             result.canPutWeed.push(id);
         }

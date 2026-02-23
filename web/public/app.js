@@ -807,6 +807,18 @@ function formatRemainSeconds(sec) {
   return `${h}h ${mm}m`;
 }
 
+function formatGoldRequirement(gold) {
+  const n = Number(gold || 0);
+  if (!Number.isFinite(n) || n <= 0) return '-';
+  if (n >= 10000 && n % 10000 === 0) {
+    return `${n / 10000}万`;
+  }
+  if (n >= 10000) {
+    return `${(n / 10000).toFixed(1).replace(/\.0$/, '')}万`;
+  }
+  return String(n);
+}
+
 function renderLands() {
   const accountId = normalizeAccountId(state.selectedAccountId);
   const data = state.lands[accountId] || null;
@@ -850,9 +862,7 @@ function renderLands() {
       const levelText = Number.isFinite(Number(land.needLevel)) && Number(land.needLevel) > 0
         ? `Lv${land.needLevel}`
         : 'Lv-';
-      const goldText = Number.isFinite(Number(land.needGold)) && Number(land.needGold) > 0
-        ? `${land.needGold}`
-        : '-';
+      const goldText = formatGoldRequirement(land.needGold);
       requirementText = `${label} ${levelText} / ${goldText} 金币`;
     }
     return `
