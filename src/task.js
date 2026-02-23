@@ -143,6 +143,13 @@ async function claimActiveReward(activeId) {
 /**
  * 分析任务列表，找出可领取的任务
  */
+function isSignInLikeTask(task) {
+    const desc = String((task && task.desc) || '');
+    const params = Array.isArray(task && task.params) ? task.params.join(' ') : '';
+    const text = `${desc} ${params}`;
+    return /(签到|登录奖励|登陆奖励|每日登录|每日登陆)/.test(text);
+}
+
 function analyzeTaskList(tasks) {
     const claimable = [];
     for (const task of tasks) {
@@ -153,8 +160,12 @@ function analyzeTaskList(tasks) {
         const isUnlocked = task.is_unlocked;
         const shareMultiple = toNum(task.share_multiple);
 
-        // 可领取条件: 已解锁 + 未领取 + 进度完成
-        if (isUnlocked && !isClaimed && progress >= totalProgress && totalProgress > 0) {
+        // 可领取条件:
+        // 1) 常规任务: 已解锁 + 未领取 + 进度完成
+        // 2) 签到类任务: 部分版本 total_progress 为 0，但仍可直接领取
+        const normalClaimable = totalProgress > 0 && progress >= totalProgress;
+        const signInClaimable = totalProgress <= 0 && isSignInLikeTask(task);
+        if (isUnlocked && !isClaimed && (normalClaimable || signInClaimable)) {
             claimable.push({
                 id,
                 desc: task.desc || `任务#${id}`,
@@ -180,7 +191,7 @@ function pickClaimableActives(actives) {
 
 function pickGiftItems(items) {
     const out = [];
-    const regex = /(礼包|礼盒|宝箱|盲盒|补给箱)/;
+    const regex = /(礼包|礼盒|宝箱|盲盒|补给箱|福袋|补给包|奖励包)/;
     for (const item of (items || [])) {
         const id = toNum(item.id);
         const count = toNum(item.count);
@@ -388,6 +399,7 @@ module.exports = {
     updateTaskRuntimeSettings,
     getTaskRuntimeSettings,
     __private: {
+        analyzeTaskList,
         pickClaimableActives,
         pickGiftItems,
     },

@@ -5,10 +5,12 @@ const friend = require('../src/friend');
 
 function makeGrowingLand({
     id,
+    phase = 3,
     weedsTimeOffsetSec = -5,
     insectTimeOffsetSec = -5,
     weedOwners = [],
     insectOwners = [],
+    stealable = false,
 }) {
     const nowSec = Math.floor(Date.now() / 1000);
     return {
@@ -17,7 +19,7 @@ function makeGrowingLand({
             id: 123,
             name: '测试作物',
             phases: [{
-                phase: 3,
+                phase,
                 begin_time: nowSec - 60,
                 weeds_time: nowSec + weedsTimeOffsetSec,
                 insect_time: nowSec + insectTimeOffsetSec,
@@ -26,7 +28,7 @@ function makeGrowingLand({
             dry_num: 0,
             weed_owners: weedOwners,
             insect_owners: insectOwners,
-            stealable: false,
+            stealable,
         },
     };
 }
@@ -59,4 +61,16 @@ test('analyzeFriendLands relaxed mode should fallback for manual bad-ops when st
     const relaxedStatus = friend.__private.analyzeFriendLands(lands, 111, '测试好友', { relaxedBadOps: true });
     assert.deepEqual(relaxedStatus.canPutWeed, [10, 12]);
     assert.deepEqual(relaxedStatus.canPutBug, [10, 12]);
+});
+
+test('analyzeFriendLands should exclude mature/dead lands from bad-op candidates', () => {
+    const lands = [
+        makeGrowingLand({ id: 21, phase: 6, stealable: true }), // 成熟
+        makeGrowingLand({ id: 22, phase: 7 }), // 枯死
+        makeGrowingLand({ id: 23, phase: 4 }), // 生长中
+    ];
+
+    const status = friend.__private.analyzeFriendLands(lands, 111, '测试好友');
+    assert.deepEqual(status.canPutWeed, [23]);
+    assert.deepEqual(status.canPutBug, [23]);
 });

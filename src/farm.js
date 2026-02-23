@@ -795,6 +795,16 @@ function pickFirstPositiveNumber(values = []) {
     return 0;
 }
 
+function normalizeGoldRequirement(value, text = '', levelHint = 0) {
+    const gold = Number(value);
+    if (!Number.isFinite(gold) || gold <= 0) return 0;
+    if (text.includes('万')) return gold * 10000;
+    if (levelHint >= 10 && gold < 1000) {
+        return gold * 10000;
+    }
+    return gold;
+}
+
 function parseLandRequirementCondition(condition = {}) {
     const cond = condition && typeof condition === 'object' ? condition : {};
     let needLevel = pickFirstPositiveNumber([
@@ -815,6 +825,17 @@ function parseLandRequirementCondition(condition = {}) {
         cond.cost_gold,
         cond.costGold,
     ]);
+    if (!needGold) {
+        const needGoldWan = pickFirstPositiveNumber([
+            cond.need_gold_wan,
+            cond.needGoldWan,
+            cond.gold_wan,
+            cond.goldWan,
+        ]);
+        if (needGoldWan > 0) {
+            needGold = needGoldWan * 10000;
+        }
+    }
 
     const condItems = Array.isArray(cond.conds) ? cond.conds : [];
     for (const item of condItems) {
@@ -834,7 +855,7 @@ function parseLandRequirementCondition(condition = {}) {
             continue;
         }
         if (!needGold && value > 0 && (type === 2 || text.includes('gold') || text.includes('coin') || text.includes('金币'))) {
-            needGold = value;
+            needGold = normalizeGoldRequirement(value, text, needLevel);
         }
     }
 
@@ -851,7 +872,7 @@ function parseLandRequirementCondition(condition = {}) {
             item && item.need_num,
         ]);
         if (itemId === 1 && count > 0) {
-            needGold = count;
+            needGold = normalizeGoldRequirement(count, '', needLevel);
         }
     }
 
