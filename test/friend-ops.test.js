@@ -50,7 +50,7 @@ test('analyzeFriendLands should not throw and should only pick actionable bad-op
 test('analyzeFriendLands relaxed mode should fallback for manual bad-ops when strict window is empty', () => {
     const lands = [
         makeGrowingLand({ id: 10, weedsTimeOffsetSec: 3600, insectTimeOffsetSec: 3600 }),
-        makeGrowingLand({ id: 12, weedsTimeOffsetSec: 3600, insectTimeOffsetSec: 3600, weedOwners: [222, 333], insectOwners: [222, 333] }),
+        makeGrowingLand({ id: 12, weedsTimeOffsetSec: 3600, insectTimeOffsetSec: 3600, weedOwners: [222], insectOwners: [222] }),
         makeGrowingLand({ id: 11, weedsTimeOffsetSec: 3600, insectTimeOffsetSec: 3600, weedOwners: [111], insectOwners: [111] }),
     ];
 
