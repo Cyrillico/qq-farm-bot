@@ -807,22 +807,6 @@ function formatRemainSeconds(sec) {
   return `${h}h ${mm}m`;
 }
 
-function formatGoldRequirement(gold, levelHint = 0) {
-  const n = Number(gold || 0);
-  if (!Number.isFinite(n) || n <= 0) return '-';
-  // 兜底兼容: 某些版本接口直接返回“万金币”数值（如 39 表示 39万）
-  if (Number(levelHint) >= 10 && n < 1000) {
-    return `${n}万`;
-  }
-  if (n >= 10000 && n % 10000 === 0) {
-    return `${n / 10000}万`;
-  }
-  if (n >= 10000) {
-    return `${(n / 10000).toFixed(1).replace(/\.0$/, '')}万`;
-  }
-  return String(n);
-}
-
 function renderLands() {
   const accountId = normalizeAccountId(state.selectedAccountId);
   const data = state.lands[accountId] || null;
@@ -859,23 +843,17 @@ function renderLands() {
     if (land.needs && land.needs.weed) tags.push('<span class="land-tag tag-danger">有草</span>');
     if (land.needs && land.needs.bug) tags.push('<span class="land-tag tag-danger">有虫</span>');
     if (land.isEmpty) tags.push('<span class="land-tag">空地</span>');
-    const requirementType = String(land.requirementType || '').toLowerCase();
-    let requirementText = '-';
-    if (requirementType === 'unlock' || requirementType === 'upgrade') {
-      const label = land.requirementLabel || (requirementType === 'unlock' ? '解锁需' : '升级需');
-      const levelText = Number.isFinite(Number(land.needLevel)) && Number(land.needLevel) > 0
-        ? `Lv${land.needLevel}`
-        : 'Lv-';
-      const goldText = formatGoldRequirement(land.needGold, land.needLevel);
-      requirementText = `${label} ${levelText} / ${goldText} 金币`;
-    }
+    const landLevelText = land.unlocked
+      ? `${land.landLevel ?? 0}${land.maxLandLevel ? `/${land.maxLandLevel}` : ''}`
+      : '-';
+    const lockedText = land.unlocked ? '' : ' | 状态：未解锁';
     return `
       <article class="land-item">
         <div class="land-head">
           <h3>土地 #${land.id}</h3>
           <p>${escapeHtml(land.plantName || '-')} | ${escapeHtml(land.phaseName || '-')}</p>
         </div>
-        <p class="land-meta">地块等级：${land.landLevel ?? 0}${land.maxLandLevel ? `/${land.maxLandLevel}` : ''} | ${escapeHtml(requirementText)}</p>
+        <p class="land-meta">地块等级：${landLevelText}${lockedText}</p>
         <p class="land-meta">下阶段：${escapeHtml(land.nextPhaseName || '-')} | 剩余：${formatRemainSeconds(land.nextPhaseInSec)}</p>
         <div class="land-tags">${tags.join('')}</div>
       </article>
