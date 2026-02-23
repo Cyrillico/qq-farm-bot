@@ -836,6 +836,9 @@ function parseLandRequirementCondition(condition = {}) {
             needGold = needGoldWan * 10000;
         }
     }
+    if (needGold > 0) {
+        needGold = normalizeGoldRequirement(needGold, '', needLevel);
+    }
 
     const condItems = Array.isArray(cond.conds) ? cond.conds : [];
     for (const item of condItems) {

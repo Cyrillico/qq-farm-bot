@@ -37,6 +37,18 @@ test('farm land requirement parser should support direct and conds fields', () =
     assert.equal(conds.needGold, 780000);
 });
 
+test('farm land requirement parser should expand direct low gold for high level', () => {
+    assert.ok(typeof farm.__private.parseLandRequirementCondition === 'function');
+
+    const parsed = farm.__private.parseLandRequirementCondition({
+        need_level: 18,
+        need_gold: 39,
+    });
+
+    assert.equal(parsed.needLevel, 18);
+    assert.equal(parsed.needGold, 390000);
+});
+
 test('farm land requirement parser should expand conds gold in wan-unit text', () => {
     assert.ok(typeof farm.__private.parseLandRequirementCondition === 'function');
 

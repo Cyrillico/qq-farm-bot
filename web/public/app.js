@@ -807,9 +807,13 @@ function formatRemainSeconds(sec) {
   return `${h}h ${mm}m`;
 }
 
-function formatGoldRequirement(gold) {
+function formatGoldRequirement(gold, levelHint = 0) {
   const n = Number(gold || 0);
   if (!Number.isFinite(n) || n <= 0) return '-';
+  // 兜底兼容: 某些版本接口直接返回“万金币”数值（如 39 表示 39万）
+  if (Number(levelHint) >= 10 && n < 1000) {
+    return `${n}万`;
+  }
   if (n >= 10000 && n % 10000 === 0) {
     return `${n / 10000}万`;
   }
@@ -862,7 +866,7 @@ function renderLands() {
       const levelText = Number.isFinite(Number(land.needLevel)) && Number(land.needLevel) > 0
         ? `Lv${land.needLevel}`
         : 'Lv-';
-      const goldText = formatGoldRequirement(land.needGold);
+      const goldText = formatGoldRequirement(land.needGold, land.needLevel);
       requirementText = `${label} ${levelText} / ${goldText} 金币`;
     }
     return `
