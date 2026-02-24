@@ -612,6 +612,26 @@ textarea:focus {
   font-size: 12px;
 }
 
+.land-crop-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.land-crop-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #3a5675;
+  background: #122236;
+  font-size: 14px;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
 .land-tags {
   display: flex;
   flex-wrap: wrap;
@@ -861,6 +881,11 @@ body[data-theme="light"] .land-tag.tag-danger {
 body[data-theme="light"] .land-tag.tag-water {
   border-color: #79bfd2;
   color: #1d7d97;
+}
+
+body[data-theme="light"] .land-crop-icon {
+  border-color: #b7cce7;
+  background: #eef5ff;
 }
 
 body[data-theme="light"] .dot-running {
