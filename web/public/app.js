@@ -1642,7 +1642,14 @@ async function onTestBark() {
         message: '这是一条测试通知',
       }),
     });
-    setText(els.barkStatus, ret.sent ? '测试推送已发送' : '测试请求完成（未发送，可能被设置过滤）');
+    if (ret.sent) {
+      setText(els.barkStatus, '测试推送已发送');
+      return;
+    }
+    const reason = String(ret.reason || '').trim();
+    const detail = String(ret.detail || '').trim();
+    const reasonText = reason ? `原因: ${reason}` : '原因: 未知';
+    setText(els.barkStatus, `测试请求完成但未发送（${reasonText}${detail ? `, ${detail}` : ''}）`);
   } catch (e) {
     setText(els.barkStatus, `测试失败：${e.message}`);
   }
