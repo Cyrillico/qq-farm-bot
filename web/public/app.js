@@ -807,6 +807,45 @@ function formatRemainSeconds(sec) {
   return `${h}h ${mm}m`;
 }
 
+function pickCropIconByName(name) {
+  const text = String(name || '').trim();
+  if (!text) return '🌱';
+  const iconRules = [
+    { re: /萝卜|胡萝卜/, icon: '🥕' },
+    { re: /白菜|生菜|油菜|甘蓝/, icon: '🥬' },
+    { re: /小麦|麦子|麦/, icon: '🌾' },
+    { re: /玉米/, icon: '🌽' },
+    { re: /土豆|马铃薯/, icon: '🥔' },
+    { re: /南瓜/, icon: '🎃' },
+    { re: /番茄|西红柿/, icon: '🍅' },
+    { re: /黄瓜/, icon: '🥒' },
+    { re: /辣椒/, icon: '🌶️' },
+    { re: /茄子/, icon: '🍆' },
+    { re: /草莓/, icon: '🍓' },
+    { re: /蓝莓/, icon: '🫐' },
+    { re: /葡萄/, icon: '🍇' },
+    { re: /苹果/, icon: '🍎' },
+    { re: /西瓜/, icon: '🍉' },
+    { re: /橙|桔|柑/, icon: '🍊' },
+    { re: /柠檬/, icon: '🍋' },
+    { re: /桃/, icon: '🍑' },
+    { re: /樱桃/, icon: '🍒' },
+    { re: /菠萝|凤梨/, icon: '🍍' },
+    { re: /香蕉/, icon: '🍌' },
+  ];
+  for (const rule of iconRules) {
+    if (rule.re.test(text)) return rule.icon;
+  }
+  return '🌱';
+}
+
+function getLandCropIcon(land) {
+  if (!land || !land.unlocked) return '🔒';
+  if (land.isEmpty) return '🟫';
+  if (Number(land.phase) === 7) return '🥀';
+  return pickCropIconByName(land.plantName || '');
+}
+
 function renderLands() {
   const accountId = normalizeAccountId(state.selectedAccountId);
   const data = state.lands[accountId] || null;
@@ -847,11 +886,18 @@ function renderLands() {
       ? `${land.landLevel ?? 0}${land.maxLandLevel ? `/${land.maxLandLevel}` : ''}`
       : '-';
     const lockedText = land.unlocked ? '' : ' | 状态：未解锁';
+    const cropIcon = getLandCropIcon(land);
+    const cropLabel = land.unlocked
+      ? (land.isEmpty ? '空地' : (land.plantName || '作物'))
+      : '未解锁';
     return `
       <article class="land-item">
         <div class="land-head">
           <h3>土地 #${land.id}</h3>
-          <p>${escapeHtml(land.plantName || '-')} | ${escapeHtml(land.phaseName || '-')}</p>
+          <p class="land-crop-line">
+            <span class="land-crop-icon" title="${escapeHtml(cropLabel)}">${cropIcon}</span>
+            <span>${escapeHtml(land.plantName || '-')} | ${escapeHtml(land.phaseName || '-')}</span>
+          </p>
         </div>
         <p class="land-meta">地块等级：${landLevelText}${lockedText}</p>
         <p class="land-meta">下阶段：${escapeHtml(land.nextPhaseName || '-')} | 剩余：${formatRemainSeconds(land.nextPhaseInSec)}</p>
