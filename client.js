@@ -43,6 +43,7 @@ const { emitUiEvent } = require('./src/uiEvents');
 const {
     updateRuntimeBarkSettings,
     updateRuntimeAccountSettings,
+    loadRuntimeSettingsFromLocalFile,
 } = require('./src/runtimeSettings');
 
 // ============ 帮助信息 ============
@@ -344,6 +345,14 @@ function registerGlobalErrorHandlers() {
     });
 }
 
+function bootstrapRuntimeSettingsFromLocalFile() {
+    const result = loadRuntimeSettingsFromLocalFile();
+    if (!result.loaded) return;
+    if (result.barkApplied) {
+        console.log(`[配置] 已加载 Bark 运行时设置 (${result.filePath})`);
+    }
+}
+
 // ============ 主函数 ============
 async function main() {
     const args = process.argv.slice(2);
@@ -439,6 +448,7 @@ async function main() {
 registerIpcHandlers();
 registerGlobalErrorHandlers();
 registerNetworkLifecycleHandlers();
+bootstrapRuntimeSettingsFromLocalFile();
 
 main().catch(async (err) => {
     console.error('启动失败:', err);

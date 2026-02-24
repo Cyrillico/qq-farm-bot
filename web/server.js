@@ -30,7 +30,7 @@ const {
     buildClearAuthCookie,
 } = require('./auth');
 const { updateRuntimeBarkSettings } = require('../src/runtimeSettings');
-const { pushBark } = require('../src/bark');
+const { pushBarkDetailed } = require('../src/bark');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const SESSION_LIFECYCLE_STATUSES = new Set([
@@ -642,12 +642,17 @@ function startServer(options = {}) {
                 const body = await readJsonBody(req);
                 const title = String(body.title || 'QQ农场 Bark 测试').trim();
                 const message = String(body.message || '这是一条来自 Web 控制台的测试通知').trim();
-                const sent = await pushBark(title, message, `test:${Date.now()}:${Math.random()}`, {
+                const result = await pushBarkDetailed(title, message, `test:${Date.now()}:${Math.random()}`, {
                     settings: settings.bark,
                     category: 'fatal',
                     force: true,
                 });
-                return sendJson(res, 200, { ok: true, sent });
+                return sendJson(res, 200, {
+                    ok: true,
+                    sent: Boolean(result && result.sent),
+                    reason: result && result.reason ? result.reason : '',
+                    detail: result && result.detail ? result.detail : '',
+                });
             } catch (e) {
                 return sendJson(res, 500, { ok: false, error: e.message });
             }

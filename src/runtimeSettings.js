@@ -3,7 +3,11 @@
  * 当前仅承载 Bark 相关配置，优先于静态 CONFIG。
  */
 
+const fs = require('node:fs');
+const path = require('node:path');
 const { CONFIG } = require('./config');
+
+const DEFAULT_LOCAL_SETTINGS_PATH = path.join(__dirname, '..', '.qq-farm-ui-settings.json');
 
 function clampInt(val, min, max, fallback) {
     const n = Number.parseInt(val, 10);
@@ -123,6 +127,53 @@ function resetRuntimeSettingsForTest() {
     runtimeSettings = buildDefaultRuntimeSettings();
 }
 
+function loadRuntimeSettingsFromLocalFile(filePath = '') {
+    const pickedPath = String(filePath || process.env.QQ_FARM_UI_SETTINGS_PATH || DEFAULT_LOCAL_SETTINGS_PATH).trim();
+    if (!pickedPath || !fs.existsSync(pickedPath)) {
+        return {
+            loaded: false,
+            filePath: pickedPath,
+            barkApplied: false,
+            accountApplied: false,
+            reason: 'not_found',
+        };
+    }
+
+    try {
+        const raw = fs.readFileSync(pickedPath, 'utf8');
+        const parsed = JSON.parse(raw);
+        let barkApplied = false;
+        let accountApplied = false;
+
+        if (parsed && typeof parsed === 'object') {
+            if (parsed.bark && typeof parsed.bark === 'object') {
+                runtimeSettings.bark = mergeBarkSettings(runtimeSettings.bark, parsed.bark);
+                barkApplied = true;
+            }
+            if (parsed.account && typeof parsed.account === 'object') {
+                runtimeSettings.account = mergeAccountRuntimeSettings(runtimeSettings.account, parsed.account);
+                accountApplied = true;
+            }
+        }
+
+        return {
+            loaded: true,
+            filePath: pickedPath,
+            barkApplied,
+            accountApplied,
+            reason: '',
+        };
+    } catch (e) {
+        return {
+            loaded: false,
+            filePath: pickedPath,
+            barkApplied: false,
+            accountApplied: false,
+            reason: e && e.message ? e.message : String(e),
+        };
+    }
+}
+
 module.exports = {
     defaultBarkSettings,
     defaultAccountRuntimeSettings,
@@ -131,4 +182,5 @@ module.exports = {
     updateRuntimeAccountSettings,
     setRuntimeSettings,
     resetRuntimeSettingsForTest,
+    loadRuntimeSettingsFromLocalFile,
 };
