@@ -158,6 +158,10 @@ function handleNotify(msg) {
             try {
                 const notify = types.KickoutNotify.decode(eventBody);
                 log('推送', `原因: ${notify.reason_message || '未知'}`);
+                networkEvents.emit('kickout', {
+                    type,
+                    reason: notify.reason_message || '',
+                });
             } catch (e) { }
             return;
         }

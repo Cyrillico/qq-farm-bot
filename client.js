@@ -38,7 +38,7 @@ const { processInviteCodes } = require('./src/invite');
 const { verifyMode, decodeMode } = require('./src/decode');
 const { emitRuntimeHint } = require('./src/utils');
 const { getQQFarmCodeByScan } = require('./src/qqQrLogin');
-const { pushBark } = require('./src/bark');
+const { pushBark, pushBarkDetailed } = require('./src/bark');
 const { emitUiEvent } = require('./src/uiEvents');
 const {
     updateRuntimeBarkSettings,
@@ -152,6 +152,30 @@ const subsystemState = {
 };
 let runtimeSubsystemsReady = false;
 let unexpectedWsClosing = false;
+
+async function pushCriticalBarkWithTimeout(title, message, dedupeKey, options = {}) {
+    const category = String(options.category || 'fatal');
+    const timeoutMs = Number.isFinite(options.timeoutMs) && options.timeoutMs > 0
+        ? Number(options.timeoutMs)
+        : 2000;
+    try {
+        const ret = await Promise.race([
+            pushBarkDetailed(title, message, dedupeKey, { category }),
+            new Promise((resolve) => setTimeout(() => resolve({
+                sent: false,
+                reason: 'timeout',
+                detail: `>${timeoutMs}ms`,
+            }), timeoutMs)),
+        ]);
+        if (ret && ret.sent) return true;
+        const reason = ret && ret.reason ? ret.reason : 'unknown';
+        const detail = ret && ret.detail ? ` ${ret.detail}` : '';
+        console.warn(`[Bark] 关键告警未发送: ${reason}${detail}`);
+        return false;
+    } catch (e) {
+        return false;
+    }
+}
 
 function setFarmSubsystemEnabled(enabled) {
     if (enabled) {
@@ -273,19 +297,51 @@ function registerIpcHandlers() {
 }
 
 function registerNetworkLifecycleHandlers() {
+    networkEvents.on('kickout', ({ reason } = {}) => {
+        if (unexpectedWsClosing) return;
+        unexpectedWsClosing = true;
+        const reasonText = reason ? `已在其他终端登录: ${reason}` : '已在其他终端登录';
+        const message = `账号被踢下线 (${reasonText})`;
+        emitProcessState('error', {
+            kind: 'kickout',
+            fatal: true,
+            message,
+        });
+        stopRuntimeSubsystems();
+        cleanup();
+        void (async () => {
+            await pushCriticalBarkWithTimeout(
+                'QQ农场连接异常',
+                message,
+                `fatal:kickout:${reasonText}`,
+                { category: 'fatal', timeoutMs: 2200 }
+            );
+            process.exit(1);
+        })();
+    });
+
     networkEvents.on('wsClosed', ({ code, reason, manual } = {}) => {
         if (manual || unexpectedWsClosing) return;
         unexpectedWsClosing = true;
         const reasonPart = reason ? `, reason=${reason}` : '';
+        const message = `WS连接关闭 (code=${code || 0}${reasonPart})`;
         emitProcessState('error', {
             kind: 'wsClosed',
             fatal: true,
-            message: `WS连接关闭 (code=${code || 0}${reasonPart})`,
+            message,
         });
         stopRuntimeSubsystems();
         cleanup();
-        // 连接意外断开时主动退出，让 WebUI 会话状态立即变红并可一键重启
-        setTimeout(() => process.exit(1), 50);
+        void (async () => {
+            await pushCriticalBarkWithTimeout(
+                'QQ农场连接异常',
+                message,
+                `network:wsClosed:${message}`,
+                { category: 'network', timeoutMs: 2200 }
+            );
+            // 连接意外断开时主动退出，让 WebUI 会话状态立即变红并可一键重启
+            process.exit(1);
+        })();
     });
 }
 
