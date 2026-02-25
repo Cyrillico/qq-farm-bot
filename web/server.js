@@ -33,6 +33,7 @@ const { updateRuntimeBarkSettings } = require('../src/runtimeSettings');
 const { pushBarkDetailed } = require('../src/bark');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const DEFAULT_STATS_PATH = path.join(__dirname, '..', '.qq-farm-ui-stats.json');
 const SESSION_LIFECYCLE_STATUSES = new Set([
     'idle',
     'starting',
@@ -169,6 +170,7 @@ function startServer(options = {}) {
     const rawPort = options.port ?? process.env.WEB_UI_PORT ?? '3210';
     const port = Number.parseInt(rawPort, 10);
     const settingsPath = options.settingsPath || DEFAULT_SETTINGS_PATH;
+    const statsPath = options.statsPath || process.env.QQ_FARM_UI_STATS_PATH || DEFAULT_STATS_PATH;
     const authConfig = buildAuthConfig(options.env || process.env);
     const stateStore = createStateStore({ maxLogs: 5000 });
     const sessionManager = new SessionManager({ rootDir: path.join(__dirname, '..') });
@@ -177,6 +179,53 @@ function startServer(options = {}) {
         settings = saveSettings(settingsPath, settings);
     }
     updateRuntimeBarkSettings(settings.bark);
+    let statsPersistTimer = null;
+
+    function loadPersistedStats() {
+        try {
+            if (!statsPath || !fs.existsSync(statsPath)) {
+                return { ok: true, loaded: false, restored: 0, reason: 'not_found' };
+            }
+            const raw = fs.readFileSync(statsPath, 'utf8');
+            const parsed = JSON.parse(raw);
+            const ret = stateStore.importStatsState(parsed);
+            return {
+                ok: true,
+                loaded: true,
+                restored: ret && ret.restored ? ret.restored : 0,
+                reason: '',
+            };
+        } catch (e) {
+            return {
+                ok: false,
+                loaded: false,
+                restored: 0,
+                reason: e && e.message ? e.message : String(e),
+            };
+        }
+    }
+
+    function savePersistedStatsNow() {
+        if (!statsPath) return;
+        fs.mkdirSync(path.dirname(statsPath), { recursive: true });
+        const payload = stateStore.exportStatsState();
+        fs.writeFileSync(statsPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    }
+
+    function scheduleStatsPersist() {
+        if (!statsPath) return;
+        if (statsPersistTimer) clearTimeout(statsPersistTimer);
+        statsPersistTimer = setTimeout(() => {
+            statsPersistTimer = null;
+            try {
+                savePersistedStatsNow();
+            } catch (e) {
+                // 持久化失败不影响主流程
+            }
+        }, 800);
+    }
+
+    const persistedStatsRet = loadPersistedStats();
 
     const sseClients = new Set();
 
@@ -202,6 +251,26 @@ function startServer(options = {}) {
     function appendLog(accountId, log) {
         const entry = stateStore.addLog(accountId, log);
         publish('log', entry, accountId);
+        publishStats(accountId);
+    }
+
+    function publishStats(accountId) {
+        try {
+            const snapshot = stateStore.getStatsSnapshot();
+            const payload = {
+                summary: snapshot.summary,
+                ts: snapshot.ts,
+            };
+            if (accountId) {
+                payload.accountStats = snapshot.accounts[accountId] || null;
+            } else {
+                payload.accounts = snapshot.accounts;
+            }
+            publish('stats', payload, accountId || undefined);
+            scheduleStatsPersist();
+        } catch (e) {
+            // stats 计算失败不影响主流程
+        }
     }
 
     sessionManager.on('spawn', ({ accountId, pid, mode, args }) => {
@@ -214,6 +283,7 @@ function startServer(options = {}) {
             lastError: '',
         });
         publish('process', stateStore.getAccountSnapshot(accountId).session, accountId);
+        publishStats(accountId);
         sessionManager.applyBarkSettings(accountId, settings.bark);
         sessionManager.applyAccountSettings(accountId, getAccountFeatureSettings(settings, accountId));
         appendLog(accountId, {
@@ -244,6 +314,7 @@ function startServer(options = {}) {
         if (type === 'status') {
             stateStore.setStatus(accountId, payload || {});
             publish('status', stateStore.getAccountSnapshot(accountId).status, accountId);
+            publishStats(accountId);
             return;
         }
         if (type === 'bestCrop') {
@@ -267,6 +338,7 @@ function startServer(options = {}) {
             if (Object.keys(next).length === 0) return;
             stateStore.setSession(accountId, next);
             publish('process', stateStore.getAccountSnapshot(accountId).session, accountId);
+            publishStats(accountId);
             return;
         }
         if (type === 'log') {
@@ -282,6 +354,20 @@ function startServer(options = {}) {
             });
             return;
         }
+        if (type === 'bark') {
+            const p = payload || {};
+            stateStore.recordMetricEvent(accountId, {
+                type: 'bark',
+                sent: Boolean(p.sent),
+                reason: p.reason || '',
+                category: p.category || '',
+            }, {
+                now: Number.isFinite(Number(p.ts)) ? Number(p.ts) : Date.now(),
+            });
+            publish('bark', p, accountId);
+            publishStats(accountId);
+            return;
+        }
         publish(type, payload || {}, accountId);
     });
 
@@ -294,6 +380,7 @@ function startServer(options = {}) {
             lastError: isError ? `exit code=${code} signal=${signal}` : '',
         });
         publish('process', stateStore.getAccountSnapshot(accountId).session, accountId);
+        publishStats(accountId);
         appendLog(accountId, {
             level: isError ? 'error' : 'info',
             tag: 'WebUI',
@@ -422,9 +509,29 @@ function startServer(options = {}) {
         if (req.method === 'GET' && pathname === '/api/state') {
             return sendJson(res, 200, {
                 state: stateStore.getSnapshot(),
+                stats: stateStore.getStatsSnapshot(),
                 settings: { bark: settings.bark, ui: settings.ui },
                 meta: { host, port },
+                persistedStats: persistedStatsRet,
             });
+        }
+
+        if (req.method === 'GET' && pathname === '/api/stats') {
+            try {
+                const rawAccountId = String(reqUrl.searchParams.get('accountId') || 'all').trim() || 'all';
+                const accountId = rawAccountId === 'all' ? 'all' : normalizeAccountId(rawAccountId);
+                const snapshot = stateStore.getStatsSnapshot();
+                const data = accountId === 'all'
+                    ? snapshot
+                    : {
+                        ts: snapshot.ts,
+                        summary: snapshot.summary,
+                        accounts: snapshot.accounts[accountId] ? { [accountId]: snapshot.accounts[accountId] } : {},
+                    };
+                return sendJson(res, 200, { ok: true, data, accountId });
+            } catch (e) {
+                return sendJson(res, 500, { ok: false, error: e.message });
+            }
         }
 
         if (req.method === 'GET' && pathname === '/api/events') {
@@ -481,6 +588,7 @@ function startServer(options = {}) {
                 const removed = stateStore.deleteAccount(accountId);
                 if (removed) {
                     publish('accountDeleted', { accountId }, accountId);
+                    publishStats();
                 }
                 return sendJson(res, 200, { ok: true, accountId, removed });
             } catch (e) {
@@ -752,6 +860,15 @@ function startServer(options = {}) {
                         try { res.end(); } catch (e) { }
                     }
                     sseClients.clear();
+                    if (statsPersistTimer) {
+                        clearTimeout(statsPersistTimer);
+                        statsPersistTimer = null;
+                    }
+                    try {
+                        savePersistedStatsNow();
+                    } catch (e) {
+                        // ignore close-time persist errors
+                    }
                     server.close(() => resolveClose());
                 }),
             });

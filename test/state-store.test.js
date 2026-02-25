@@ -112,3 +112,115 @@ test('state store can delete account snapshot completely', () => {
     const missing = store.deleteAccount('not-exists');
     assert.equal(missing, false);
 });
+
+test('state store aggregates account stats from status, session and logs', () => {
+    const store = createStateStore({ maxLogs: 20 });
+
+    store.setSession('wx-main', {
+        status: 'running',
+        startedAt: 1000,
+    }, { now: 1000 });
+    store.setStatus('wx-main', {
+        platform: 'wx',
+        name: '测试号',
+        level: 10,
+        exp: 1000,
+        gold: 5000,
+    }, { now: 2000 });
+    store.setStatus('wx-main', {
+        exp: 1120,
+        gold: 5300,
+        level: 10,
+    }, { now: 3000 });
+
+    store.addLog('wx-main', {
+        ts: 4000,
+        level: 'warn',
+        tag: '推送',
+        text: '[推送] 被踢下线! gatepb.KickoutNotify',
+    });
+    store.addLog('wx-main', {
+        ts: 5000,
+        level: 'warn',
+        tag: 'WS',
+        text: '[WS] ⚠ 连接关闭 (code=1006)',
+    });
+    store.addLog('wx-main', {
+        ts: 6000,
+        level: 'info',
+        tag: '农场',
+        text: '[农场] [收:7 长:0] → 收获7/种植7',
+    });
+    store.addLog('wx-main', {
+        ts: 7000,
+        level: 'warn',
+        tag: '好友',
+        action: 'friend_manual',
+        text: '[好友] ⚠ 手动操作 KFC9999: steal -> 偷取完成',
+    });
+
+    store.setSession('wx-main', {
+        status: 'stopped',
+        stoppedAt: 9000,
+    }, { now: 9000 });
+
+    const statsResp = store.getStatsSnapshot({ now: 10000 });
+    const acc = statsResp.accounts['wx-main'];
+    assert.ok(acc);
+    assert.equal(acc.current.platform, 'wx');
+    assert.equal(acc.current.name, '测试号');
+    assert.equal(acc.current.level, 10);
+    assert.equal(acc.current.exp, 1120);
+    assert.equal(acc.current.gold, 5300);
+    assert.equal(acc.today.expDelta, 120);
+    assert.equal(acc.today.goldDelta, 300);
+    assert.equal(acc.counts.kickout, 1);
+    assert.equal(acc.counts.wsClose, 1);
+    assert.equal(acc.counts.harvest, 7);
+    assert.equal(acc.counts.plant, 7);
+    assert.equal(acc.counts.friendManual, 1);
+    assert.ok(acc.runtime.runningMsToday >= 8000);
+    assert.ok(Array.isArray(acc.trends.exp) && acc.trends.exp.length >= 2);
+    assert.ok(Array.isArray(acc.trends.gold) && acc.trends.gold.length >= 2);
+    assert.equal(statsResp.summary.totalAccounts >= 1, true);
+    assert.equal(statsResp.summary.runningAccounts >= 0, true);
+});
+
+test('state store aggregates bark metric events precisely', () => {
+    const store = createStateStore({ maxLogs: 10 });
+
+    store.recordMetricEvent('qq-main', { type: 'bark', sent: true, reason: 'ok', category: 'network' }, { now: 1000 });
+    store.recordMetricEvent('qq-main', { type: 'bark', sent: false, reason: 'deduped', category: 'network' }, { now: 1100 });
+    store.recordMetricEvent('qq-main', { type: 'bark', sent: false, reason: 'request_failed', category: 'fatal' }, { now: 1200 });
+
+    const stats = store.getStatsSnapshot({ now: 1300 });
+    const acc = stats.accounts['qq-main'];
+    assert.ok(acc);
+    assert.equal(acc.counts.barkSuccess, 1);
+    assert.equal(acc.counts.barkDeduped, 1);
+    assert.equal(acc.counts.barkFailed, 1);
+    assert.equal(acc.counts.barkByCategory.fatal, 1);
+    assert.equal(acc.counts.barkByCategory.network, 2);
+    assert.equal(stats.summary.counts.barkSuccess, 1);
+    assert.equal(stats.summary.counts.barkDeduped, 1);
+    assert.equal(stats.summary.counts.barkFailed, 1);
+});
+
+test('state store can export and import stats state for persistence', () => {
+    const a = createStateStore({ maxLogs: 10 });
+    a.setStatus('wx-main', { platform: 'wx', name: 'A', exp: 500, gold: 1000 }, { now: 1000 });
+    a.setStatus('wx-main', { exp: 620, gold: 1300 }, { now: 2000 });
+    a.recordMetricEvent('wx-main', { type: 'bark', sent: false, reason: 'deduped', category: 'business' }, { now: 3000 });
+
+    const exported = a.exportStatsState();
+    const b = createStateStore({ maxLogs: 10 });
+    const ret = b.importStatsState(exported);
+    assert.equal(ret.ok, true);
+
+    const snapshot = b.getStatsSnapshot({ now: 4000 });
+    const acc = snapshot.accounts['wx-main'];
+    assert.ok(acc);
+    assert.equal(acc.today.expDelta, 120);
+    assert.equal(acc.today.goldDelta, 300);
+    assert.equal(acc.counts.barkDeduped, 1);
+});

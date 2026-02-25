@@ -1,6 +1,7 @@
 const MAX_LOG_LINES = 5000;
 const LOG_QUERY_LIMIT = 200;
 const THEME_STORAGE_KEY = 'qq-farm-ui-theme';
+const STATS_VIEW_STORAGE_KEY = 'qq-farm-ui-stats-view';
 const FRIEND_DANGEROUS_ACTIONS = new Set(['putBug', 'putWeed', 'bad']);
 const CROP_ICON_FILES = Object.freeze({
   lock: '/assets/crops/lock.svg',
@@ -68,6 +69,15 @@ const state = {
   switchPulseAccountId: '',
   switchPulseTimer: null,
   pendingAutoHomeOnLogin: {},
+  stats: {
+    ts: 0,
+    accounts: {},
+    summary: null,
+  },
+  statsView: {
+    range: '6h',
+    zoom: 1.5,
+  },
   bark: null,
   accountSettings: {},
   lands: {},
@@ -163,6 +173,29 @@ const els = {
   bestCropNext: document.getElementById('bestCropNext'),
   bestCropExp: document.getElementById('bestCropExp'),
   bestCropSource: document.getElementById('bestCropSource'),
+  statsExpDelta: document.getElementById('statsExpDelta'),
+  statsGoldDelta: document.getElementById('statsGoldDelta'),
+  statsExpRate: document.getElementById('statsExpRate'),
+  statsGoldRate: document.getElementById('statsGoldRate'),
+  statsBarkCurrent: document.getElementById('statsBarkCurrent'),
+  statsRunningTime: document.getElementById('statsRunningTime'),
+  statsKickout: document.getElementById('statsKickout'),
+  statsWsClose: document.getElementById('statsWsClose'),
+  statsWarnError: document.getElementById('statsWarnError'),
+  statsHarvest: document.getElementById('statsHarvest'),
+  statsPlant: document.getElementById('statsPlant'),
+  statsFriendManual: document.getElementById('statsFriendManual'),
+  statsDayKey: document.getElementById('statsDayKey'),
+  statsExpChart: document.getElementById('statsExpChart'),
+  statsGoldChart: document.getElementById('statsGoldChart'),
+  statsRange: document.getElementById('statsRange'),
+  statsZoom: document.getElementById('statsZoom'),
+  statsSummaryAccounts: document.getElementById('statsSummaryAccounts'),
+  statsSummaryDelta: document.getElementById('statsSummaryDelta'),
+  statsSummaryRuntime: document.getElementById('statsSummaryRuntime'),
+  statsSummaryCounts: document.getElementById('statsSummaryCounts'),
+  statsSummaryBark: document.getElementById('statsSummaryBark'),
+  statsRanking: document.getElementById('statsRanking'),
   qrPhase: document.getElementById('qrPhase'),
   qrImage: document.getElementById('qrImage'),
   qrLink: document.getElementById('qrLink'),
@@ -234,6 +267,54 @@ function loadThemeFromStorage() {
   } catch (e) {
   }
   applyTheme(picked);
+}
+
+function normalizeStatsRange(raw) {
+  const value = String(raw || '').trim().toLowerCase();
+  if (['1h', '6h', '24h', 'all'].includes(value)) return value;
+  return '6h';
+}
+
+function normalizeStatsZoom(raw) {
+  const n = Number(raw);
+  if (n === 1 || n === 1.5 || n === 2) return n;
+  return 1.5;
+}
+
+function syncStatsViewControls() {
+  if (els.statsRange) {
+    els.statsRange.value = normalizeStatsRange(state.statsView.range);
+  }
+  if (els.statsZoom) {
+    els.statsZoom.value = String(normalizeStatsZoom(state.statsView.zoom));
+  }
+}
+
+function saveStatsViewPrefs() {
+  try {
+    localStorage.setItem(STATS_VIEW_STORAGE_KEY, JSON.stringify({
+      range: normalizeStatsRange(state.statsView.range),
+      zoom: normalizeStatsZoom(state.statsView.zoom),
+    }));
+  } catch (e) {
+  }
+}
+
+function loadStatsViewPrefs() {
+  try {
+    const raw = localStorage.getItem(STATS_VIEW_STORAGE_KEY);
+    if (!raw) {
+      syncStatsViewControls();
+      return;
+    }
+    const parsed = JSON.parse(raw);
+    state.statsView.range = normalizeStatsRange(parsed && parsed.range);
+    state.statsView.zoom = normalizeStatsZoom(parsed && parsed.zoom);
+  } catch (e) {
+    state.statsView.range = '6h';
+    state.statsView.zoom = 1.5;
+  }
+  syncStatsViewControls();
 }
 
 function getAccountSettingsFor(accountId) {
@@ -759,6 +840,208 @@ function renderBestCrop() {
   setText(els.bestCropSource, `来源：${c.source || '-'}`);
 }
 
+function formatSigned(n) {
+  const value = Number(n || 0);
+  if (!Number.isFinite(value)) return '-';
+  if (value > 0) return `+${value}`;
+  return String(value);
+}
+
+function formatMsToReadable(ms) {
+  const value = Math.max(0, Number(ms || 0));
+  if (!Number.isFinite(value)) return '-';
+  const totalSec = Math.floor(value / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function getCurrentStats() {
+  const accountId = normalizeAccountId(state.selectedAccountId);
+  const stats = (state.stats && state.stats.accounts && state.stats.accounts[accountId]) || null;
+  const summary = (state.stats && state.stats.summary) || null;
+  return { accountId, stats, summary };
+}
+
+function getStatsRangeMs(rangeKey) {
+  const key = normalizeStatsRange(rangeKey);
+  if (key === '1h') return 3600 * 1000;
+  if (key === '6h') return 6 * 3600 * 1000;
+  if (key === '24h') return 24 * 3600 * 1000;
+  return 0;
+}
+
+function filterTrendPointsByRange(points, rangeKey, nowTs) {
+  const list = Array.isArray(points) ? points : [];
+  const rangeMs = getStatsRangeMs(rangeKey);
+  if (!rangeMs) return list.slice(-240);
+  const endTs = Number.isFinite(Number(nowTs)) ? Number(nowTs) : Date.now();
+  const fromTs = endTs - rangeMs;
+  const filtered = list.filter((p) => Number(p && p.ts) >= fromTs);
+  if (filtered.length >= 2) return filtered.slice(-240);
+  return list.slice(-Math.min(48, list.length || 0));
+}
+
+function buildSparklineSvg(points, options = {}) {
+  const rangeKey = normalizeStatsRange(options.range || state.statsView.range);
+  const zoom = normalizeStatsZoom(options.zoom || state.statsView.zoom);
+  const nowTs = Number.isFinite(Number(options.nowTs)) ? Number(options.nowTs) : (state.stats.ts || Date.now());
+  const list = filterTrendPointsByRange(points, rangeKey, nowTs);
+  if (!list.length) return '';
+  const width = Math.round(Number(options.width || 360) * zoom);
+  const height = Number(options.height || 88);
+  const stroke = options.stroke || '#6dd8ff';
+  const fill = options.fill || 'rgba(109, 216, 255, 0.12)';
+  const values = list.map((p) => Number(p && p.v)).filter((n) => Number.isFinite(n));
+  if (!values.length) return '';
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+
+  const coords = list.map((p, idx) => {
+    const v = Number(p && p.v);
+    const safeV = Number.isFinite(v) ? v : min;
+    const x = list.length === 1 ? width / 2 : (idx / (list.length - 1)) * width;
+    const y = height - ((safeV - min) / range) * (height - 8) - 4;
+    return [x, y];
+  });
+
+  const path = coords.map(([x, y], idx) => `${idx === 0 ? 'M' : 'L'}${x.toFixed(2)} ${y.toFixed(2)}`).join(' ');
+  const area = `M0 ${height} ${coords.map(([x, y]) => `L${x.toFixed(2)} ${y.toFixed(2)}`).join(' ')} L${width} ${height} Z`;
+  const last = coords[coords.length - 1];
+  const lastValue = values[values.length - 1];
+
+  return `
+    <div class="sparkline-scroll">
+      <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="sparkline-svg" aria-hidden="true">
+        <path d="${area}" fill="${fill}"></path>
+        <path d="${path}" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="${last[0].toFixed(2)}" cy="${last[1].toFixed(2)}" r="3" fill="${stroke}"></circle>
+      </svg>
+    </div>
+    <div class="sparkline-meta">
+      <span>${rangeKey}</span>
+      <span>起始 ${min}</span>
+      <span>最新 ${lastValue}</span>
+      <span>最大 ${max}</span>
+      <span>${list.length} 点</span>
+    </div>
+  `;
+}
+
+function renderStats() {
+  const { stats: accountStats, summary } = getCurrentStats();
+
+  if (!accountStats) {
+    setText(els.statsExpDelta, '经验增量：-');
+    setText(els.statsGoldDelta, '金币增量：-');
+    setText(els.statsExpRate, '经验效率：-');
+    setText(els.statsGoldRate, '金币效率：-');
+    setText(els.statsBarkCurrent, 'Bark：-');
+    setText(els.statsRunningTime, '运行时长：-');
+    setText(els.statsKickout, '被踢次数：-');
+    setText(els.statsWsClose, '断连次数：-');
+    setText(els.statsWarnError, 'Warn/Error：-');
+    setText(els.statsHarvest, '收获总数：-');
+    setText(els.statsPlant, '种植总数：-');
+    setText(els.statsFriendManual, '好友手动操作：-');
+    setText(els.statsDayKey, '统计日期：-');
+    if (els.statsExpChart) els.statsExpChart.innerHTML = '暂无数据';
+    if (els.statsGoldChart) els.statsGoldChart.innerHTML = '暂无数据';
+  } else {
+    const today = accountStats.today || {};
+    const runtime = accountStats.runtime || {};
+    const counts = accountStats.counts || {};
+    const trends = accountStats.trends || {};
+    setText(els.statsExpDelta, `经验增量：${formatSigned(today.expDelta || 0)}`);
+    setText(els.statsGoldDelta, `金币增量：${formatSigned(today.goldDelta || 0)}`);
+    setText(els.statsExpRate, `经验效率：${Number(today.expPerHour || 0).toFixed(2)} exp/h`);
+    setText(els.statsGoldRate, `金币效率：${Number(today.goldPerHour || 0).toFixed(2)} gold/h`);
+    setText(
+      els.statsBarkCurrent,
+      `Bark：成功${counts.barkSuccess || 0} / 失败${counts.barkFailed || 0} / 去重${counts.barkDeduped || 0}`,
+    );
+    setText(els.statsRunningTime, `运行时长：${formatMsToReadable(runtime.runningMsToday || 0)}`);
+    setText(els.statsKickout, `被踢次数：${counts.kickout || 0}`);
+    setText(els.statsWsClose, `断连次数：${counts.wsClose || 0}`);
+    setText(els.statsWarnError, `Warn/Error：${counts.warn || 0}/${counts.error || 0}`);
+    setText(els.statsHarvest, `收获总数：${counts.harvest || 0}`);
+    setText(els.statsPlant, `种植总数：${counts.plant || 0}`);
+    setText(els.statsFriendManual, `好友手动操作：${counts.friendManual || 0}`);
+    setText(els.statsDayKey, `统计日期：${accountStats.dayKey || '-'}`);
+    if (els.statsExpChart) {
+      els.statsExpChart.innerHTML = buildSparklineSvg(trends.exp, {
+        range: state.statsView.range,
+        zoom: state.statsView.zoom,
+        nowTs: state.stats.ts,
+        stroke: 'var(--spark-exp-line, #52d3ff)',
+        fill: 'var(--spark-exp-fill, rgba(82, 211, 255, 0.12))',
+      }) || '暂无数据';
+    }
+    if (els.statsGoldChart) {
+      els.statsGoldChart.innerHTML = buildSparklineSvg(trends.gold, {
+        range: state.statsView.range,
+        zoom: state.statsView.zoom,
+        nowTs: state.stats.ts,
+        stroke: 'var(--spark-gold-line, #ffbf47)',
+        fill: 'var(--spark-gold-fill, rgba(255, 191, 71, 0.14))',
+      }) || '暂无数据';
+    }
+  }
+
+  if (!summary) {
+    setText(els.statsSummaryAccounts, '账号：-');
+    setText(els.statsSummaryDelta, '今日增量：-');
+    setText(els.statsSummaryRuntime, '总运行时长：-');
+    setText(els.statsSummaryCounts, '事件计数：-');
+    setText(els.statsSummaryBark, 'Bark：-');
+    if (els.statsRanking) els.statsRanking.innerHTML = '暂无统计数据';
+    return;
+  }
+
+  setText(
+    els.statsSummaryAccounts,
+    `账号：总${summary.totalAccounts || 0} / 运行${summary.runningAccounts || 0} / 异常${summary.errorAccounts || 0}`,
+  );
+  setText(
+    els.statsSummaryDelta,
+    `今日增量：经验 ${formatSigned(summary.totalExpDelta || 0)} | 金币 ${formatSigned(summary.totalGoldDelta || 0)}`,
+  );
+  setText(
+    els.statsSummaryRuntime,
+    `总运行时长：${formatMsToReadable(summary.totalRunningMsToday || 0)}`,
+  );
+  const sumCounts = summary.counts || {};
+  setText(
+    els.statsSummaryCounts,
+    `事件计数：踢下线${sumCounts.kickout || 0} / 断连${sumCounts.wsClose || 0} / 手动好友${sumCounts.friendManual || 0}`,
+  );
+  const sumBarkCats = (sumCounts && sumCounts.barkByCategory) || {};
+  setText(
+    els.statsSummaryBark,
+    `Bark：成功${sumCounts.barkSuccess || 0} / 失败${sumCounts.barkFailed || 0} / 去重${sumCounts.barkDeduped || 0}（F${sumBarkCats.fatal || 0}/N${sumBarkCats.network || 0}/B${sumBarkCats.business || 0}）`,
+  );
+
+  const ranking = Array.isArray(summary.rankingByExpPerHour) ? summary.rankingByExpPerHour.slice(0, 6) : [];
+  if (!ranking.length) {
+    els.statsRanking.innerHTML = '<p class="stats-empty">暂无统计数据</p>';
+    return;
+  }
+  els.statsRanking.innerHTML = ranking.map((item, idx) => {
+    const name = item.name ? ` · ${escapeHtml(item.name)}` : '';
+    return `
+      <div class="stats-rank-row">
+        <span class="stats-rank-index">#${idx + 1}</span>
+        <span class="stats-rank-account">${escapeHtml(item.accountId)}${name}</span>
+        <span class="stats-rank-value">${Number(item.expPerHour || 0).toFixed(2)} exp/h</span>
+      </div>
+    `;
+  }).join('');
+}
+
 function getQrCandidates(qr) {
   const q = qr || {};
   const list = [];
@@ -1075,6 +1358,7 @@ function refreshPanels() {
   renderAccountSettings();
   renderStatus();
   renderBestCrop();
+  renderStats();
   renderQr();
   renderUiSettings();
   renderFriendList();
@@ -1298,6 +1582,13 @@ async function bootstrap() {
   syncHashState(true);
 
   state.bark = initial.settings && initial.settings.bark ? initial.settings.bark : null;
+  state.stats = initial.stats && typeof initial.stats === 'object'
+    ? {
+      ts: initial.stats.ts || 0,
+      accounts: initial.stats.accounts || {},
+      summary: initial.stats.summary || null,
+    }
+    : state.stats;
   state.ui = initial.settings && initial.settings.ui
     ? initial.settings.ui
     : state.ui;
@@ -1428,6 +1719,25 @@ function connectEvents() {
         return;
       }
 
+      if (type === 'stats') {
+        if (typeof payload.ts === 'number') {
+          state.stats.ts = payload.ts;
+        }
+        if (payload.summary && typeof payload.summary === 'object') {
+          state.stats.summary = payload.summary;
+        }
+        if (payload.accounts && typeof payload.accounts === 'object') {
+          state.stats.accounts = payload.accounts;
+        } else if (payload.accountStats && accountId) {
+          state.stats.accounts = {
+            ...(state.stats.accounts || {}),
+            [accountId]: payload.accountStats,
+          };
+        }
+        renderStats();
+        return;
+      }
+
       if (type === 'settings' && payload.scope === 'bark' && payload.bark) {
         state.bark = payload.bark;
         renderBarkSettings();
@@ -1477,6 +1787,9 @@ function connectEvents() {
           delete state.accountSettings[deletedId];
           delete state.startPayloads[deletedId];
           delete state.pendingAutoHomeOnLogin[deletedId];
+          if (state.stats && state.stats.accounts) {
+            delete state.stats.accounts[deletedId];
+          }
           if (state.selectedAccountId === deletedId) {
             const ids = Object.keys(state.sessions);
             const next = ids[0] || 'default';
@@ -1930,6 +2243,20 @@ function bindEvents() {
       applyTheme(next);
     });
   }
+  if (els.statsRange) {
+    els.statsRange.addEventListener('change', () => {
+      state.statsView.range = normalizeStatsRange(els.statsRange.value);
+      saveStatsViewPrefs();
+      renderStats();
+    });
+  }
+  if (els.statsZoom) {
+    els.statsZoom.addEventListener('change', () => {
+      state.statsView.zoom = normalizeStatsZoom(els.statsZoom.value);
+      saveStatsViewPrefs();
+      renderStats();
+    });
+  }
 
   els.mode.addEventListener('change', applyModeVisibility);
   els.platform.addEventListener('change', () => {
@@ -2009,6 +2336,7 @@ function onHashChange() {
 
 async function main() {
   loadThemeFromStorage();
+  loadStatsViewPrefs();
   applyModeVisibility();
   syncPlatformQrDefaults();
   renderView();
