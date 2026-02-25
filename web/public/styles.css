@@ -380,6 +380,11 @@ textarea:focus {
   box-shadow: 0 0 0 1px rgba(77, 208, 225, 0.35) inset;
 }
 
+.session-item.switch-pulse,
+.sidebar-account-item.switch-pulse {
+  animation: switch-pulse .42s ease;
+}
+
 .session-meta {
   display: grid;
   gap: 3px;
@@ -570,6 +575,10 @@ textarea:focus {
   padding-top: 12px;
 }
 
+#accountEditor {
+  animation: panel-in .18s ease;
+}
+
 .lands-summary {
   margin-top: 12px;
 }
@@ -625,11 +634,16 @@ textarea:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #3a5675;
-  background: #122236;
-  font-size: 14px;
-  line-height: 1;
+  border: 1px solid rgba(58, 86, 117, 0.45);
+  background: rgba(18, 34, 54, 0.55);
   flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.land-crop-icon-img {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .land-tags {
@@ -674,6 +688,21 @@ textarea:focus {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes switch-pulse {
+  0% {
+    transform: translateY(0) scale(1);
+    box-shadow: none;
+  }
+  35% {
+    transform: translateY(-1px) scale(1.01);
+    box-shadow: 0 0 0 2px rgba(77, 208, 225, 0.18);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow: none;
   }
 }
 
@@ -885,7 +914,7 @@ body[data-theme="light"] .land-tag.tag-water {
 
 body[data-theme="light"] .land-crop-icon {
   border-color: #b7cce7;
-  background: #eef5ff;
+  background: rgba(238, 245, 255, 0.85);
 }
 
 body[data-theme="light"] .dot-running {
