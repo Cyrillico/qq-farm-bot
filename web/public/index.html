@@ -244,6 +244,78 @@
           </div>
         </section>
 
+        <section class="panel stats-panel view-panel" data-view="account-home">
+          <h2>运行统计（V2）</h2>
+          <div class="stats-toolbar">
+            <label>
+              趋势范围
+              <select id="statsRange">
+                <option value="1h">近 1 小时</option>
+                <option value="6h" selected>近 6 小时</option>
+                <option value="24h">近 24 小时</option>
+                <option value="all">全部</option>
+              </select>
+            </label>
+            <label>
+              图表缩放
+              <select id="statsZoom">
+                <option value="1">1x</option>
+                <option value="1.5" selected>1.5x</option>
+                <option value="2">2x</option>
+              </select>
+            </label>
+          </div>
+          <div class="cards stats-cards">
+            <article class="card">
+              <h3>当前账号今日增量</h3>
+              <p id="statsExpDelta">经验增量：-</p>
+              <p id="statsGoldDelta">金币增量：-</p>
+              <p id="statsExpRate">经验效率：-</p>
+              <p id="statsGoldRate">金币效率：-</p>
+              <p id="statsBarkCurrent">Bark：-</p>
+            </article>
+            <article class="card">
+              <h3>当前账号稳定性</h3>
+              <p id="statsRunningTime">运行时长：-</p>
+              <p id="statsKickout">被踢次数：-</p>
+              <p id="statsWsClose">断连次数：-</p>
+              <p id="statsWarnError">Warn/Error：-</p>
+            </article>
+            <article class="card">
+              <h3>当前账号行为计数</h3>
+              <p id="statsHarvest">收获总数：-</p>
+              <p id="statsPlant">种植总数：-</p>
+              <p id="statsFriendManual">好友手动操作：-</p>
+              <p id="statsDayKey">统计日期：-</p>
+            </article>
+          </div>
+          <div class="cards stats-trend-cards">
+            <article class="card trend-card">
+              <h3>经验趋势</h3>
+              <div id="statsExpChart" class="sparkline-box">暂无数据</div>
+            </article>
+            <article class="card trend-card">
+              <h3>金币趋势</h3>
+              <div id="statsGoldChart" class="sparkline-box">暂无数据</div>
+            </article>
+          </div>
+          <div class="cards stats-summary-cards">
+            <article class="card">
+              <h3>全账号汇总</h3>
+              <p id="statsSummaryAccounts">账号：-</p>
+              <p id="statsSummaryDelta">今日增量：-</p>
+              <p id="statsSummaryRuntime">总运行时长：-</p>
+              <p id="statsSummaryCounts">事件计数：-</p>
+              <p id="statsSummaryBark">Bark：-</p>
+            </article>
+            <article class="card">
+              <h3>效率排行（exp/h）</h3>
+              <div id="statsRanking" class="stats-ranking-list">暂无统计数据</div>
+            </article>
+          </div>
+          <p class="status-line">说明：第二版统计会写入本地 JSON 文件，Web 服务重启后保留当天统计；图表支持范围切换和缩放。</p>
+        </section>
+
         <section class="panel friend-panel view-panel" data-view="account-friends">
           <h2>好友操作</h2>
           <div class="grid two">

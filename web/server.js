@@ -19,6 +19,7 @@ const {
 } = require('./settings-store');
 const {
     AUTH_COOKIE_NAME,
+    AUTH_CSRF_HEADER_NAME,
     AUTH_MAX_AGE_MS,
     buildAuthConfig,
     isAuthEnabled,
@@ -26,13 +27,23 @@ const {
     verifySessionToken,
     parseCookieHeader,
     verifyCredentials,
+    buildCsrfToken,
+    verifyCsrfToken,
     buildAuthCookie,
     buildClearAuthCookie,
 } = require('./auth');
+const {
+    createLoginRateLimiter,
+    parseIpWhitelist,
+    isIpAllowed,
+    normalizeIp,
+    maskBarkSettings,
+} = require('./security');
 const { updateRuntimeBarkSettings } = require('../src/runtimeSettings');
 const { pushBarkDetailed } = require('../src/bark');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const DEFAULT_STATS_PATH = path.join(__dirname, '..', '.qq-farm-ui-stats.json');
 const SESSION_LIFECYCLE_STATUSES = new Set([
     'idle',
     'starting',
@@ -46,6 +57,20 @@ function normalizeSessionLifecycleStatus(value) {
     const text = String(value || '').trim().toLowerCase();
     if (!SESSION_LIFECYCLE_STATUSES.has(text)) return '';
     return text;
+}
+
+function isSafeMethod(method) {
+    const m = String(method || '').toUpperCase();
+    return m === 'GET' || m === 'HEAD' || m === 'OPTIONS';
+}
+
+function getClientIp(req) {
+    const xff = String(req.headers['x-forwarded-for'] || '').trim();
+    if (xff) {
+        const first = xff.split(',')[0].trim();
+        if (first) return normalizeIp(first);
+    }
+    return normalizeIp((req.socket && req.socket.remoteAddress) || '');
 }
 
 function readJsonBody(req) {
@@ -169,7 +194,14 @@ function startServer(options = {}) {
     const rawPort = options.port ?? process.env.WEB_UI_PORT ?? '3210';
     const port = Number.parseInt(rawPort, 10);
     const settingsPath = options.settingsPath || DEFAULT_SETTINGS_PATH;
+    const statsPath = options.statsPath || process.env.QQ_FARM_UI_STATS_PATH || DEFAULT_STATS_PATH;
     const authConfig = buildAuthConfig(options.env || process.env);
+    const env = options.env || process.env;
+    const ipWhitelistRules = parseIpWhitelist(env.WEB_UI_ALLOW_IPS || '');
+    const loginRateLimiter = createLoginRateLimiter({
+        maxAttempts: env.WEB_UI_LOGIN_RATE_LIMIT_MAX,
+        windowMs: env.WEB_UI_LOGIN_RATE_LIMIT_WINDOW_MS,
+    });
     const stateStore = createStateStore({ maxLogs: 5000 });
     const sessionManager = new SessionManager({ rootDir: path.join(__dirname, '..') });
     let settings = loadSettings(settingsPath);
@@ -177,6 +209,53 @@ function startServer(options = {}) {
         settings = saveSettings(settingsPath, settings);
     }
     updateRuntimeBarkSettings(settings.bark);
+    let statsPersistTimer = null;
+
+    function loadPersistedStats() {
+        try {
+            if (!statsPath || !fs.existsSync(statsPath)) {
+                return { ok: true, loaded: false, restored: 0, reason: 'not_found' };
+            }
+            const raw = fs.readFileSync(statsPath, 'utf8');
+            const parsed = JSON.parse(raw);
+            const ret = stateStore.importStatsState(parsed);
+            return {
+                ok: true,
+                loaded: true,
+                restored: ret && ret.restored ? ret.restored : 0,
+                reason: '',
+            };
+        } catch (e) {
+            return {
+                ok: false,
+                loaded: false,
+                restored: 0,
+                reason: e && e.message ? e.message : String(e),
+            };
+        }
+    }
+
+    function savePersistedStatsNow() {
+        if (!statsPath) return;
+        fs.mkdirSync(path.dirname(statsPath), { recursive: true });
+        const payload = stateStore.exportStatsState();
+        fs.writeFileSync(statsPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    }
+
+    function scheduleStatsPersist() {
+        if (!statsPath) return;
+        if (statsPersistTimer) clearTimeout(statsPersistTimer);
+        statsPersistTimer = setTimeout(() => {
+            statsPersistTimer = null;
+            try {
+                savePersistedStatsNow();
+            } catch (e) {
+                // 持久化失败不影响主流程
+            }
+        }, 800);
+    }
+
+    const persistedStatsRet = loadPersistedStats();
 
     const sseClients = new Set();
 
@@ -202,6 +281,26 @@ function startServer(options = {}) {
     function appendLog(accountId, log) {
         const entry = stateStore.addLog(accountId, log);
         publish('log', entry, accountId);
+        publishStats(accountId);
+    }
+
+    function publishStats(accountId) {
+        try {
+            const snapshot = stateStore.getStatsSnapshot();
+            const payload = {
+                summary: snapshot.summary,
+                ts: snapshot.ts,
+            };
+            if (accountId) {
+                payload.accountStats = snapshot.accounts[accountId] || null;
+            } else {
+                payload.accounts = snapshot.accounts;
+            }
+            publish('stats', payload, accountId || undefined);
+            scheduleStatsPersist();
+        } catch (e) {
+            // stats 计算失败不影响主流程
+        }
     }
 
     sessionManager.on('spawn', ({ accountId, pid, mode, args }) => {
@@ -214,6 +313,7 @@ function startServer(options = {}) {
             lastError: '',
         });
         publish('process', stateStore.getAccountSnapshot(accountId).session, accountId);
+        publishStats(accountId);
         sessionManager.applyBarkSettings(accountId, settings.bark);
         sessionManager.applyAccountSettings(accountId, getAccountFeatureSettings(settings, accountId));
         appendLog(accountId, {
@@ -244,6 +344,7 @@ function startServer(options = {}) {
         if (type === 'status') {
             stateStore.setStatus(accountId, payload || {});
             publish('status', stateStore.getAccountSnapshot(accountId).status, accountId);
+            publishStats(accountId);
             return;
         }
         if (type === 'bestCrop') {
@@ -267,6 +368,7 @@ function startServer(options = {}) {
             if (Object.keys(next).length === 0) return;
             stateStore.setSession(accountId, next);
             publish('process', stateStore.getAccountSnapshot(accountId).session, accountId);
+            publishStats(accountId);
             return;
         }
         if (type === 'log') {
@@ -282,6 +384,20 @@ function startServer(options = {}) {
             });
             return;
         }
+        if (type === 'bark') {
+            const p = payload || {};
+            stateStore.recordMetricEvent(accountId, {
+                type: 'bark',
+                sent: Boolean(p.sent),
+                reason: p.reason || '',
+                category: p.category || '',
+            }, {
+                now: Number.isFinite(Number(p.ts)) ? Number(p.ts) : Date.now(),
+            });
+            publish('bark', p, accountId);
+            publishStats(accountId);
+            return;
+        }
         publish(type, payload || {}, accountId);
     });
 
@@ -294,6 +410,7 @@ function startServer(options = {}) {
             lastError: isError ? `exit code=${code} signal=${signal}` : '',
         });
         publish('process', stateStore.getAccountSnapshot(accountId).session, accountId);
+        publishStats(accountId);
         appendLog(accountId, {
             level: isError ? 'error' : 'info',
             tag: 'WebUI',
@@ -316,6 +433,7 @@ function startServer(options = {}) {
                 enabled: false,
                 authenticated: true,
                 username: '',
+                csrfToken: '',
             };
         }
 
@@ -327,6 +445,7 @@ function startServer(options = {}) {
                 enabled: true,
                 authenticated: false,
                 username: '',
+                csrfToken: '',
             };
         }
         if (authConfig.username && verified.username !== authConfig.username) {
@@ -334,12 +453,15 @@ function startServer(options = {}) {
                 enabled: true,
                 authenticated: false,
                 username: '',
+                csrfToken: '',
             };
         }
+        const csrfToken = buildCsrfToken(token, authConfig.secret);
         return {
             enabled: true,
             authenticated: true,
             username: verified.username,
+            csrfToken,
         };
     }
 
@@ -352,10 +474,43 @@ function startServer(options = {}) {
         return null;
     }
 
+    function ensureIpAllowed(req, res, pathname) {
+        if (!ipWhitelistRules.length) return true;
+        const clientIp = getClientIp(req);
+        if (isIpAllowed(clientIp, ipWhitelistRules)) return true;
+        if (String(pathname || '').startsWith('/api/')) {
+            sendJson(res, 403, { ok: false, error: 'ip_not_allowed' });
+            return false;
+        }
+        sendText(res, 403, 'Forbidden');
+        return false;
+    }
+
+    function ensureCsrf(req, res, authState) {
+        if (isSafeMethod(req.method)) return true;
+        const pathname = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`).pathname;
+        if (pathname === '/api/auth/login') return true;
+        if (!String(pathname).startsWith('/api/')) return true;
+
+        const auth = authState || getAuthState(req);
+        if (!auth || !auth.enabled || !auth.authenticated) {
+            return true;
+        }
+
+        const cookies = parseCookieHeader(req.headers.cookie || '');
+        const authToken = cookies[AUTH_COOKIE_NAME] || '';
+        const headerToken = String(req.headers[AUTH_CSRF_HEADER_NAME] || '').trim();
+        const verified = verifyCsrfToken(headerToken, authToken, authConfig.secret);
+        if (verified.ok) return true;
+        sendJson(res, 403, { ok: false, error: 'csrf_invalid' });
+        return false;
+    }
+
     const server = http.createServer(async (req, res) => {
         setSecurityHeaders(res);
         const reqUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
         const pathname = reqUrl.pathname;
+        if (!ensureIpAllowed(req, res, pathname)) return;
 
         if (req.method === 'GET' && pathname === '/api/auth/status') {
             const auth = getAuthState(req);
@@ -364,35 +519,50 @@ function startServer(options = {}) {
 
         if (req.method === 'POST' && pathname === '/api/auth/login') {
             try {
+                const clientIp = getClientIp(req) || 'unknown';
+                const rateCheck = loginRateLimiter.check(clientIp);
+                if (!rateCheck.allowed) {
+                    const retryAfterSec = Math.max(1, Math.ceil(rateCheck.retryAfterMs / 1000));
+                    return sendJson(res, 429, {
+                        ok: false,
+                        error: `登录尝试过于频繁，请 ${retryAfterSec}s 后重试`,
+                    }, {
+                        'Retry-After': String(retryAfterSec),
+                    });
+                }
                 const body = await readJsonBody(req);
                 if (!isAuthEnabled(authConfig)) {
                     return sendJson(res, 200, {
                         ok: true,
-                        auth: { enabled: false, authenticated: true, username: '' },
+                        auth: { enabled: false, authenticated: true, username: '', csrfToken: '' },
                     });
                 }
                 const username = String(body.username || '').trim();
                 const password = String(body.password || '');
                 if (!verifyCredentials(authConfig, username, password)) {
+                    loginRateLimiter.recordFailure(clientIp);
                     return sendJson(res, 401, {
                         ok: false,
                         error: '账号或密码错误',
-                        auth: { enabled: true, authenticated: false, username: '' },
+                        auth: { enabled: true, authenticated: false, username: '', csrfToken: '' },
                     });
                 }
 
                 const token = signSessionToken(authConfig.username, authConfig.secret, Date.now());
+                loginRateLimiter.reset(clientIp);
                 const setCookie = buildAuthCookie(token, isSecureRequest(req));
+                const auth = {
+                    enabled: true,
+                    authenticated: true,
+                    username: authConfig.username,
+                    csrfToken: buildCsrfToken(token, authConfig.secret),
+                };
                 return sendJson(
                     res,
                     200,
                     {
                         ok: true,
-                        auth: {
-                            enabled: true,
-                            authenticated: true,
-                            username: authConfig.username,
-                        },
+                        auth,
                     },
                     { 'Set-Cookie': setCookie }
                 );
@@ -402,13 +572,17 @@ function startServer(options = {}) {
         }
 
         if (req.method === 'POST' && pathname === '/api/auth/logout') {
+            const auth = getAuthState(req);
+            if (auth.enabled && auth.authenticated && !ensureCsrf(req, res, auth)) {
+                return;
+            }
             const clearCookie = buildClearAuthCookie(isSecureRequest(req));
             return sendJson(
                 res,
                 200,
                 {
                     ok: true,
-                    auth: { enabled: isAuthEnabled(authConfig), authenticated: false, username: '' },
+                    auth: { enabled: isAuthEnabled(authConfig), authenticated: false, username: '', csrfToken: '' },
                 },
                 { 'Set-Cookie': clearCookie }
             );
@@ -417,14 +591,35 @@ function startServer(options = {}) {
         if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/')) {
             const auth = ensureAuthed(req, res);
             if (!auth) return;
+            if (!ensureCsrf(req, res, auth)) return;
         }
 
         if (req.method === 'GET' && pathname === '/api/state') {
             return sendJson(res, 200, {
                 state: stateStore.getSnapshot(),
-                settings: { bark: settings.bark, ui: settings.ui },
+                stats: stateStore.getStatsSnapshot(),
+                settings: { bark: maskBarkSettings(settings.bark), ui: settings.ui },
                 meta: { host, port },
+                persistedStats: persistedStatsRet,
             });
+        }
+
+        if (req.method === 'GET' && pathname === '/api/stats') {
+            try {
+                const rawAccountId = String(reqUrl.searchParams.get('accountId') || 'all').trim() || 'all';
+                const accountId = rawAccountId === 'all' ? 'all' : normalizeAccountId(rawAccountId);
+                const snapshot = stateStore.getStatsSnapshot();
+                const data = accountId === 'all'
+                    ? snapshot
+                    : {
+                        ts: snapshot.ts,
+                        summary: snapshot.summary,
+                        accounts: snapshot.accounts[accountId] ? { [accountId]: snapshot.accounts[accountId] } : {},
+                    };
+                return sendJson(res, 200, { ok: true, data, accountId });
+            } catch (e) {
+                return sendJson(res, 500, { ok: false, error: e.message });
+            }
         }
 
         if (req.method === 'GET' && pathname === '/api/events') {
@@ -481,6 +676,7 @@ function startServer(options = {}) {
                 const removed = stateStore.deleteAccount(accountId);
                 if (removed) {
                     publish('accountDeleted', { accountId }, accountId);
+                    publishStats();
                 }
                 return sendJson(res, 200, { ok: true, accountId, removed });
             } catch (e) {
@@ -752,6 +948,15 @@ function startServer(options = {}) {
                         try { res.end(); } catch (e) { }
                     }
                     sseClients.clear();
+                    if (statsPersistTimer) {
+                        clearTimeout(statsPersistTimer);
+                        statsPersistTimer = null;
+                    }
+                    try {
+                        savePersistedStatsNow();
+                    } catch (e) {
+                        // ignore close-time persist errors
+                    }
                     server.close(() => resolveClose());
                 }),
             });

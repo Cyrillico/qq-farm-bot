@@ -6,6 +6,7 @@
 
 const axios = require('axios');
 const { getRuntimeSettings } = require('./runtimeSettings');
+const { emitUiEvent } = require('./uiEvents');
 
 const dedupeCache = new Map();
 let barkSendErrorLogged = false;
@@ -16,13 +17,21 @@ let lastPushResult = {
     at: 0,
 };
 
-function setLastPushResult(sent, reason, detail = '') {
+function setLastPushResult(sent, reason, detail = '', meta = {}) {
     lastPushResult = {
         sent: Boolean(sent),
         reason: String(reason || '').trim(),
         detail: String(detail || '').trim(),
         at: Date.now(),
     };
+    emitUiEvent('bark', {
+        sent: Boolean(sent),
+        reason: String(reason || '').trim(),
+        detail: String(detail || '').trim(),
+        category: String((meta && meta.category) || '').trim(),
+        force: Boolean(meta && meta.force),
+        ts: Date.now(),
+    });
 }
 
 function normalizeSummary(text) {
@@ -55,24 +64,24 @@ async function pushBarkDetailed(title, body, dedupeKey, opts = {}) {
     const force = Boolean(opts.force);
     const barkSettings = opts.settings || getRuntimeSettings().bark;
     if (!barkSettings) {
-        setLastPushResult(false, 'missing_settings');
+        setLastPushResult(false, 'missing_settings', '', { category, force });
         return { sent: false, reason: 'missing_settings', detail: '' };
     }
 
     if (!force) {
         if (!barkSettings.enabled) {
-            setLastPushResult(false, 'disabled');
+            setLastPushResult(false, 'disabled', '', { category, force });
             return { sent: false, reason: 'disabled', detail: '' };
         }
         if (barkSettings.categories && barkSettings.categories[category] === false) {
-            setLastPushResult(false, 'category_filtered', category);
+            setLastPushResult(false, 'category_filtered', category, { category, force });
             return { sent: false, reason: 'category_filtered', detail: category };
         }
     }
 
     const baseUrl = normalizePushBaseUrl(barkSettings.pushUrl);
     if (!baseUrl) {
-        setLastPushResult(false, 'missing_push_url');
+        setLastPushResult(false, 'missing_push_url', '', { category, force });
         return { sent: false, reason: 'missing_push_url', detail: '' };
     }
 
@@ -87,7 +96,7 @@ async function pushBarkDetailed(title, body, dedupeKey, opts = {}) {
     const key = getDedupeKey(safeTitle, safeBody, dedupeKey);
     const lastTs = dedupeCache.get(key) || 0;
     if (now - lastTs < ttlMs) {
-        setLastPushResult(false, 'deduped', key);
+        setLastPushResult(false, 'deduped', key, { category, force });
         return { sent: false, reason: 'deduped', detail: key };
     }
     dedupeCache.set(key, now);
@@ -98,11 +107,11 @@ async function pushBarkDetailed(title, body, dedupeKey, opts = {}) {
             params: { group: barkSettings.group || 'qq-farm-bot' },
             timeout: 6000,
         });
-        setLastPushResult(true, 'ok');
+        setLastPushResult(true, 'ok', '', { category, force });
         return { sent: true, reason: 'ok', detail: '' };
     } catch (e) {
         const message = e && e.message ? e.message : String(e);
-        setLastPushResult(false, 'request_failed', message);
+        setLastPushResult(false, 'request_failed', message, { category, force });
         if (!barkSendErrorLogged) {
             barkSendErrorLogged = true;
             console.warn(`[Bark] 推送失败: ${message}`);
