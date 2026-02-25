@@ -158,6 +158,24 @@ test('state store aggregates account stats from status, session and logs', () =>
         action: 'friend_manual',
         text: '[好友] ⚠ 手动操作 KFC9999: steal -> 偷取完成',
     });
+    store.addLog('wx-main', {
+        ts: 7100,
+        level: 'info',
+        tag: '农场',
+        text: '[农场] [水:1 长:24] → 浇水1',
+    });
+    store.addLog('wx-main', {
+        ts: 7200,
+        level: 'info',
+        tag: '农场',
+        text: '[农场] [草:1 长:24] → 除草1',
+    });
+    store.addLog('wx-main', {
+        ts: 7300,
+        level: 'info',
+        tag: '好友',
+        text: '[好友] 巡查 1 人 → 除草2/除虫5/浇水3',
+    });
 
     store.setSession('wx-main', {
         status: 'stopped',
@@ -179,6 +197,10 @@ test('state store aggregates account stats from status, session and logs', () =>
     assert.equal(acc.counts.harvest, 7);
     assert.equal(acc.counts.plant, 7);
     assert.equal(acc.counts.friendManual, 1);
+    assert.equal(acc.counts.water, 1);
+    assert.equal(acc.counts.weed, 1);
+    assert.equal(acc.counts.friendWater, 3);
+    assert.equal(acc.counts.friendWeed, 2);
     assert.ok(acc.runtime.runningMsToday >= 8000);
     assert.ok(Array.isArray(acc.trends.exp) && acc.trends.exp.length >= 2);
     assert.ok(Array.isArray(acc.trends.gold) && acc.trends.gold.length >= 2);
@@ -223,4 +245,33 @@ test('state store can export and import stats state for persistence', () => {
     assert.equal(acc.today.expDelta, 120);
     assert.equal(acc.today.goldDelta, 300);
     assert.equal(acc.counts.barkDeduped, 1);
+});
+
+test('state store importStatsState migrates old wrong baseline deltas that equal total exp/gold', () => {
+    const store = createStateStore({ maxLogs: 10 });
+    const imported = {
+        version: 1,
+        sessions: {
+            'wx-main': {
+                stats: {
+                    dayKey: '2099-01-01',
+                    dayStartTs: 4070908800000,
+                    current: { platform: 'wx', name: 'A', level: 20, exp: 8888, gold: 66666 },
+                    baseline: { exp: 0, gold: 0 },
+                    today: { expDelta: 8888, goldDelta: 66666 },
+                    runtime: { runningMsToday: 1000, runningSinceTs: 0, lastStatus: 'running' },
+                    counts: {},
+                    trends: { exp: [], gold: [] },
+                    meta: { lastStatusTs: 1, lastLogTs: 1 },
+                },
+            },
+        },
+    };
+    const ret = store.importStatsState(imported);
+    assert.equal(ret.ok, true);
+    const stats = store.getStatsSnapshot({ now: new Date('2099-01-01T12:00:00').getTime() });
+    const acc = stats.accounts['wx-main'];
+    assert.ok(acc);
+    assert.equal(acc.today.expDelta, 0);
+    assert.equal(acc.today.goldDelta, 0);
 });

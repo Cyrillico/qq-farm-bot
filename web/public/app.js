@@ -185,6 +185,10 @@ const els = {
   statsWarnError: document.getElementById('statsWarnError'),
   statsHarvest: document.getElementById('statsHarvest'),
   statsPlant: document.getElementById('statsPlant'),
+  statsWater: document.getElementById('statsWater'),
+  statsWeed: document.getElementById('statsWeed'),
+  statsFriendWater: document.getElementById('statsFriendWater'),
+  statsFriendWeed: document.getElementById('statsFriendWeed'),
   statsFriendManual: document.getElementById('statsFriendManual'),
   statsDayKey: document.getElementById('statsDayKey'),
   statsExpChart: document.getElementById('statsExpChart'),
@@ -949,6 +953,10 @@ function renderStats() {
     setText(els.statsWarnError, 'Warn/Error：-');
     setText(els.statsHarvest, '收获总数：-');
     setText(els.statsPlant, '种植总数：-');
+    setText(els.statsWater, '浇水总数：-');
+    setText(els.statsWeed, '除草总数：-');
+    setText(els.statsFriendWater, '帮好友浇水：-');
+    setText(els.statsFriendWeed, '帮好友除草：-');
     setText(els.statsFriendManual, '好友手动操作：-');
     setText(els.statsDayKey, '统计日期：-');
     if (els.statsExpChart) els.statsExpChart.innerHTML = '暂无数据';
@@ -972,6 +980,10 @@ function renderStats() {
     setText(els.statsWarnError, `Warn/Error：${counts.warn || 0}/${counts.error || 0}`);
     setText(els.statsHarvest, `收获总数：${counts.harvest || 0}`);
     setText(els.statsPlant, `种植总数：${counts.plant || 0}`);
+    setText(els.statsWater, `浇水总数：${counts.water || 0}`);
+    setText(els.statsWeed, `除草总数：${counts.weed || 0}`);
+    setText(els.statsFriendWater, `帮好友浇水：${counts.friendWater || 0}`);
+    setText(els.statsFriendWeed, `帮好友除草：${counts.friendWeed || 0}`);
     setText(els.statsFriendManual, `好友手动操作：${counts.friendManual || 0}`);
     setText(els.statsDayKey, `统计日期：${accountStats.dayKey || '-'}`);
     if (els.statsExpChart) {

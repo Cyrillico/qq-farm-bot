@@ -33,6 +33,10 @@ function createDefaultStatsCounts() {
         wsClose: 0,
         harvest: 0,
         plant: 0,
+        water: 0,
+        weed: 0,
+        friendWater: 0,
+        friendWeed: 0,
         friendManual: 0,
         warn: 0,
         error: 0,
@@ -257,6 +261,32 @@ function updateLogStats(account, item) {
         stats.counts.friendManual += 1;
     }
 
+    if (tag === '农场') {
+        const ownWaterMatches = text.match(/浇水\s*(\d+)/g) || [];
+        for (const m of ownWaterMatches) {
+            const n = Number.parseInt(String(m).replace(/[^\d]/g, ''), 10) || 0;
+            stats.counts.water += n;
+        }
+        const ownWeedMatches = text.match(/除草\s*(\d+)/g) || [];
+        for (const m of ownWeedMatches) {
+            const n = Number.parseInt(String(m).replace(/[^\d]/g, ''), 10) || 0;
+            stats.counts.weed += n;
+        }
+    }
+
+    if (tag === '好友') {
+        const friendWaterMatches = text.match(/浇水\s*(\d+)/g) || [];
+        for (const m of friendWaterMatches) {
+            const n = Number.parseInt(String(m).replace(/[^\d]/g, ''), 10) || 0;
+            stats.counts.friendWater += n;
+        }
+        const friendWeedMatches = text.match(/除草\s*(\d+)/g) || [];
+        for (const m of friendWeedMatches) {
+            const n = Number.parseInt(String(m).replace(/[^\d]/g, ''), 10) || 0;
+            stats.counts.friendWeed += n;
+        }
+    }
+
     const harvestPlantMatch = text.match(/收获\s*(\d+)\s*\/\s*种植\s*(\d+)/);
     if (harvestPlantMatch) {
         stats.counts.harvest += Number.parseInt(harvestPlantMatch[1], 10) || 0;
@@ -353,6 +383,24 @@ function normalizeImportedStats(raw) {
     if (src.meta && typeof src.meta === 'object') {
         base.meta.lastStatusTs = Math.max(0, toSafeNum(src.meta.lastStatusTs, 0));
         base.meta.lastLogTs = Math.max(0, toSafeNum(src.meta.lastLogTs, 0));
+    }
+
+    // 兼容早期错误统计文件：baseline=0 且 delta==当前总值，会导致页面初始出现超大增量
+    if (
+        base.baseline.exp === 0
+        && base.current.exp > 0
+        && base.today.expDelta === base.current.exp
+    ) {
+        base.baseline.exp = base.current.exp;
+        base.today.expDelta = 0;
+    }
+    if (
+        base.baseline.gold === 0
+        && base.current.gold > 0
+        && base.today.goldDelta === base.current.gold
+    ) {
+        base.baseline.gold = base.current.gold;
+        base.today.goldDelta = 0;
     }
 
     return base;
