@@ -48,8 +48,7 @@
           <h2>菜单</h2>
         </div>
         <nav id="sideNav" class="side-nav">
-          <button class="side-item active" type="button" data-view-nav="dashboard">总览</button>
-          <button class="side-item" type="button" data-view-nav="account-home">账号主页</button>
+          <button class="side-item active" type="button" data-view-nav="account-home">账号总览</button>
           <button class="side-item" type="button" data-view-nav="account-lands">土地详情</button>
           <button class="side-item" type="button" data-view-nav="account-settings">账号设置</button>
           <button class="side-item" type="button" data-view-nav="account-friends">好友操作</button>
@@ -73,8 +72,8 @@
           </div>
         </header>
 
-        <section class="panel overview-panel view-panel" data-view="dashboard">
-          <h2>概览</h2>
+        <section class="panel overview-panel view-panel" data-view="account-home">
+          <h2>账号总览</h2>
           <div class="cards overview-cards">
             <article class="card">
               <h3>账号总数</h3>
@@ -98,123 +97,132 @@
 
         <section class="panel control-panel view-panel" data-view="account-settings">
           <h2>账号设置</h2>
-          <div class="grid two">
-            <label>
-              账号标识（accountId）
-              <input id="accountId" type="text" placeholder="例如 qq-main / wx-1" />
-            </label>
-            <label>
-              日志视图
-              <select id="logScope">
-                <option value="selected">仅当前账号</option>
-                <option value="all">全部账号</option>
-              </select>
-            </label>
-          </div>
-          <div class="grid two">
-            <label>
-              模式
-              <select id="mode">
-                <option value="run">运行</option>
-                <option value="verify">验证 proto</option>
-                <option value="decode">PB 解码</option>
-              </select>
-            </label>
-            <label>
-              平台
-              <select id="platform">
-                <option value="qq">QQ</option>
-                <option value="wx">微信</option>
-              </select>
-            </label>
-          </div>
-
-          <div id="runFields" class="stack">
-            <div class="grid two">
-              <label>
-                code
-                <input id="code" type="text" placeholder="可留空并勾选QQ扫码" />
-              </label>
-              <label class="checkbox">
-                <input id="useQr" type="checkbox" />
-                <span>QQ 扫码登录（无 code 时）</span>
-              </label>
-            </div>
-            <div class="grid two">
-              <label>
-                农场间隔（秒）
-                <input id="interval" type="number" min="1" step="1" placeholder="例如 10" />
-              </label>
-              <label>
-                好友间隔（秒）
-                <input id="friendInterval" type="number" min="1" step="1" placeholder="例如 2" />
-              </label>
-            </div>
-          </div>
-
-          <div id="decodeFields" class="stack hidden">
-            <label>
-              decode 数据
-              <textarea id="decodeData" rows="3" placeholder="输入 base64 或 hex"></textarea>
-            </label>
-            <div class="grid three">
-              <label class="checkbox"><input id="decodeHex" type="checkbox" /><span>--hex</span></label>
-              <label class="checkbox"><input id="decodeGate" type="checkbox" /><span>--gate</span></label>
-              <label>
-                type
-                <input id="decodeType" type="text" placeholder="可选，例如 gatepb.Message" />
-              </label>
-            </div>
-          </div>
-
           <div class="actions">
-            <button id="startBtn" class="btn btn-primary">启动</button>
-            <button id="stopBtn" class="btn btn-danger">停止</button>
-            <button id="clearLogsBtn" class="btn">清空日志</button>
+            <button id="newAccountBtn" class="btn btn-primary" type="button">新增账号</button>
+            <button id="editAccountBtn" class="btn" type="button">编辑当前账号</button>
           </div>
-          <div class="cards">
-            <article class="card">
-              <h3>QQ 扫码</h3>
-              <p id="qrPhase">状态：-</p>
-              <img id="qrImage" class="qr-image hidden" alt="QQ扫码二维码" />
-              <a id="qrLink" class="hidden" target="_blank" rel="noreferrer">打开扫码链接</a>
-              <div class="actions">
-                <button id="refreshQrBtn" class="btn" type="button">刷新二维码</button>
-                <button id="switchQrBtn" class="btn hidden" type="button">切换备用二维码</button>
-              </div>
-              <div id="qrAltLinks" class="qr-alt-links"></div>
-              <p id="qrMessage"></p>
-            </article>
-          </div>
-          <div class="stack feature-settings">
-            <p class="mini-title">运行功能开关（立即生效）</p>
-            <div class="grid two">
-              <label class="checkbox"><input id="featureFarmEnabled" type="checkbox" /><span>自动巡田</span></label>
-              <label class="checkbox"><input id="featureFriendEnabled" type="checkbox" /><span>自动好友巡查</span></label>
-              <label class="checkbox"><input id="featureTaskEnabled" type="checkbox" /><span>自动任务领取</span></label>
-              <label class="checkbox"><input id="featureTaskActiveEnabled" type="checkbox" /><span>自动领取活跃礼包</span></label>
-              <label class="checkbox"><input id="featureGiftEnabled" type="checkbox" /><span>自动开启礼包道具</span></label>
-              <label class="checkbox"><input id="featureSellEnabled" type="checkbox" /><span>自动仓库出售</span></label>
-              <label class="checkbox"><input id="featureForceLowestLevelCrop" type="checkbox" /><span>固定最低等级作物</span></label>
-              <label class="checkbox"><input id="featureHelpOnlyWithExp" type="checkbox" /><span>仅有经验时帮好友</span></label>
-              <label class="checkbox"><input id="featureEnablePutBadThings" type="checkbox" /><span>允许放虫放草捣乱</span></label>
-              <label class="checkbox"><input id="featureAutoUnlockLands" type="checkbox" /><span>自动解锁土地</span></label>
-              <label class="checkbox"><input id="featureAutoUpgradeLands" type="checkbox" /><span>自动升级土地</span></label>
-              <label class="checkbox"><input id="featureAutoFertilize" type="checkbox" /><span>自动施肥</span></label>
-              <label class="checkbox"><input id="featureAutoBuyFertilizer" type="checkbox" /><span>自动补充肥料</span></label>
-            </div>
-            <div class="actions">
-              <button id="saveAccountSettingsBtn" class="btn">保存账号功能设置</button>
-            </div>
-            <p id="accountSettingsStatus" class="status-line"></p>
-          </div>
+          <p id="accountEditorHint" class="status-line">点击“新增账号”后配置并启动。启动后会自动收起编辑区。</p>
           <p id="sessionStatus" class="status-line">状态：idle</p>
           <div id="sessionList" class="session-list"></div>
           <p class="status-line">提示：点击账号卡片可快速切换，绿点=运行中，红点=未运行/异常</p>
+
+          <div id="accountEditor" class="stack feature-settings hidden">
+            <div class="grid two">
+              <label>
+                账号标识（accountId）
+                <input id="accountId" type="text" placeholder="例如 qq-main / wx-1" />
+              </label>
+              <label>
+                日志视图
+                <select id="logScope">
+                  <option value="selected">仅当前账号</option>
+                  <option value="all">全部账号</option>
+                </select>
+              </label>
+            </div>
+            <div class="grid two">
+              <label>
+                模式
+                <select id="mode">
+                  <option value="run">运行</option>
+                  <option value="verify">验证 proto</option>
+                  <option value="decode">PB 解码</option>
+                </select>
+              </label>
+              <label>
+                平台
+                <select id="platform">
+                  <option value="qq">QQ</option>
+                  <option value="wx">微信</option>
+                </select>
+              </label>
+            </div>
+
+            <div id="runFields" class="stack">
+              <div class="grid two">
+                <label>
+                  code
+                  <input id="code" type="text" placeholder="可留空并勾选QQ扫码" />
+                </label>
+                <label class="checkbox">
+                  <input id="useQr" type="checkbox" />
+                  <span>QQ 扫码登录（无 code 时）</span>
+                </label>
+              </div>
+              <div class="grid two">
+                <label>
+                  农场间隔（秒）
+                  <input id="interval" type="number" min="1" step="1" placeholder="例如 10" />
+                </label>
+                <label>
+                  好友间隔（秒）
+                  <input id="friendInterval" type="number" min="1" step="1" placeholder="例如 2" />
+                </label>
+              </div>
+            </div>
+
+            <div id="decodeFields" class="stack hidden">
+              <label>
+                decode 数据
+                <textarea id="decodeData" rows="3" placeholder="输入 base64 或 hex"></textarea>
+              </label>
+              <div class="grid three">
+                <label class="checkbox"><input id="decodeHex" type="checkbox" /><span>--hex</span></label>
+                <label class="checkbox"><input id="decodeGate" type="checkbox" /><span>--gate</span></label>
+                <label>
+                  type
+                  <input id="decodeType" type="text" placeholder="可选，例如 gatepb.Message" />
+                </label>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button id="startBtn" class="btn btn-primary">启动</button>
+              <button id="stopBtn" class="btn btn-danger">停止</button>
+              <button id="clearLogsBtn" class="btn">清空日志</button>
+              <button id="cancelAccountEditBtn" class="btn" type="button">收起编辑区</button>
+            </div>
+            <div class="cards">
+              <article class="card">
+                <h3>QQ 扫码</h3>
+                <p id="qrPhase">状态：-</p>
+                <img id="qrImage" class="qr-image hidden" alt="QQ扫码二维码" />
+                <a id="qrLink" class="hidden" target="_blank" rel="noreferrer">打开扫码链接</a>
+                <div class="actions">
+                  <button id="refreshQrBtn" class="btn" type="button">刷新二维码</button>
+                  <button id="switchQrBtn" class="btn hidden" type="button">切换备用二维码</button>
+                </div>
+                <div id="qrAltLinks" class="qr-alt-links"></div>
+                <p id="qrMessage"></p>
+              </article>
+            </div>
+            <div class="stack feature-settings">
+              <p class="mini-title">运行功能开关（立即生效）</p>
+              <div class="grid two">
+                <label class="checkbox"><input id="featureFarmEnabled" type="checkbox" /><span>自动巡田</span></label>
+                <label class="checkbox"><input id="featureFriendEnabled" type="checkbox" /><span>自动好友巡查</span></label>
+                <label class="checkbox"><input id="featureTaskEnabled" type="checkbox" /><span>自动任务领取</span></label>
+                <label class="checkbox"><input id="featureTaskActiveEnabled" type="checkbox" /><span>自动领取活跃礼包</span></label>
+                <label class="checkbox"><input id="featureGiftEnabled" type="checkbox" /><span>自动开启礼包道具</span></label>
+                <label class="checkbox"><input id="featureSellEnabled" type="checkbox" /><span>自动仓库出售</span></label>
+                <label class="checkbox"><input id="featureForceLowestLevelCrop" type="checkbox" /><span>固定最低等级作物</span></label>
+                <label class="checkbox"><input id="featureHelpOnlyWithExp" type="checkbox" /><span>仅有经验时帮好友</span></label>
+                <label class="checkbox"><input id="featureEnablePutBadThings" type="checkbox" /><span>允许放虫放草捣乱</span></label>
+                <label class="checkbox"><input id="featureAutoUnlockLands" type="checkbox" /><span>自动解锁土地</span></label>
+                <label class="checkbox"><input id="featureAutoUpgradeLands" type="checkbox" /><span>自动升级土地</span></label>
+                <label class="checkbox"><input id="featureAutoFertilize" type="checkbox" /><span>自动施肥</span></label>
+                <label class="checkbox"><input id="featureAutoBuyFertilizer" type="checkbox" /><span>自动补充肥料</span></label>
+              </div>
+              <div class="actions">
+                <button id="saveAccountSettingsBtn" class="btn">保存账号功能设置</button>
+              </div>
+              <p id="accountSettingsStatus" class="status-line"></p>
+            </div>
+          </div>
         </section>
 
         <section class="panel metrics view-panel" data-view="account-home">
-          <h2>账号主页</h2>
+          <h2>实时账号信息</h2>
           <div class="cards">
             <article class="card">
               <h3>实时信息</h3>

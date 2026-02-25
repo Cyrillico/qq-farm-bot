@@ -2,9 +2,19 @@ const MAX_LOG_LINES = 5000;
 const LOG_QUERY_LIMIT = 200;
 const THEME_STORAGE_KEY = 'qq-farm-ui-theme';
 const FRIEND_DANGEROUS_ACTIONS = new Set(['putBug', 'putWeed', 'bad']);
+const CROP_ICON_FILES = Object.freeze({
+  lock: '/assets/crops/lock.svg',
+  empty: '/assets/crops/empty.svg',
+  dead: '/assets/crops/dead.svg',
+  root: '/assets/crops/root.svg',
+  leaf: '/assets/crops/leaf.svg',
+  grain: '/assets/crops/grain.svg',
+  fruit: '/assets/crops/fruit.svg',
+  melon: '/assets/crops/melon.svg',
+  sprout: '/assets/crops/sprout.svg',
+});
 const VIEW_META = {
-  dashboard: { title: '控制台总览', hint: '查看整体运行概览与账号状态分布' },
-  'account-home': { title: '账号主页', hint: '查看等级/经验/金币与最佳作物状态' },
+  'account-home': { title: '账号总览', hint: '查看账号分布、实时信息与最佳作物建议' },
   'account-lands': { title: '土地详情', hint: '查看每块土地作物、生长阶段与需处理状态' },
   'account-settings': { title: '账号设置', hint: '配置账号、平台、模式、QQ扫码并启动/停止会话' },
   'account-friends': { title: '好友操作', hint: '执行好友列表操作与高风险开关配置' },
@@ -12,6 +22,8 @@ const VIEW_META = {
   'account-logs': { title: '账号日志', hint: '按条件筛选日志并加载历史记录' },
 };
 const VIEW_ALIASES = {
+  dashboard: 'account-home',
+  overview: 'account-home',
   lands: 'account-lands',
   control: 'account-settings',
   settings: 'account-settings',
@@ -21,7 +33,7 @@ const VIEW_ALIASES = {
   bark: 'account-bark',
   logs: 'account-logs',
 };
-const DEFAULT_VIEW = 'dashboard';
+const DEFAULT_VIEW = 'account-home';
 const VALID_VIEWS = new Set(Object.keys(VIEW_META));
 const DEFAULT_ACCOUNT_SETTINGS = Object.freeze({
   farmEnabled: true,
@@ -52,6 +64,9 @@ const state = {
   selectedAccountId: 'default',
   currentView: DEFAULT_VIEW,
   theme: 'dark',
+  accountEditorOpen: false,
+  switchPulseAccountId: '',
+  switchPulseTimer: null,
   bark: null,
   accountSettings: {},
   lands: {},
@@ -98,6 +113,11 @@ const els = {
   loginBtn: document.getElementById('loginBtn'),
   logoutBtn: document.getElementById('logoutBtn'),
   accountId: document.getElementById('accountId'),
+  accountEditor: document.getElementById('accountEditor'),
+  accountEditorHint: document.getElementById('accountEditorHint'),
+  newAccountBtn: document.getElementById('newAccountBtn'),
+  editAccountBtn: document.getElementById('editAccountBtn'),
+  cancelAccountEditBtn: document.getElementById('cancelAccountEditBtn'),
   logScope: document.getElementById('logScope'),
   sessionList: document.getElementById('sessionList'),
   mode: document.getElementById('mode'),
@@ -447,15 +467,9 @@ function getSessionStateType(session) {
 }
 
 function getSortedAccountIds() {
-  return Object.keys(state.sessions).sort((a, b) => {
-    const sa = ((state.sessions[a] || {}).session || {}).status || 'idle';
-    const sb = ((state.sessions[b] || {}).session || {}).status || 'idle';
-    if (sa === 'running' && sb !== 'running') return -1;
-    if (sb === 'running' && sa !== 'running') return 1;
-    if (a === state.selectedAccountId) return -1;
-    if (b === state.selectedAccountId) return 1;
-    return a.localeCompare(b);
-  });
+  return Object.keys(state.sessions).sort((a, b) => (
+    a.localeCompare(b, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' })
+  ));
 }
 
 function applyModeVisibility() {
@@ -469,6 +483,88 @@ function syncPlatformQrDefaults() {
   const isQq = platform !== 'wx';
   els.useQr.checked = isQq;
   els.useQr.disabled = !isQq;
+}
+
+function makeRandomAccountId(platform = 'qq') {
+  const prefix = String(platform || 'qq').trim().toLowerCase() === 'wx' ? 'wx' : 'qq';
+  for (let i = 0; i < 12; i++) {
+    const n = Math.floor(Math.random() * 9000) + 1000;
+    const id = `${prefix}-${n}`;
+    if (!state.sessions[id]) return id;
+  }
+  return `${prefix}-${String(Date.now()).slice(-6)}`;
+}
+
+function setAccountEditorOpen(open, hintText = '') {
+  state.accountEditorOpen = Boolean(open);
+  if (els.accountEditor) {
+    els.accountEditor.classList.toggle('hidden', !state.accountEditorOpen);
+  }
+  if (!els.accountEditorHint) return;
+  if (hintText) {
+    setText(els.accountEditorHint, hintText);
+    return;
+  }
+  if (state.accountEditorOpen) {
+    setText(els.accountEditorHint, '可编辑账号标识（默认已自动生成），支持手动修改后再启动。');
+  } else {
+    setText(els.accountEditorHint, '点击“新增账号”后配置并启动。启动后会自动收起编辑区。');
+  }
+}
+
+function markAccountSwitchPulse(accountId) {
+  const id = normalizeAccountId(accountId);
+  state.switchPulseAccountId = id;
+  if (state.switchPulseTimer) {
+    clearTimeout(state.switchPulseTimer);
+  }
+  state.switchPulseTimer = setTimeout(() => {
+    state.switchPulseAccountId = '';
+    renderSessionList();
+    renderSidebarAccountList();
+  }, 420);
+}
+
+function applyStartPayloadToEditor(accountId, options = {}) {
+  const id = normalizeAccountId(accountId);
+  const payload = state.startPayloads[id] || {};
+  const fallbackPlatform = (((state.sessions[id] || {}).status || {}).platform || 'qq') === 'wx' ? 'wx' : 'qq';
+  els.accountId.value = id;
+  els.mode.value = payload.mode || 'run';
+  els.platform.value = payload.platform || fallbackPlatform;
+  els.code.value = payload.code || '';
+  els.interval.value = payload.interval || '';
+  els.friendInterval.value = payload.friendInterval || '';
+  els.decodeData.value = payload.decodeData || '';
+  els.decodeHex.checked = Boolean(payload.decodeHex);
+  els.decodeGate.checked = Boolean(payload.decodeGate);
+  els.decodeType.value = payload.decodeType || '';
+  applyModeVisibility();
+  syncPlatformQrDefaults();
+  if (String(els.platform.value || '').trim().toLowerCase() !== 'wx' && typeof payload.useQr === 'boolean') {
+    els.useQr.checked = payload.useQr;
+  }
+  if (!options.silent) {
+    setAccountEditorOpen(true);
+  }
+}
+
+function prepareNewAccountDraft() {
+  const platform = String(els.platform.value || 'qq').trim().toLowerCase() === 'wx' ? 'wx' : 'qq';
+  const accountId = makeRandomAccountId(platform);
+  const draft = {
+    accountId,
+    mode: 'run',
+    platform,
+    code: '',
+    useQr: platform !== 'wx',
+    interval: '',
+    friendInterval: '',
+  };
+  state.startPayloads[accountId] = { ...draft };
+  applyStartPayloadToEditor(accountId, { silent: true });
+  setSelectedAccount(accountId, { syncHash: true, loadData: false });
+  setAccountEditorOpen(true, `已创建草稿账号 ${accountId}，可按需修改后启动。`);
 }
 
 function renderSessionList() {
@@ -494,9 +590,10 @@ function renderSessionList() {
       : sessionStateType === 'error'
         ? '异常'
         : '未运行';
+    const pulse = state.switchPulseAccountId === accountId ? ' switch-pulse' : '';
     const desc = `${s.status || 'idle'} | ${st.platform || '-'} | ${st.name || '-'} | Lv${st.level ?? 0}`;
     return `
-      <div class="session-item${active}" data-role="session-card" data-account-id="${escapeHtml(accountId)}">
+      <div class="session-item${active}${pulse}" data-role="session-card" data-account-id="${escapeHtml(accountId)}">
         <div class="session-meta">
           <div class="session-id">
             <span class="session-dot ${dotClass}"></span>
@@ -535,10 +632,11 @@ function renderSidebarAccountList() {
         ? 'dot-error'
         : 'dot-stopped';
     const active = accountId === state.selectedAccountId ? ' active' : '';
+    const pulse = state.switchPulseAccountId === accountId ? ' switch-pulse' : '';
     const level = Number.isFinite(profile.level) ? profile.level : '-';
     const name = profile.name ? ` · ${escapeHtml(profile.name)}` : '';
     return `
-      <button class="sidebar-account-item${active}" type="button" data-sidebar-account-id="${escapeHtml(accountId)}">
+      <button class="sidebar-account-item${active}${pulse}" type="button" data-sidebar-account-id="${escapeHtml(accountId)}">
         <span class="session-dot ${dotClass}"></span>
         <span class="sidebar-account-main">${escapeHtml(accountId)}${name}</span>
         <span class="sidebar-account-level">Lv${level}</span>
@@ -807,43 +905,28 @@ function formatRemainSeconds(sec) {
   return `${h}h ${mm}m`;
 }
 
-function pickCropIconByName(name) {
+function pickCropIconAssetByName(name) {
   const text = String(name || '').trim();
-  if (!text) return '🌱';
+  if (!text) return CROP_ICON_FILES.sprout;
   const iconRules = [
-    { re: /萝卜|胡萝卜/, icon: '🥕' },
-    { re: /白菜|生菜|油菜|甘蓝/, icon: '🥬' },
-    { re: /小麦|麦子|麦/, icon: '🌾' },
-    { re: /玉米/, icon: '🌽' },
-    { re: /土豆|马铃薯/, icon: '🥔' },
-    { re: /南瓜/, icon: '🎃' },
-    { re: /番茄|西红柿/, icon: '🍅' },
-    { re: /黄瓜/, icon: '🥒' },
-    { re: /辣椒/, icon: '🌶️' },
-    { re: /茄子/, icon: '🍆' },
-    { re: /草莓/, icon: '🍓' },
-    { re: /蓝莓/, icon: '🫐' },
-    { re: /葡萄/, icon: '🍇' },
-    { re: /苹果/, icon: '🍎' },
-    { re: /西瓜/, icon: '🍉' },
-    { re: /橙|桔|柑/, icon: '🍊' },
-    { re: /柠檬/, icon: '🍋' },
-    { re: /桃/, icon: '🍑' },
-    { re: /樱桃/, icon: '🍒' },
-    { re: /菠萝|凤梨/, icon: '🍍' },
-    { re: /香蕉/, icon: '🍌' },
+    { re: /萝卜|胡萝卜|土豆|马铃薯|番薯/, icon: CROP_ICON_FILES.root },
+    { re: /白菜|生菜|油菜|甘蓝|黄瓜|辣椒|茄子/, icon: CROP_ICON_FILES.leaf },
+    { re: /小麦|麦子|麦|玉米|水稻|稻谷/, icon: CROP_ICON_FILES.grain },
+    { re: /西瓜|南瓜/, icon: CROP_ICON_FILES.melon },
+    { re: /草莓|蓝莓|葡萄|苹果|橙|桔|柑|柠檬|桃|樱桃|菠萝|凤梨|香蕉|番茄|西红柿/, icon: CROP_ICON_FILES.fruit },
   ];
   for (const rule of iconRules) {
     if (rule.re.test(text)) return rule.icon;
   }
-  return '🌱';
+  return CROP_ICON_FILES.sprout;
 }
 
-function getLandCropIcon(land) {
-  if (!land || !land.unlocked) return '🔒';
-  if (land.isEmpty) return '🟫';
-  if (Number(land.phase) === 7) return '🥀';
-  return pickCropIconByName(land.plantName || '');
+function getLandCropIconAsset(land) {
+  if (!land || !land.unlocked) return { src: CROP_ICON_FILES.lock, label: '未解锁' };
+  if (land.isEmpty) return { src: CROP_ICON_FILES.empty, label: '空地' };
+  if (Number(land.phase) === 7) return { src: CROP_ICON_FILES.dead, label: '枯死' };
+  const label = String(land.plantName || '作物');
+  return { src: pickCropIconAssetByName(label), label };
 }
 
 function renderLands() {
@@ -886,16 +969,15 @@ function renderLands() {
       ? `${land.landLevel ?? 0}${land.maxLandLevel ? `/${land.maxLandLevel}` : ''}`
       : '-';
     const lockedText = land.unlocked ? '' : ' | 状态：未解锁';
-    const cropIcon = getLandCropIcon(land);
-    const cropLabel = land.unlocked
-      ? (land.isEmpty ? '空地' : (land.plantName || '作物'))
-      : '未解锁';
+    const crop = getLandCropIconAsset(land);
     return `
       <article class="land-item">
         <div class="land-head">
           <h3>土地 #${land.id}</h3>
           <p class="land-crop-line">
-            <span class="land-crop-icon" title="${escapeHtml(cropLabel)}">${cropIcon}</span>
+            <span class="land-crop-icon" title="${escapeHtml(crop.label)}">
+              <img class="land-crop-icon-img" src="${crop.src}" alt="${escapeHtml(crop.label)}" />
+            </span>
             <span>${escapeHtml(land.plantName || '-')} | ${escapeHtml(land.phaseName || '-')}</span>
           </p>
         </div>
@@ -939,10 +1021,14 @@ function refreshAccountDependentData(accountId) {
 
 function setSelectedAccount(accountId, { syncHash = true, loadData = false } = {}) {
   const next = normalizeAccountId(accountId);
+  const previous = normalizeAccountId(state.selectedAccountId);
   state.selectedAccountId = next;
   ensureSession(next);
   if (els.accountId) {
     els.accountId.value = next;
+  }
+  if (next !== previous) {
+    markAccountSwitchPulse(next);
   }
   if (syncHash) {
     syncHashState(true);
@@ -1190,6 +1276,7 @@ async function bootstrap() {
     : state.ui;
   renderBarkSettings();
   renderUiSettings();
+  setAccountEditorOpen(false);
   await loadAccountSettings(state.selectedAccountId);
   refreshPanels();
   resetLogView();
@@ -1403,12 +1490,28 @@ async function onStart() {
     renderSessionList();
     resetLogView();
     await queryLogsFromApi({ append: false });
+    setAccountEditorOpen(false, `账号 ${payload.accountId} 已启动，编辑区已自动收起。`);
+    setCurrentView('account-home');
   } catch (e) {
     appendLog(state.selectedAccountId || 'default', { text: `[WebUI] 启动失败: ${e.message}` });
     renderLogs();
   } finally {
     els.startBtn.disabled = false;
   }
+}
+
+function onNewAccount() {
+  prepareNewAccountDraft();
+}
+
+function onEditCurrentAccount() {
+  const accountId = normalizeAccountId(state.selectedAccountId);
+  applyStartPayloadToEditor(accountId, { silent: true });
+  setAccountEditorOpen(true, `正在编辑账号 ${accountId}`);
+}
+
+function onCancelAccountEdit() {
+  setAccountEditorOpen(false);
 }
 
 async function stopByAccount(accountId) {
@@ -1793,6 +1896,15 @@ function bindEvents() {
   els.platform.addEventListener('change', () => {
     syncPlatformQrDefaults();
   });
+  if (els.newAccountBtn) {
+    els.newAccountBtn.addEventListener('click', onNewAccount);
+  }
+  if (els.editAccountBtn) {
+    els.editAccountBtn.addEventListener('click', onEditCurrentAccount);
+  }
+  if (els.cancelAccountEditBtn) {
+    els.cancelAccountEditBtn.addEventListener('click', onCancelAccountEdit);
+  }
   els.loginBtn.addEventListener('click', onLogin);
   els.logoutBtn.addEventListener('click', onLogout);
   els.authPassword.addEventListener('keydown', (event) => {
