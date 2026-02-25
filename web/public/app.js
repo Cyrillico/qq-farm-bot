@@ -99,6 +99,7 @@ const state = {
     enabled: false,
     authenticated: true,
     username: '',
+    csrfToken: '',
   },
   routeInitialized: false,
 };
@@ -423,6 +424,7 @@ function applyAuthState(auth) {
     enabled: Boolean(auth && auth.enabled),
     authenticated: Boolean(auth && auth.authenticated),
     username: String((auth && auth.username) || ''),
+    csrfToken: String((auth && auth.csrfToken) || ''),
   };
   state.auth = next;
 
@@ -1498,8 +1500,19 @@ function collectBarkPayload() {
 
 async function fetchJson(url, options = {}) {
   const { skipAuthGuard = false, ...fetchOptions } = options;
+  const method = String(fetchOptions.method || 'GET').toUpperCase();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(fetchOptions.headers || {}),
+  };
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && !String(url).startsWith('/api/auth/login')) {
+    const csrfToken = String((state.auth && state.auth.csrfToken) || '').trim();
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+  }
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     ...fetchOptions,
   });
   const data = await res.json().catch(() => ({}));
@@ -1521,6 +1534,13 @@ async function loadAuthStatus() {
   const ret = await fetchJson('/api/auth/status', { skipAuthGuard: true });
   applyAuthState(ret.auth || { enabled: false, authenticated: true, username: '' });
   return state.auth;
+}
+
+async function loadBarkSettings() {
+  const ret = await fetchJson('/api/settings/bark');
+  state.bark = ret.bark || state.bark;
+  renderBarkSettings();
+  return state.bark;
 }
 
 async function onLogin() {
@@ -1592,9 +1612,9 @@ async function bootstrap() {
   state.ui = initial.settings && initial.settings.ui
     ? initial.settings.ui
     : state.ui;
-  renderBarkSettings();
   renderUiSettings();
   setAccountEditorOpen(false);
+  await loadBarkSettings();
   await loadAccountSettings(state.selectedAccountId);
   refreshPanels();
   resetLogView();

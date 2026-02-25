@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 
 const AUTH_COOKIE_NAME = 'qq_farm_ui_auth';
+const AUTH_CSRF_HEADER_NAME = 'x-csrf-token';
 const AUTH_MAX_AGE_MS = 24 * 3600 * 1000;
 
 function toBase64Url(input) {
@@ -101,12 +102,30 @@ function verifyCredentials(authConfig, username, password) {
     return userOk && passOk;
 }
 
+function buildCsrfToken(authToken, secret) {
+    const safeAuthToken = String(authToken || '').trim();
+    if (!safeAuthToken) return '';
+    const sig = signValue(secret, `csrf|${safeAuthToken}`);
+    return `v1.${sig}`;
+}
+
+function verifyCsrfToken(csrfToken, authToken, secret) {
+    const raw = String(csrfToken || '').trim();
+    const safeAuthToken = String(authToken || '').trim();
+    if (!raw || !safeAuthToken) return { ok: false, reason: 'missing' };
+    const parts = raw.split('.');
+    if (parts.length !== 2 || parts[0] !== 'v1') return { ok: false, reason: 'invalid_format' };
+    const expected = buildCsrfToken(safeAuthToken, secret);
+    if (!safeEqual(raw, expected)) return { ok: false, reason: 'invalid_sig' };
+    return { ok: true };
+}
+
 function buildAuthCookie(token, secure = false) {
     const attrs = [
         `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}`,
         'Path=/',
         'HttpOnly',
-        'SameSite=Lax',
+        'SameSite=Strict',
         `Max-Age=${Math.floor(AUTH_MAX_AGE_MS / 1000)}`,
     ];
     if (secure) attrs.push('Secure');
@@ -118,7 +137,7 @@ function buildClearAuthCookie(secure = false) {
         `${AUTH_COOKIE_NAME}=`,
         'Path=/',
         'HttpOnly',
-        'SameSite=Lax',
+        'SameSite=Strict',
         'Max-Age=0',
     ];
     if (secure) attrs.push('Secure');
@@ -127,6 +146,7 @@ function buildClearAuthCookie(secure = false) {
 
 module.exports = {
     AUTH_COOKIE_NAME,
+    AUTH_CSRF_HEADER_NAME,
     AUTH_MAX_AGE_MS,
     buildAuthConfig,
     isAuthEnabled,
@@ -134,6 +154,8 @@ module.exports = {
     verifySessionToken,
     parseCookieHeader,
     verifyCredentials,
+    buildCsrfToken,
+    verifyCsrfToken,
     buildAuthCookie,
     buildClearAuthCookie,
 };

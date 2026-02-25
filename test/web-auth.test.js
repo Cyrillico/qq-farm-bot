@@ -7,6 +7,8 @@ const {
     signSessionToken,
     verifySessionToken,
     parseCookieHeader,
+    buildCsrfToken,
+    verifyCsrfToken,
 } = require('../web/auth');
 
 test('auth config enabled only when username and password both provided', () => {
@@ -60,4 +62,32 @@ test('parseCookieHeader parses key value pairs', () => {
     assert.equal(cookies.a, '1');
     assert.equal(cookies.b, 'hello world');
     assert.equal(cookies.c, '3');
+});
+
+test('csrf token binds to auth token and verifies roundtrip', () => {
+    const cfg = buildAuthConfig({
+        WEB_UI_AUTH_USERNAME: 'admin',
+        WEB_UI_AUTH_PASSWORD: 'pass',
+        WEB_UI_AUTH_SECRET: 'test-secret',
+    });
+    const authToken = signSessionToken('admin', cfg.secret, 1700000000000);
+    const csrf = buildCsrfToken(authToken, cfg.secret);
+    const verified = verifyCsrfToken(csrf, authToken, cfg.secret);
+    assert.equal(verified.ok, true);
+});
+
+test('csrf token verify fails for tampered token or mismatched auth token', () => {
+    const cfg = buildAuthConfig({
+        WEB_UI_AUTH_USERNAME: 'admin',
+        WEB_UI_AUTH_PASSWORD: 'pass',
+        WEB_UI_AUTH_SECRET: 'test-secret',
+    });
+    const authToken = signSessionToken('admin', cfg.secret, 1700000000000);
+    const csrf = buildCsrfToken(authToken, cfg.secret);
+    const bad1 = verifyCsrfToken(`${csrf}x`, authToken, cfg.secret);
+    assert.equal(bad1.ok, false);
+
+    const otherAuthToken = signSessionToken('admin', cfg.secret, 1700000001000);
+    const bad2 = verifyCsrfToken(csrf, otherAuthToken, cfg.secret);
+    assert.equal(bad2.ok, false);
 });
