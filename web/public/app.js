@@ -67,6 +67,7 @@ const state = {
   accountEditorOpen: false,
   switchPulseAccountId: '',
   switchPulseTimer: null,
+  pendingAutoHomeOnLogin: {},
   bark: null,
   accountSettings: {},
   lands: {},
@@ -510,6 +511,32 @@ function setAccountEditorOpen(open, hintText = '') {
   } else {
     setText(els.accountEditorHint, '点击“新增账号”后配置并启动。启动后会自动收起编辑区。');
   }
+}
+
+function shouldDeferAutoJumpUntilLoginSuccess(startPayload) {
+  return Boolean(
+    startPayload
+    && startPayload.mode === 'run'
+    && startPayload.useQr,
+  );
+}
+
+function markPendingAutoHomeOnLogin(accountId, pending) {
+  const id = normalizeAccountId(accountId);
+  if (!id) return;
+  if (pending) {
+    state.pendingAutoHomeOnLogin[id] = true;
+    return;
+  }
+  delete state.pendingAutoHomeOnLogin[id];
+}
+
+function maybeAutoJumpAfterLoginSuccess(accountId) {
+  const id = normalizeAccountId(accountId);
+  if (!state.pendingAutoHomeOnLogin[id]) return;
+  markPendingAutoHomeOnLogin(id, false);
+  setAccountEditorOpen(false, `账号 ${id} 已登录成功，编辑区已自动收起。`);
+  setCurrentView('account-home');
 }
 
 function markAccountSwitchPulse(accountId) {
@@ -1310,6 +1337,10 @@ function connectEvents() {
 
       if (type === 'log') {
         appendLog(accountId, payload);
+        const logText = String(payload.text || payload.message || '');
+        if (logText.includes('登录成功')) {
+          maybeAutoJumpAfterLoginSuccess(accountId);
+        }
         const filters = getActiveLogFilters();
         const liveItem = {
           accountId,
@@ -1445,6 +1476,7 @@ function connectEvents() {
           delete state.lands[deletedId];
           delete state.accountSettings[deletedId];
           delete state.startPayloads[deletedId];
+          delete state.pendingAutoHomeOnLogin[deletedId];
           if (state.selectedAccountId === deletedId) {
             const ids = Object.keys(state.sessions);
             const next = ids[0] || 'default';
@@ -1481,6 +1513,7 @@ async function onStart() {
     els.startBtn.disabled = true;
     const payload = collectStartPayload();
     state.startPayloads[payload.accountId] = { ...payload };
+    markPendingAutoHomeOnLogin(payload.accountId, shouldDeferAutoJumpUntilLoginSuccess(payload));
     setSelectedAccount(payload.accountId, { syncHash: true, loadData: false });
     await fetchJson('/api/session/start', {
       method: 'POST',
@@ -1490,9 +1523,15 @@ async function onStart() {
     renderSessionList();
     resetLogView();
     await queryLogsFromApi({ append: false });
-    setAccountEditorOpen(false, `账号 ${payload.accountId} 已启动，编辑区已自动收起。`);
-    setCurrentView('account-home');
+    if (state.pendingAutoHomeOnLogin[payload.accountId]) {
+      setText(els.sessionStatus, `当前账号：${payload.accountId} | 状态：starting（等待扫码登录成功）`);
+      setText(els.accountSettingsStatus, '二维码已生成，请扫码并确认登录，登录成功后将自动返回账号总览');
+    } else {
+      setAccountEditorOpen(false, `账号 ${payload.accountId} 已启动，编辑区已自动收起。`);
+      setCurrentView('account-home');
+    }
   } catch (e) {
+    markPendingAutoHomeOnLogin(state.selectedAccountId || els.accountId.value || 'default', false);
     appendLog(state.selectedAccountId || 'default', { text: `[WebUI] 启动失败: ${e.message}` });
     renderLogs();
   } finally {
