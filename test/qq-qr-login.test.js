@@ -61,6 +61,69 @@ test('waitForLoginCodeResult should resolve auth code after scan confirmation', 
     assert.equal(frames.at(-1).qrUrl, 'https://example.test/qr');
 });
 
+test('waitForLoginCodeResult should keep retrying confirmed ticket when auth code exchange is transiently invalid', async () => {
+    const frames = [];
+    let queryCount = 0;
+    let exchangeCount = 0;
+
+    const authCode = await waitForLoginCodeResult({
+        loginCode: 'abc123',
+        url: 'https://example.test/qr',
+        backupUrls: ['https://example.test/alt'],
+        pollIntervalMs: 0,
+        timeoutMs: 1000,
+        waitingNoticeIntervalMs: 0,
+        queryStatus: async () => {
+            queryCount += 1;
+            return { status: 'OK', ticket: 'ticket-keep' };
+        },
+        exchangeTicket: async (ticket) => {
+            exchangeCount += 1;
+            assert.equal(ticket, 'ticket-keep');
+            if (exchangeCount < 3) {
+                throw new Error('获取农场登录 code 失败: code=-3000 校验失败');
+            }
+            return 'auth-code-final';
+        },
+        emitQrEvent: (type, payload) => {
+            frames.push({ type, ...(payload || {}) });
+        },
+        sleep: async () => {},
+    });
+
+    assert.equal(authCode, 'auth-code-final');
+    assert.equal(queryCount, 1);
+    assert.equal(exchangeCount, 3);
+    assert.equal(frames.at(-1).phase, 'confirmed');
+});
+
+test('waitForLoginCodeResult should still fail fast for non-transient auth code exchange errors', async () => {
+    let queryCount = 0;
+    let exchangeCount = 0;
+
+    await assert.rejects(() => waitForLoginCodeResult({
+        loginCode: 'abc123',
+        url: 'https://example.test/qr',
+        backupUrls: [],
+        pollIntervalMs: 0,
+        timeoutMs: 1000,
+        waitingNoticeIntervalMs: 0,
+        queryStatus: async () => {
+            queryCount += 1;
+            return { status: 'OK', ticket: 'ticket-hard-fail' };
+        },
+        exchangeTicket: async () => {
+            exchangeCount += 1;
+            throw new Error('获取农场登录 code 失败: code=401 ticket invalid');
+        },
+        emitQrEvent: () => {},
+        sleep: async () => {},
+    }), /ticket invalid/);
+
+    assert.equal(queryCount, 1);
+    assert.equal(exchangeCount, 1);
+});
+
 test('waitForLoginCodeResult should throw when relogin qr is expired', async () => {
     const frames = [];
 
