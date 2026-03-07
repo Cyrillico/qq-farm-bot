@@ -68,6 +68,7 @@ sudo bash deploy/vps-update.sh --app-dir /opt/qq-farm-bot --service qq-farm-ui -
 说明：它不会清理未跟踪文件，所以 `.env`、`.qq-farm-ui-settings.json` 这类本地文件会保留。
 
 首次部署脚本也已调整为非破坏式 Caddy 写入：默认生成 `/etc/caddy/sites-enabled/<service>.caddy`，并只在主 `/etc/caddy/Caddyfile` 缺少导入时追加 `import /etc/caddy/sites-enabled/*.caddy`。
+如果主 `Caddyfile` 或其他已托管站点里已经存在同域名站点块，脚本会跳过本项目站点注入，避免重复声明同一个域名。
 
 ## 可选参数
 

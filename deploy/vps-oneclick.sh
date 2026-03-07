@@ -315,11 +315,52 @@ CADDY
   fi
 }
 
+escape_regex() {
+  printf '%s' "$1" | sed -e 's/[][(){}.^$+*?|\/]/\\&/g'
+}
+
+caddy_file_declares_domain() {
+  local file_path="$1"
+  [[ -f "$file_path" ]] || return 1
+  local domain_pattern
+  domain_pattern="$(escape_regex "$DOMAIN")"
+  grep -Eq "^[[:space:]]*${domain_pattern}[[:space:]]*\{" "$file_path"
+}
+
+hasExistingCaddySiteForDomain() {
+  local managed_file="$1"
+  local caddy_main="/etc/caddy/Caddyfile"
+  local caddy_sites_dir="/etc/caddy/sites-enabled"
+
+  if caddy_file_declares_domain "$caddy_main"; then
+    return 0
+  fi
+
+  if [[ -d "$caddy_sites_dir" ]]; then
+    local site_file
+    while IFS= read -r -d '' site_file; do
+      [[ "$site_file" == "$managed_file" ]] && continue
+      if caddy_file_declares_domain "$site_file"; then
+        return 0
+      fi
+    done < <(find "$caddy_sites_dir" -maxdepth 1 -type f -name '*.caddy' -print0)
+  fi
+
+  return 1
+}
+
 write_caddyfile() {
   log "配置 Caddy HTTPS 反向代理"
 
   local caddy_main="/etc/caddy/Caddyfile"
   local caddy_site_file="/etc/caddy/sites-enabled/${SERVICE_NAME}.caddy"
+
+  if [[ ! -f "$caddy_site_file" ]] && hasExistingCaddySiteForDomain "$caddy_site_file"; then
+    log "检测到 Caddy 已存在同域名站点 ${DOMAIN}，跳过注入同域名配置，避免冲突"
+    caddy validate --config "$caddy_main"
+    systemctl enable --now caddy
+    return
+  fi
 
   ensure_caddy_imports
 
