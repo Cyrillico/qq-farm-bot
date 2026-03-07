@@ -28,6 +28,24 @@ function getHeaders(apiDomain = getApiDomain()) {
     };
 }
 
+function safeJsonStringify(value) {
+    try {
+        return JSON.stringify(value);
+    } catch (error) {
+        return String(value);
+    }
+}
+
+function shortenSensitive(value, left = 6, right = 4) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    if (text.length <= left + right + 3) return text;
+    return text.slice(0, left) + '...' + text.slice(-right);
+}
+
+function logQrDiagnostic(tag, payload) {
+    console.log(`[扫码登录][诊断] ${tag}: ${safeJsonStringify(payload)}`);
+}
 function normalizeUrl(value) {
     const text = String(value || '').trim();
     if (!/^https?:\/\//i.test(text)) return '';
@@ -77,6 +95,12 @@ async function requestLoginCode() {
         headers: getHeaders(apiDomain),
     });
 
+    logQrDiagnostic('GetLoginCode', {
+        apiDomain,
+        status: response && response.status,
+        data: response && response.data ? response.data : null,
+    });
+
     const { code, data } = response.data || {};
     if (+code !== 0 || !data || !data.code) {
         throw new Error('获取QQ扫码登录码失败');
@@ -100,6 +124,13 @@ async function queryScanStatus(loginCode) {
         `${buildApiUrl('/ide/devtoolAuth/syncScanSateGetTicket', apiDomain)}?code=${encodeURIComponent(loginCode)}`,
         { headers: getHeaders(apiDomain) }
     );
+
+    logQrDiagnostic('syncScanSateGetTicket', {
+        apiDomain,
+        loginCode: shortenSensitive(loginCode),
+        status: response && response.status,
+        data: response && response.data ? response.data : null,
+    });
 
     if (response.status !== 200) return { status: 'Error' };
 
@@ -177,6 +208,13 @@ async function getAuthCode(ticket, options = {}) {
         );
 
         const payload = response && response.data ? response.data : {};
+        logQrDiagnostic('ide/login', {
+            apiDomain,
+            attempt: attempt + 1,
+            ticket: shortenSensitive(ticket),
+            status: response && response.status,
+            data: payload,
+        });
         const authCode = response && response.status === 200 ? pickAuthCodeFromPayload(payload) : '';
         if (authCode) {
             return authCode;

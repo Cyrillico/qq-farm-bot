@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const axios = require('axios');
 const qrcodeTerminal = require('qrcode-terminal');
 
-const { resolveQrUrls, waitForLoginCodeResult, getQQFarmCodeByScan, getAuthCode } = require('../src/qqQrLogin');
+const { resolveQrUrls, waitForLoginCodeResult, getQQFarmCodeByScan, getAuthCode, queryScanStatus } = require('../src/qqQrLogin');
 
 test('resolveQrUrls should prefer legacy h5 fallback url and keep API urls in backups', () => {
     const ret = resolveQrUrls(
@@ -135,6 +135,66 @@ test('waitForLoginCodeResult should throw when relogin qr is expired', async () 
 
     assert.equal(frames.at(-1).phase, 'expired');
     assert.equal(frames.at(-1).message, '二维码已失效，请重试');
+});
+
+test('queryScanStatus should log raw payload for diagnostics', async (t) => {
+    const originalGet = axios.get;
+    const originalLog = console.log;
+    const logs = [];
+
+    axios.get = async () => ({
+        status: 200,
+        data: {
+            code: 0,
+            data: { ok: 1, ticket: 'ticket-1', uin: '10001' },
+        },
+    });
+    console.log = (...args) => {
+        logs.push(args.join(' '));
+    };
+
+    t.after(() => {
+        axios.get = originalGet;
+        console.log = originalLog;
+    });
+
+    const status = await queryScanStatus('abc123');
+    assert.equal(status.status, 'OK');
+    assert.match(logs.join('\n'), /syncScanSateGetTicket/);
+    assert.match(logs.join('\n'), /ticket-1/);
+});
+
+test('getAuthCode should log raw payload for diagnostics on failure', async (t) => {
+    const originalPost = axios.post;
+    const originalLog = console.log;
+    const logs = [];
+
+    axios.post = async () => ({
+        status: 200,
+        data: {
+            code: -3000,
+            msg: '校验失败',
+            data: { traceId: 'trace-1' },
+        },
+    });
+    console.log = (...args) => {
+        logs.push(args.join(' '));
+    };
+
+    t.after(() => {
+        axios.post = originalPost;
+        console.log = originalLog;
+    });
+
+    await assert.rejects(() => getAuthCode('ticket-1', {
+        maxRetries: 0,
+        retryDelayMs: 0,
+        sleep: async () => {},
+    }), /code=-3000/);
+
+    assert.match(logs.join('\n'), /ide\/login/);
+    assert.match(logs.join('\n'), /-3000/);
+    assert.match(logs.join('\n'), /trace-1/);
 });
 
 test('getQQFarmCodeByScan should call onCodeReady before polling', async (t) => {
