@@ -47,15 +47,25 @@ sudo systemctl status caddy
 
 ## 更新代码
 
+已部署完成后，优先使用仓库内置更新脚本：
+
 ```bash
-sudo bash deploy/vps-oneclick.sh \
-  --domain farm.example.com \
-  --repo https://github.com/Cyrillico/qq-farm-bot.git \
-  --branch main \
-  --auth-user admin
+cd /opt/qq-farm-bot
+sudo bash deploy/vps-update.sh
 ```
 
-说明：脚本会自动 `git fetch + reset --hard origin/<branch>`，确保部署目录与远端一致。
+如果你的部署目录或服务名不是默认值：
+
+```bash
+sudo bash deploy/vps-update.sh --app-dir /opt/qq-farm-bot --service qq-farm-ui --branch main
+```
+
+脚本会自动执行：
+- `git fetch + reset --hard origin/<branch>`
+- `npm install --omit=dev`
+- `systemctl restart <service>`
+
+说明：它不会清理未跟踪文件，所以 `.env`、`.qq-farm-ui-settings.json` 这类本地文件会保留。
 
 ## 可选参数
 

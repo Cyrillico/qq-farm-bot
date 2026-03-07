@@ -155,6 +155,12 @@ sudo bash deploy/vps-oneclick.sh \
 - UFW 防火墙 + fail2ban + 自动安全更新
 - Web 控制台账号密码鉴权环境变量写入
 
+已部署机器可直接一键更新：
+
+```bash
+sudo bash deploy/vps-update.sh
+```
+
 完整说明见：`docs/vps-oneclick.md`
 
 ### 参数说明

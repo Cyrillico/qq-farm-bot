@@ -25,6 +25,7 @@ let taskCheckInProgress = false;
 let taskPollTimer = null;
 let taskNotifyTimer = null;
 const TASK_POLL_INTERVAL_MS = 60 * 1000;
+const INITIAL_TASK_STARTUP_DELAY_MS = 8000;
 
 function updateTaskRuntimeSettings(patch = {}) {
     taskRuntimeSettings = {
@@ -620,12 +621,16 @@ async function claimTasksFromList(claimable) {
 
 // ============ 初始化 ============
 
+function getInitialTaskStartupDelayMs() {
+    return INITIAL_TASK_STARTUP_DELAY_MS;
+}
+
 function initTaskSystem() {
     // 监听任务状态变化推送
     networkEvents.on('taskInfoNotify', onTaskInfoNotify);
 
-    // 启动时检查一次任务
-    setTimeout(() => checkAndClaimTasks(), 4000);
+    // 登录完成后先给会话一个稳定期，避免刚上线就连续触发礼包/任务请求。
+    setTimeout(() => checkAndClaimTasks(), getInitialTaskStartupDelayMs());
     if (taskPollTimer) clearInterval(taskPollTimer);
     taskPollTimer = setInterval(() => {
         void checkAndClaimTasks();
@@ -659,5 +664,6 @@ module.exports = {
         pickGiftItems,
         buildDailyGiftOverview,
         runManualDailyGiftAction,
+        getInitialTaskStartupDelayMs,
     },
 };

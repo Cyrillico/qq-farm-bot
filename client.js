@@ -47,6 +47,7 @@ const { getQQFarmCodeByScan } = require('./src/qqQrLogin');
 const { pushBark, pushBarkDetailed } = require('./src/bark');
 const { emitUiEvent } = require('./src/uiEvents');
 const { buildOfflineReloginReminder } = require('./src/offlineReminder');
+const { buildLoginStartupPlan } = require('./src/loginWarmup');
 const {
     updateRuntimeBarkSettings,
     updateRuntimeAccountSettings,
@@ -161,6 +162,9 @@ const subsystemState = {
 let runtimeSubsystemsReady = false;
 let unexpectedWsClosing = false;
 let reloginInProgress = false;
+let startupWarmupTimers = [];
+let startupWarmupActive = false;
+let startupWarmupPendingCount = 0;
 
 async function pushCriticalBarkWithTimeout(title, message, dedupeKey, options = {}) {
     const category = String(options.category || 'fatal');
@@ -243,7 +247,91 @@ function setSellSubsystemEnabled(enabled) {
     }
 }
 
+function clearRuntimeStartupPlan() {
+    for (const timer of startupWarmupTimers) {
+        clearTimeout(timer);
+    }
+    startupWarmupTimers = [];
+    startupWarmupPendingCount = 0;
+    startupWarmupActive = false;
+}
+
+function finishRuntimeStartupStep() {
+    if (!startupWarmupPendingCount) {
+        startupWarmupActive = false;
+        return;
+    }
+    startupWarmupPendingCount = Math.max(0, startupWarmupPendingCount - 1);
+    if (startupWarmupPendingCount === 0) {
+        startupWarmupActive = false;
+    }
+}
+
+function runRuntimeStartupStep(stepKey, account = {}) {
+    switch (stepKey) {
+        case 'farm':
+            setFarmSubsystemEnabled(Boolean(account.farmEnabled));
+            return;
+        case 'friend':
+            setFriendSubsystemEnabled(Boolean(account.friendEnabled));
+            return;
+        case 'task':
+            setTaskSubsystemEnabled(Boolean(account.taskEnabled));
+            return;
+        case 'sell':
+            setSellSubsystemEnabled(Boolean(account.sellEnabled));
+            return;
+        case 'sellDebug':
+            if (account.sellEnabled) {
+                void debugSellFruits();
+            }
+            return;
+        default:
+            return;
+    }
+}
+
+function scheduleRuntimeSubsystemStartup(account = {}) {
+    clearRuntimeStartupPlan();
+
+    if (!account.farmEnabled) setFarmSubsystemEnabled(false);
+    if (!account.friendEnabled) setFriendSubsystemEnabled(false);
+    if (!account.taskEnabled) setTaskSubsystemEnabled(false);
+    if (!account.sellEnabled) setSellSubsystemEnabled(false);
+
+    const plan = buildLoginStartupPlan(account);
+    const delayedPlan = plan.filter((item) => Number(item.delayMs) > 0);
+    startupWarmupPendingCount = delayedPlan.length;
+    startupWarmupActive = delayedPlan.length > 0;
+
+    if (delayedPlan.length > 0) {
+        const labels = {
+            friend: '好友巡查',
+            task: '任务/礼包',
+            sell: '自动出售',
+            sellDebug: '背包预检',
+        };
+        const summary = delayedPlan.map((item) => `${labels[item.key] || item.key} ${Math.round(item.delayMs / 1000)}s`).join(' / ');
+        console.log(`[启动预热] 为避免登录后请求突刺，将分阶段启用：${summary}`);
+    }
+
+    for (const item of plan) {
+        const delayMs = Math.max(0, Number(item.delayMs) || 0);
+        if (delayMs === 0) {
+            runRuntimeStartupStep(item.key, account);
+            continue;
+        }
+        const timer = setTimeout(() => {
+            startupWarmupTimers = startupWarmupTimers.filter((entry) => entry !== timer);
+            runRuntimeStartupStep(item.key, account);
+            finishRuntimeStartupStep();
+        }, delayMs);
+        startupWarmupTimers.push(timer);
+    }
+}
+
 function stopRuntimeSubsystems() {
+    clearRuntimeStartupPlan();
     setFarmSubsystemEnabled(false);
     setFriendSubsystemEnabled(false);
     setTaskSubsystemEnabled(false);
@@ -253,6 +341,7 @@ function stopRuntimeSubsystems() {
 
 function applyRuntimeAccountSettings(patch = {}, options = {}) {
     const silent = Boolean(options.silent);
+    const activateSubsystems = options.activateSubsystems !== false;
     const runtime = updateRuntimeAccountSettings(patch);
     const account = runtime.account || {};
 
@@ -279,11 +368,15 @@ function applyRuntimeAccountSettings(patch = {}, options = {}) {
         openServerGiftEnabled: account.openServerGiftEnabled,
     });
 
-    if (runtimeSubsystemsReady) {
-        setFarmSubsystemEnabled(Boolean(account.farmEnabled));
-        setFriendSubsystemEnabled(Boolean(account.friendEnabled));
-        setTaskSubsystemEnabled(Boolean(account.taskEnabled));
-        setSellSubsystemEnabled(Boolean(account.sellEnabled));
+    if (runtimeSubsystemsReady && activateSubsystems) {
+        if (startupWarmupActive) {
+            scheduleRuntimeSubsystemStartup(account);
+        } else {
+            setFarmSubsystemEnabled(Boolean(account.farmEnabled));
+            setFriendSubsystemEnabled(Boolean(account.friendEnabled));
+            setTaskSubsystemEnabled(Boolean(account.taskEnabled));
+            setSellSubsystemEnabled(Boolean(account.sellEnabled));
+        }
     }
 
     if (!silent) {
@@ -602,12 +695,8 @@ async function main() {
         await processInviteCodes();
 
         runtimeSubsystemsReady = true;
-        const accountRuntime = applyRuntimeAccountSettings({}, { silent: true });
-
-        // 启动时可选检查一次背包（仅自动出售开启时）
-        if (accountRuntime.sellEnabled) {
-            setTimeout(() => debugSellFruits(), 5000);
-        }
+        const accountRuntime = applyRuntimeAccountSettings({}, { silent: true, activateSubsystems: false });
+        scheduleRuntimeSubsystemStartup(accountRuntime);
         emitProcessState('running', { mode: 'run' });
     });
 
