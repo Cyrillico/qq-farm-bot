@@ -277,19 +277,54 @@ UNIT
   systemctl enable --now "$SERVICE_NAME"
 }
 
+ensure_caddy_imports() {
+  local caddy_main="/etc/caddy/Caddyfile"
+  local caddy_sites_dir="/etc/caddy/sites-enabled"
+  local caddy_import_line='import /etc/caddy/sites-enabled/*.caddy'
+
+  mkdir -p "$caddy_sites_dir"
+
+  if [[ ! -f "$caddy_main" ]]; then
+    log "初始化 Caddy 主配置"
+    if [[ -n "$EMAIL" ]]; then
+      cat > "$caddy_main" <<CADDY
+{
+    email ${EMAIL}
+}
+
+${caddy_import_line}
+CADDY
+    else
+      cat > "$caddy_main" <<CADDY
+${caddy_import_line}
+CADDY
+    fi
+    return
+  fi
+
+  if ! grep -Fq "$caddy_import_line" "$caddy_main"; then
+    log "检测到现有 Caddy 主配置，追加 sites-enabled 导入，不覆盖原有代理"
+    printf '
+# Managed by qq-farm-bot deploy script
+%s
+' "$caddy_import_line" >> "$caddy_main"
+  fi
+
+  if [[ -n "$EMAIL" ]] && ! grep -Eq '^[[:space:]]*email[[:space:]]+' "$caddy_main"; then
+    log "保留现有 Caddy 主配置；如需全局 ACME 邮箱，请手动在 /etc/caddy/Caddyfile 中设置: ${EMAIL}"
+  fi
+}
+
 write_caddyfile() {
   log "配置 Caddy HTTPS 反向代理"
 
-  local caddy_global=""
-  if [[ -n "$EMAIL" ]]; then
-    caddy_global="{
-    email ${EMAIL}
-}
-"
-  fi
+  local caddy_main="/etc/caddy/Caddyfile"
+  local caddy_site_file="/etc/caddy/sites-enabled/${SERVICE_NAME}.caddy"
 
-  cat > /etc/caddy/Caddyfile <<CADDY
-${caddy_global}${DOMAIN} {
+  ensure_caddy_imports
+
+  cat > "$caddy_site_file" <<CADDY
+${DOMAIN} {
     encode zstd gzip
 
     header {
@@ -305,7 +340,8 @@ ${caddy_global}${DOMAIN} {
 }
 CADDY
 
-  caddy fmt --overwrite /etc/caddy/Caddyfile
+  caddy fmt --overwrite "$caddy_site_file"
+  caddy validate --config "$caddy_main"
   systemctl enable --now caddy
   systemctl reload caddy || systemctl restart caddy
 }

@@ -150,7 +150,7 @@ sudo bash deploy/vps-oneclick.sh \
 ```
 
 脚本会自动完成：
-- HTTPS 证书 + Caddy 反代
+- HTTPS 证书 + Caddy 反代（默认写入 `sites-enabled`，尽量不覆盖已有主配置）
 - systemd 常驻运行
 - UFW 防火墙 + fail2ban + 自动安全更新
 - Web 控制台账号密码鉴权环境变量写入

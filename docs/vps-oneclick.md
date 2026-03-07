@@ -26,7 +26,7 @@ sudo bash deploy/vps-oneclick.sh \
 - 拉取代码到 `/opt/qq-farm-bot`。
 - 写入 `.env`（含 Web 登录账号密码环境变量）。
 - 创建并启动 `qq-farm-ui` systemd 服务。
-- 配置 Caddy 反向代理到 `127.0.0.1:3210` 并自动签发 HTTPS 证书。
+- 在 `/etc/caddy/sites-enabled/` 写入本项目站点配置，并通过主 `Caddyfile` 导入，尽量不覆盖你已有的反向代理。
 - 开启防火墙规则（OpenSSH/80/443）。
 
 ## 常用运维命令
@@ -66,6 +66,8 @@ sudo bash deploy/vps-update.sh --app-dir /opt/qq-farm-bot --service qq-farm-ui -
 - `systemctl restart <service>`
 
 说明：它不会清理未跟踪文件，所以 `.env`、`.qq-farm-ui-settings.json` 这类本地文件会保留。
+
+首次部署脚本也已调整为非破坏式 Caddy 写入：默认生成 `/etc/caddy/sites-enabled/<service>.caddy`，并只在主 `/etc/caddy/Caddyfile` 缺少导入时追加 `import /etc/caddy/sites-enabled/*.caddy`。
 
 ## 可选参数
 
