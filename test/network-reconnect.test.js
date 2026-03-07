@@ -142,3 +142,17 @@ test('network reconnects automatically after unexpected close', () => {
         fixture.restore();
     }
 });
+
+
+test('network connect should encode login code in websocket url query', () => {
+    const fixture = loadNetworkWithMocks();
+    try {
+        fixture.network.connect('a+/=?&b', () => {});
+        assert.equal(fixture.sockets.length, 1);
+        const socketUrl = fixture.sockets[0].url;
+        assert.match(socketUrl, /code=a%2B%2F%3D%3F%26b/);
+        assert.doesNotMatch(socketUrl, /code=a\+\/=\?&b/);
+    } finally {
+        fixture.restore();
+    }
+});

@@ -25,6 +25,17 @@ let savedCode = '';
 
 const AUTO_RECONNECT_DELAY_MS = 5000;
 
+function buildWsConnectUrl(loginCode) {
+    const params = new URLSearchParams({
+        platform: String(CONFIG.platform || ''),
+        os: String(CONFIG.os || ''),
+        ver: String(CONFIG.clientVersion || ''),
+        code: String(loginCode || ''),
+        openID: '',
+    });
+    return `${CONFIG.serverUrl}?${params.toString()}`;
+}
+
 // ============ 用户状态 (登录后设置) ============
 const userState = {
     gid: 0,
@@ -450,7 +461,7 @@ function connect(code, onLoginSuccess) {
     if (code) savedCode = String(code);
     clearReconnectTimer();
     const loginCode = savedCode || String(code || '');
-    const url = `${CONFIG.serverUrl}?platform=${CONFIG.platform}&os=${CONFIG.os}&ver=${CONFIG.clientVersion}&code=${loginCode}&openID=`;
+    const url = buildWsConnectUrl(loginCode);
     manualClose = false;
 
     ws = new WebSocket(url, {
@@ -537,4 +548,7 @@ module.exports = {
     getUserState,
     networkEvents,
     markManualClose,
+    __private: {
+        buildWsConnectUrl,
+    },
 };

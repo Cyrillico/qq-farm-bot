@@ -112,19 +112,87 @@ async function queryScanStatus(loginCode) {
     return { status: 'Error' };
 }
 
-async function getAuthCode(ticket) {
-    const apiDomain = getApiDomain();
-    const response = await axios.post(
-        buildApiUrl('/ide/login', apiDomain),
-        { appid: FARM_APP_ID, ticket },
-        { headers: getHeaders(apiDomain) }
-    );
+function normalizeAuthCodeValue(value) {
+    if (value === undefined || value === null) return '';
+    const text = String(value).trim();
+    if (!text) return '';
+    if (/^-\d+$/.test(text)) return '';
+    if (text === '0') return '';
+    return text;
+}
 
-    if (response.status !== 200 || !response.data || !response.data.code) {
-        throw new Error('获取农场登录 code 失败');
+function pickAuthCodeFromPayload(payload = {}) {
+    const candidates = [
+        payload && payload.data && payload.data.code,
+        payload && payload.authCode,
+        payload && payload.auth_code,
+        payload && payload.code,
+    ];
+
+    for (const candidate of candidates) {
+        const authCode = normalizeAuthCodeValue(candidate);
+        if (authCode) return authCode;
+    }
+    return '';
+}
+
+function describeAuthCodeFailure(payload = {}) {
+    const parts = [];
+    if (payload && payload.code !== undefined && payload.code !== null && String(payload.code).trim()) {
+        parts.push(`code=${String(payload.code).trim()}`);
+    }
+    for (const key of ['msg', 'message', 'errmsg', 'error']) {
+        const value = payload && payload[key];
+        if (value !== undefined && value !== null && String(value).trim()) {
+            parts.push(String(value).trim());
+            break;
+        }
+    }
+    return parts.join(' ').trim();
+}
+
+function shouldRetryAuthCodePayload(payload = {}) {
+    const rawCode = payload && payload.code;
+    if (rawCode === undefined || rawCode === null) return false;
+    const text = String(rawCode).trim();
+    if (!text) return false;
+    if (/^-\d+$/.test(text)) return true;
+    return text === '0';
+}
+
+async function getAuthCode(ticket, options = {}) {
+    const apiDomain = getApiDomain();
+    const requestPost = typeof options.requestPost === 'function' ? options.requestPost : axios.post;
+    const sleep = typeof options.sleep === 'function'
+        ? options.sleep
+        : (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const maxRetries = Number.isFinite(Number(options.maxRetries)) ? Math.max(0, Number(options.maxRetries)) : 2;
+    const retryDelayMs = Number.isFinite(Number(options.retryDelayMs)) ? Math.max(0, Number(options.retryDelayMs)) : 800;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+        const response = await requestPost(
+            buildApiUrl('/ide/login', apiDomain),
+            { appid: FARM_APP_ID, ticket },
+            { headers: getHeaders(apiDomain) }
+        );
+
+        const payload = response && response.data ? response.data : {};
+        const authCode = response && response.status === 200 ? pickAuthCodeFromPayload(payload) : '';
+        if (authCode) {
+            return authCode;
+        }
+
+        const detail = describeAuthCodeFailure(payload);
+        const canRetry = attempt < maxRetries && response && response.status === 200 && shouldRetryAuthCodePayload(payload);
+        if (canRetry) {
+            await sleep(retryDelayMs);
+            continue;
+        }
+
+        throw new Error(detail ? `获取农场登录 code 失败: ${detail}` : '获取农场登录 code 失败');
     }
 
-    return response.data.code;
+    throw new Error('获取农场登录 code 失败');
 }
 
 function emitQrState(payload, emitQrEvent = emitUiEvent) {
@@ -272,4 +340,10 @@ module.exports = {
     queryScanStatus,
     getAuthCode,
     waitForLoginCodeResult,
+    __private: {
+        normalizeAuthCodeValue,
+        pickAuthCodeFromPayload,
+        describeAuthCodeFailure,
+        shouldRetryAuthCodePayload,
+    },
 };

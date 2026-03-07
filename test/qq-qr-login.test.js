@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const axios = require('axios');
 const qrcodeTerminal = require('qrcode-terminal');
 
-const { resolveQrUrls, waitForLoginCodeResult, getQQFarmCodeByScan } = require('../src/qqQrLogin');
+const { resolveQrUrls, waitForLoginCodeResult, getQQFarmCodeByScan, getAuthCode } = require('../src/qqQrLogin');
 
 test('resolveQrUrls should prefer legacy h5 fallback url and keep API urls in backups', () => {
     const ret = resolveQrUrls(
@@ -150,4 +150,62 @@ test('getQQFarmCodeByScan should call onCodeReady before polling', async (t) => 
         ],
         relogin: true,
     });
+});
+
+
+test('getAuthCode should prefer nested data.code when top-level code is status field', async (t) => {
+    const originalPost = axios.post;
+
+    axios.post = async () => ({
+        status: 200,
+        data: {
+            code: 0,
+            data: {
+                code: 'auth-code-1',
+            },
+        },
+    });
+
+    t.after(() => {
+        axios.post = originalPost;
+    });
+
+    const authCode = await getAuthCode('ticket-1');
+    assert.equal(authCode, 'auth-code-1');
+});
+
+test('getAuthCode should retry transient negative response before treating it as login code', async (t) => {
+    const originalPost = axios.post;
+    let attempts = 0;
+
+    axios.post = async () => {
+        attempts += 1;
+        if (attempts === 1) {
+            return {
+                status: 200,
+                data: {
+                    code: -3000,
+                    msg: 'busy',
+                },
+            };
+        }
+        return {
+            status: 200,
+            data: {
+                code: 'auth-code-2',
+            },
+        };
+    };
+
+    t.after(() => {
+        axios.post = originalPost;
+    });
+
+    const authCode = await getAuthCode('ticket-1', {
+        maxRetries: 1,
+        retryDelayMs: 0,
+        sleep: async () => {},
+    });
+    assert.equal(authCode, 'auth-code-2');
+    assert.equal(attempts, 2);
 });
