@@ -501,9 +501,13 @@ function connect(code, onLoginSuccess) {
     });
 
     ws.on('error', (err) => {
-        logWarn('WS', `错误: ${err.message}`);
+        const message = err && err.message ? String(err.message) : String(err || '');
+        logWarn('WS', `错误: ${message}`);
+        const match = message.match(/Unexpected server response:\s*(\d+)/i);
+        const code = match ? (Number.parseInt(match[1], 10) || 0) : 0;
         networkEvents.emit('wsError', {
-            message: err && err.message ? err.message : String(err),
+            code,
+            message,
             manual: manualClose,
         });
     });

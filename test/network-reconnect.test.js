@@ -143,7 +143,6 @@ test('network reconnects automatically after unexpected close', () => {
     }
 });
 
-
 test('network connect should encode login code in websocket url query', () => {
     const fixture = loadNetworkWithMocks();
     try {
@@ -152,6 +151,25 @@ test('network connect should encode login code in websocket url query', () => {
         const socketUrl = fixture.sockets[0].url;
         assert.match(socketUrl, /code=a%2B%2F%3D%3F%26b/);
         assert.doesNotMatch(socketUrl, /code=a\+\/=\?&b/);
+    } finally {
+        fixture.restore();
+    }
+});
+
+test('network should parse unexpected server response status into wsError event', () => {
+    const fixture = loadNetworkWithMocks();
+    try {
+        fixture.network.connect('login-code', () => {});
+        const events = [];
+        fixture.network.networkEvents.on('wsError', (payload) => {
+            events.push(payload);
+        });
+
+        fixture.sockets[0].emit('error', new Error('Unexpected server response: 400'));
+
+        assert.equal(events.length, 1);
+        assert.equal(events[0].code, 400);
+        assert.equal(events[0].message, 'Unexpected server response: 400');
     } finally {
         fixture.restore();
     }

@@ -16,7 +16,7 @@ const { loadProto } = require('./src/proto');
 const { connect, reconnect, cleanup, getWs, markManualClose, networkEvents } = require('./src/network');
 const {
     shouldAttemptAutoReconnectForKickout,
-    shouldAttemptAutoReloginForWsError,
+    shouldMarkLoginInvalidForWsError,
 } = require('./src/reconnectPolicy');
 const {
     startFarmCheckLoop,
@@ -401,6 +401,9 @@ function applyRuntimeQrLoginSettings(patch = {}, options = {}) {
 }
 
 async function beginAutoRelogin(reasonText) {
+    if (String(CONFIG.platform || '').trim().toLowerCase() === 'wx') {
+        return false;
+    }
     if (reloginInProgress) return false;
 
     reloginInProgress = true;
@@ -473,6 +476,47 @@ async function beginAutoRelogin(reasonText) {
     }
 }
 
+
+async function handleInvalidLoginCode(reasonText) {
+    if (unexpectedWsClosing) return;
+    unexpectedWsClosing = true;
+    stopRuntimeSubsystems();
+
+    const detail = String(reasonText || '').trim() || '登录失效，请更新 Code';
+    const isWx = String(CONFIG.platform || '').trim().toLowerCase() === 'wx';
+    const uiMessage = isWx
+        ? '账号登录已失效，请更新微信 code（' + detail + '）'
+        : '账号登录已失效，请在面板重新扫码或更新 code（' + detail + '）';
+    const barkMessage = isWx
+        ? '微信账号登录已失效，请更新 code。原因：' + detail
+        : 'QQ账号登录已失效，请在面板重新扫码或更新 code。原因：' + detail;
+
+    emitUiEvent('qr', {
+        phase: 'error',
+        message: uiMessage,
+    });
+    emitProcessState('error', {
+        kind: 'login_invalid',
+        fatal: true,
+        message: uiMessage,
+    });
+
+    markManualClose();
+    const activeWs = getWs();
+    if (activeWs) {
+        try { activeWs.close(); } catch (e) { }
+    }
+    cleanup();
+
+    await pushCriticalBarkWithTimeout(
+        'QQ农场登录失效',
+        barkMessage,
+        'fatal:login_invalid:' + CONFIG.platform + ':' + detail,
+        { category: 'fatal', timeoutMs: 2200 }
+    );
+    process.exit(1);
+}
+
 function registerIpcHandlers() {
     process.on('message', (msg) => {
         if (!msg || typeof msg !== 'object') return;
@@ -499,7 +543,7 @@ function registerNetworkLifecycleHandlers() {
     networkEvents.on('kickout', ({ reason } = {}) => {
         if (unexpectedWsClosing) return;
         const reasonText = String(reason || '').trim() || '未知原因';
-        if (shouldAttemptAutoReconnectForKickout(reasonText)) {
+        if (shouldAttemptAutoReconnectForKickout(reasonText, { platform: CONFIG.platform })) {
             void beginAutoRelogin(reasonText);
             return;
         }
@@ -543,8 +587,8 @@ function registerNetworkLifecycleHandlers() {
 
     networkEvents.on('wsError', ({ code, message, manual } = {}) => {
         if (manual || reloginInProgress) return;
-        if (!shouldAttemptAutoReloginForWsError({ code, message })) return;
-        void beginAutoRelogin(message || `code=${code || 0}`);
+        if (!shouldMarkLoginInvalidForWsError({ code, message })) return;
+        void handleInvalidLoginCode(message || `code=${code || 0}`);
     });
 }
 
