@@ -13,7 +13,11 @@
 
 const { CONFIG } = require('./src/config');
 const { loadProto } = require('./src/proto');
-const { connect, cleanup, getWs, markManualClose, networkEvents } = require('./src/network');
+const { connect, reconnect, cleanup, getWs, markManualClose, networkEvents } = require('./src/network');
+const {
+    shouldAttemptAutoReconnectForKickout,
+    shouldAttemptAutoReloginForWsError,
+} = require('./src/reconnectPolicy');
 const {
     startFarmCheckLoop,
     stopFarmCheckLoop,
@@ -31,18 +35,22 @@ const {
     initTaskSystem,
     cleanupTaskSystem,
     updateTaskRuntimeSettings,
+    getDailyGiftOverview,
+    claimDailyGiftByKey,
 } = require('./src/task');
 const { initStatusBar, cleanupStatusBar, setStatusPlatform } = require('./src/status');
-const { startSellLoop, stopSellLoop, debugSellFruits } = require('./src/warehouse');
+const { startSellLoop, stopSellLoop, debugSellFruits, listBagForUi } = require('./src/warehouse');
 const { processInviteCodes } = require('./src/invite');
 const { verifyMode, decodeMode } = require('./src/decode');
 const { emitRuntimeHint } = require('./src/utils');
 const { getQQFarmCodeByScan } = require('./src/qqQrLogin');
 const { pushBark, pushBarkDetailed } = require('./src/bark');
 const { emitUiEvent } = require('./src/uiEvents');
+const { buildOfflineReloginReminder } = require('./src/offlineReminder');
 const {
     updateRuntimeBarkSettings,
     updateRuntimeAccountSettings,
+    updateRuntimeQrLoginSettings,
     loadRuntimeSettingsFromLocalFile,
 } = require('./src/runtimeSettings');
 
@@ -152,15 +160,17 @@ const subsystemState = {
 };
 let runtimeSubsystemsReady = false;
 let unexpectedWsClosing = false;
+let reloginInProgress = false;
 
 async function pushCriticalBarkWithTimeout(title, message, dedupeKey, options = {}) {
     const category = String(options.category || 'fatal');
     const timeoutMs = Number.isFinite(options.timeoutMs) && options.timeoutMs > 0
         ? Number(options.timeoutMs)
         : 2000;
+    const actionUrl = String(options.actionUrl || '').trim();
     try {
         const ret = await Promise.race([
-            pushBarkDetailed(title, message, dedupeKey, { category }),
+            pushBarkDetailed(title, message, dedupeKey, { category, actionUrl }),
             new Promise((resolve) => setTimeout(() => resolve({
                 sent: false,
                 reason: 'timeout',
@@ -250,16 +260,23 @@ function applyRuntimeAccountSettings(patch = {}, options = {}) {
     updateFriendRuntimeSettings({
         helpOnlyWithExp: account.helpOnlyWithExp,
         enablePutBadThings: account.enablePutBadThings,
+        friendStealEnabled: account.friendStealEnabled,
+        friendHelpEnabled: account.friendHelpEnabled,
     });
     updateFarmRuntimeSettings({
         autoUnlockLands: account.autoUnlockLands,
         autoUpgradeLands: account.autoUpgradeLands,
         autoFertilize: account.autoFertilize,
         autoBuyFertilizer: account.autoBuyFertilizer,
+        plantingStrategy: account.plantingStrategy,
+        preferredSeedId: account.preferredSeedId,
     });
     updateTaskRuntimeSettings({
         taskActiveEnabled: account.taskActiveEnabled,
         giftEnabled: account.giftEnabled,
+        vipGiftEnabled: account.vipGiftEnabled,
+        monthCardEnabled: account.monthCardEnabled,
+        openServerGiftEnabled: account.openServerGiftEnabled,
     });
 
     if (runtimeSubsystemsReady) {
@@ -278,6 +295,91 @@ function applyRuntimeAccountSettings(patch = {}, options = {}) {
     return account;
 }
 
+function applyRuntimeQrLoginSettings(patch = {}, options = {}) {
+    const silent = Boolean(options.silent);
+    const runtime = updateRuntimeQrLoginSettings(patch);
+    if (!silent) {
+        emitProcessState('settingsUpdated', {
+            scope: 'qrLogin',
+            qrLogin: runtime.qrLogin || {},
+        });
+    }
+    return runtime.qrLogin || {};
+}
+
+async function beginAutoRelogin(reasonText) {
+    if (reloginInProgress) return false;
+
+    reloginInProgress = true;
+    unexpectedWsClosing = true;
+    stopRuntimeSubsystems();
+    emitProcessState('starting', {
+        mode: 'run',
+        reason: 'relogin_qr',
+    });
+    emitUiEvent('qr', {
+        phase: 'loading',
+        message: '正在申请重登录二维码...',
+    });
+
+    markManualClose();
+    const activeWs = getWs();
+    if (activeWs) {
+        try { activeWs.close(); } catch (e) { }
+    }
+    cleanup();
+
+    const waitingMessage = reasonText
+        ? `账号已下线，请扫码重新登录（${reasonText}）`
+        : '账号已下线，请扫码重新登录';
+
+    try {
+        const nextCode = await getQQFarmCodeByScan({
+            relogin: true,
+            waitingMessage,
+            onCodeReady: async ({ url, backupUrls }) => {
+                const reminder = buildOfflineReloginReminder(reasonText, { url, backupUrls });
+                await pushCriticalBarkWithTimeout(
+                    reminder.title,
+                    reminder.body,
+                    reminder.dedupeKey,
+                    {
+                        category: 'network',
+                        timeoutMs: 2500,
+                        actionUrl: reminder.actionUrl,
+                    }
+                );
+            },
+        });
+        emitProcessState('starting', {
+            mode: 'run',
+            reason: 'relogin_connect',
+        });
+        reconnect(nextCode);
+        return true;
+    } catch (err) {
+        const detail = `自动重登录失败: ${formatErrorDetail(err)}`;
+        emitUiEvent('qr', {
+            phase: 'error',
+            message: detail,
+        });
+        emitProcessState('error', {
+            kind: 'relogin',
+            fatal: true,
+            message: detail,
+        });
+        await pushCriticalBarkWithTimeout(
+            'QQ农场重登录失败',
+            detail,
+            `fatal:relogin:${detail}`,
+            { category: 'fatal', timeoutMs: 2200 }
+        );
+        process.exit(1);
+    } finally {
+        reloginInProgress = false;
+    }
+}
+
 function registerIpcHandlers() {
     process.on('message', (msg) => {
         if (!msg || typeof msg !== 'object') return;
@@ -290,6 +392,10 @@ function registerIpcHandlers() {
             applyRuntimeAccountSettings(msg.payload || {});
             return;
         }
+        if (msg.type === 'settings:qrLogin') {
+            applyRuntimeQrLoginSettings(msg.payload || {});
+            return;
+        }
         if (msg.type === 'rpc:req') {
             void handleRpcRequest(msg);
         }
@@ -299,8 +405,13 @@ function registerIpcHandlers() {
 function registerNetworkLifecycleHandlers() {
     networkEvents.on('kickout', ({ reason } = {}) => {
         if (unexpectedWsClosing) return;
+        const reasonText = String(reason || '').trim() || '未知原因';
+        if (shouldAttemptAutoReconnectForKickout(reasonText)) {
+            void beginAutoRelogin(reasonText);
+            return;
+        }
+
         unexpectedWsClosing = true;
-        const reasonText = reason ? `已在其他终端登录: ${reason}` : '已在其他终端登录';
         const message = `账号被踢下线 (${reasonText})`;
         emitProcessState('error', {
             kind: 'kickout',
@@ -321,27 +432,26 @@ function registerNetworkLifecycleHandlers() {
     });
 
     networkEvents.on('wsClosed', ({ code, reason, manual } = {}) => {
-        if (manual || unexpectedWsClosing) return;
+        if (manual || reloginInProgress || unexpectedWsClosing) return;
         unexpectedWsClosing = true;
         const reasonPart = reason ? `, reason=${reason}` : '';
         const message = `WS连接关闭 (code=${code || 0}${reasonPart})`;
-        emitProcessState('error', {
-            kind: 'wsClosed',
-            fatal: true,
-            message,
+        emitProcessState('starting', {
+            mode: 'run',
+            reason: 'ws_reconnect',
         });
-        stopRuntimeSubsystems();
-        cleanup();
-        void (async () => {
-            await pushCriticalBarkWithTimeout(
-                'QQ农场连接异常',
-                message,
-                `network:wsClosed:${message}`,
-                { category: 'network', timeoutMs: 2200 }
-            );
-            // 连接意外断开时主动退出，让 WebUI 会话状态立即变红并可一键重启
-            process.exit(1);
-        })();
+        void pushCriticalBarkWithTimeout(
+            'QQ农场连接异常',
+            `${message}，准备自动重连`,
+            `network:wsClosed:${message}`,
+            { category: 'network', timeoutMs: 2200 }
+        );
+    });
+
+    networkEvents.on('wsError', ({ code, message, manual } = {}) => {
+        if (manual || reloginInProgress) return;
+        if (!shouldAttemptAutoReloginForWsError({ code, message })) return;
+        void beginAutoRelogin(message || `code=${code || 0}`);
     });
 }
 
@@ -359,6 +469,12 @@ async function handleRpcRequest(msg) {
             result = await runManualFriendOp(payload);
         } else if (method === 'farm.lands') {
             result = await listLandsForUi();
+        } else if (method === 'bag.items') {
+            result = await listBagForUi();
+        } else if (method === 'task.dailyGifts') {
+            result = await getDailyGiftOverview();
+        } else if (method === 'task.dailyGifts.claim') {
+            result = await claimDailyGiftByKey(payload.key);
         } else {
             throw new Error(`unsupported rpc method: ${method}`);
         }
@@ -406,6 +522,9 @@ function bootstrapRuntimeSettingsFromLocalFile() {
     if (!result.loaded) return;
     if (result.barkApplied) {
         console.log(`[配置] 已加载 Bark 运行时设置 (${result.filePath})`);
+    }
+    if (result.qrLoginApplied) {
+        console.log(`[配置] 已加载二维码登录域名设置 (${result.filePath})`);
     }
 }
 
@@ -472,7 +591,13 @@ async function main() {
 
     // 连接并登录，登录成功后启动各功能模块
     connect(options.code, async () => {
+        const recovered = runtimeSubsystemsReady;
         unexpectedWsClosing = false;
+        if (recovered) {
+            emitProcessState('running', { mode: 'run', recovered: true });
+            return;
+        }
+
         // 处理邀请码 (仅微信环境)
         await processInviteCodes();
 

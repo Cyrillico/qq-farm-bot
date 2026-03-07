@@ -6,7 +6,7 @@
 const { types } = require('./proto');
 const { sendMsgAsync } = require('./network');
 const { toLong, toNum, log, logWarn, emitRuntimeHint } = require('./utils');
-const { getFruitName, getItemName } = require('./gameConfig');
+const { getFruitName, getItemName, getItemInfoById } = require('./gameConfig');
 const seedShopData = require('../tools/seed-shop-merged-export.json');
 
 // 游戏内金币和点券的物品 ID (GlobalData.GodItemId / DiamondItemId)
@@ -162,8 +162,39 @@ function stopSellLoop() {
     }
 }
 
+function listBagForUi() {
+    return getBag().then((bagReply) => {
+        const items = getBagItems(bagReply).map((item) => {
+            const id = toNum(item.id);
+            const count = toNum(item.count);
+            const uid = toNum(item.uid);
+            const info = getItemInfoById(id) || {};
+            return {
+                id,
+                uid,
+                count,
+                name: getItemName(id),
+                price: Number(info.price) || 0,
+                type: String(info.type || '').trim(),
+                category: isFruitIdBySeedData(id) ? 'fruit' : 'item',
+                sellable: isFruitIdBySeedData(id) && count > 0 && uid > 0,
+            };
+        }).filter((item) => item.id > 0 && item.count > 0);
+        items.sort((a, b) => b.count - a.count || a.id - b.id);
+        return {
+            items,
+            summary: {
+                totalKinds: items.length,
+                totalCount: items.reduce((sum, item) => sum + item.count, 0),
+                sellableKinds: items.filter((item) => item.sellable).length,
+            },
+        };
+    });
+}
+
 module.exports = {
     getBag,
+    listBagForUi,
     sellItems,
     sellAllFruits,
     debugSellFruits,

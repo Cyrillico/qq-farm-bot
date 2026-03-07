@@ -249,12 +249,27 @@ function getItemName(itemId) {
 // 启动时加载配置
 loadConfigs();
 
+function getAllPlants() {
+    return Array.isArray(plantConfig) ? [...plantConfig] : [];
+}
+
+function getSeedPrice(seedId) {
+    const item = getItemInfoById(seedId);
+    return item ? Number(item.price) || 0 : 0;
+}
+
+function getFruitPrice(fruitId) {
+    const item = getItemInfoById(fruitId);
+    return item ? Number(item.price) || 0 : 0;
+}
+
 module.exports = {
     loadConfigs,
     // 等级经验
     getLevelExpTable,
     getLevelExpProgress,
     // 植物配置
+    getAllPlants,
     getPlantById,
     getPlantBySeedId,
     getPlantName,
@@ -263,9 +278,12 @@ module.exports = {
     getPlantGrowTime,
     getPlantExp,
     formatGrowTime,
+    getSeedPrice,
     // 果实配置
     getFruitName,
     getPlantByFruitId,
+    getFruitPrice,
     // 物品配置
+    getItemInfoById,
     getItemName
 };

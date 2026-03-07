@@ -11,6 +11,7 @@ const { getPlantNameBySeedId, getPlantName, getPlantExp, formatGrowTime, getPlan
 const { getPlantingRecommendation } = require('../tools/calc-exp-yield');
 const { buildBestCropPair } = require('./cropAdvisor');
 const { emitUiEvent, isUiEventsEnabled } = require('./uiEvents');
+const { pickAvailableSeedByStrategy } = require('./analytics');
 
 // ============ 内部状态 ============
 let isCheckingFarm = false;
@@ -23,6 +24,8 @@ const DEFAULT_FARM_RUNTIME_SETTINGS = {
     autoUpgradeLands: true,
     autoFertilize: true,
     autoBuyFertilizer: true,
+    plantingStrategy: 'preferred',
+    preferredSeedId: 0,
 };
 let farmRuntimeSettings = { ...DEFAULT_FARM_RUNTIME_SETTINGS };
 
@@ -35,6 +38,10 @@ function updateFarmRuntimeSettings(patch = {}) {
     farmRuntimeSettings.autoUpgradeLands = Boolean(farmRuntimeSettings.autoUpgradeLands);
     farmRuntimeSettings.autoFertilize = Boolean(farmRuntimeSettings.autoFertilize);
     farmRuntimeSettings.autoBuyFertilizer = Boolean(farmRuntimeSettings.autoBuyFertilizer);
+    const allowedStrategies = new Set(['preferred', 'level', 'max_exp', 'max_fert_exp', 'max_profit', 'max_fert_profit']);
+    const plantingStrategy = String(farmRuntimeSettings.plantingStrategy || 'preferred').trim();
+    farmRuntimeSettings.plantingStrategy = allowedStrategies.has(plantingStrategy) ? plantingStrategy : 'preferred';
+    farmRuntimeSettings.preferredSeedId = Math.max(0, Number.parseInt(farmRuntimeSettings.preferredSeedId, 10) || 0);
     return { ...farmRuntimeSettings };
 }
 
@@ -482,41 +489,46 @@ async function findBestSeed(landsCount) {
 
     try {
         log('商店', `等级: ${state.level}，土地数量: ${safeLandsCount}`);
-        
-        const rec = getPlantingRecommendation(state.level, safeLandsCount, { top: 50 });
-        const rankedSeedIds = rec.candidatesNormalFert.map(x => x.seedId);
-        for (const seedId of rankedSeedIds) {
-            const hit = available.find(x => x.seedId === seedId);
-            if (hit) {
-                const recHit = rec.candidatesNormalFert.find(x => x.seedId === seedId) || null;
-                emitUiEvent('bestCrop', {
-                    source: 'recommendation',
-                    level: state.level,
-                    landsCount: safeLandsCount,
-                    seedId: hit.seedId,
-                    seedName: getPlantNameBySeedId(hit.seedId),
-                    requiredLevel: hit.requiredLevel,
-                    price: hit.price,
-                    expPerHour: recHit ? recHit.expPerHour : undefined,
-                    currentLevelBest: levelBestPair.currentLevelBest,
-                    nextLevelBest: levelBestPair.nextLevelBest,
-                });
-                return hit;
+        const picked = pickAvailableSeedByStrategy({
+            available,
+            strategy: farmRuntimeSettings.plantingStrategy,
+            preferredSeedId: farmRuntimeSettings.preferredSeedId,
+        });
+        if (picked) {
+            let recommendation = null;
+            try {
+                const rec = getPlantingRecommendation(state.level, safeLandsCount, { top: 50 });
+                recommendation = (rec.candidatesNormalFert || []).find((item) => item.seedId === picked.seedId) || null;
+            } catch (e) {
+                recommendation = picked.metric || null;
             }
+            emitUiEvent('bestCrop', {
+                source: picked.source || 'strategy',
+                strategy: farmRuntimeSettings.plantingStrategy,
+                preferredSeedId: farmRuntimeSettings.preferredSeedId,
+                level: state.level,
+                landsCount: safeLandsCount,
+                seedId: picked.seedId,
+                seedName: getPlantNameBySeedId(picked.seedId),
+                requiredLevel: picked.requiredLevel,
+                price: picked.price,
+                expPerHour: recommendation ? recommendation.expPerHour : undefined,
+                profitPerHour: recommendation ? recommendation.profitPerHour : undefined,
+                currentLevelBest: levelBestPair.currentLevelBest,
+                nextLevelBest: levelBestPair.nextLevelBest,
+            });
+            return picked;
         }
     } catch (e) {
-        logWarn('商店', `经验效率推荐失败，使用兜底策略: ${e.message}`);
+        logWarn('商店', `按策略选种失败，使用兜底策略: ${e.message}`);
     }
 
-    // 兜底：等级在28级以前还是白萝卜比较好，28级以上选最高等级的种子
-    if (state.level && state.level <= 28) {
-        available.sort((a, b) => a.requiredLevel - b.requiredLevel);
-    } else {
-        available.sort((a, b) => b.requiredLevel - a.requiredLevel);
-    }
-    const picked = available[0];
+    const fallback = [...available].sort((a, b) => b.requiredLevel - a.requiredLevel || a.price - b.price);
+    const picked = fallback[0];
     emitUiEvent('bestCrop', {
         source: 'fallback',
+        strategy: farmRuntimeSettings.plantingStrategy,
+        preferredSeedId: farmRuntimeSettings.preferredSeedId,
         level: state.level,
         landsCount: safeLandsCount,
         seedId: picked.seedId,

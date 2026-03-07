@@ -1,6 +1,6 @@
 /**
  * 运行时设置（进程内可热更新）
- * 当前仅承载 Bark 相关配置，优先于静态 CONFIG。
+ * 当前承载 Bark / 账号 / 扫码接口相关配置，优先于静态 CONFIG。
  */
 
 const fs = require('node:fs');
@@ -31,6 +31,24 @@ function defaultBarkSettings() {
     };
 }
 
+function normalizeApiDomain(input, fallback = 'q.qq.com') {
+    const raw = String(input || '').trim();
+    if (!raw) return fallback;
+    const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    try {
+        const parsed = new URL(withScheme);
+        return String(parsed.host || '').trim() || fallback;
+    } catch (e) {
+        return fallback;
+    }
+}
+
+function defaultQrLoginSettings() {
+    return {
+        apiDomain: 'q.qq.com',
+    };
+}
+
 function defaultAccountRuntimeSettings() {
     return {
         farmEnabled: true,
@@ -46,6 +64,13 @@ function defaultAccountRuntimeSettings() {
         autoBuyFertilizer: true,
         taskActiveEnabled: true,
         giftEnabled: true,
+        friendStealEnabled: true,
+        friendHelpEnabled: true,
+        vipGiftEnabled: true,
+        monthCardEnabled: true,
+        openServerGiftEnabled: true,
+        plantingStrategy: 'preferred',
+        preferredSeedId: 0,
     };
 }
 
@@ -68,6 +93,14 @@ function mergeBarkSettings(base, patch = {}) {
     return next;
 }
 
+function mergeQrLoginSettings(base, patch = {}) {
+    return {
+        ...base,
+        ...patch,
+        apiDomain: normalizeApiDomain((patch && patch.apiDomain) || (base && base.apiDomain), (base && base.apiDomain) || 'q.qq.com'),
+    };
+}
+
 function mergeAccountRuntimeSettings(base, patch = {}) {
     const next = {
         ...base,
@@ -86,6 +119,13 @@ function mergeAccountRuntimeSettings(base, patch = {}) {
     next.autoBuyFertilizer = Boolean(next.autoBuyFertilizer);
     next.taskActiveEnabled = Boolean(next.taskActiveEnabled);
     next.giftEnabled = Boolean(next.giftEnabled);
+    next.friendStealEnabled = Boolean(next.friendStealEnabled);
+    next.friendHelpEnabled = Boolean(next.friendHelpEnabled);
+    next.vipGiftEnabled = Boolean(next.vipGiftEnabled);
+    next.monthCardEnabled = Boolean(next.monthCardEnabled);
+    next.openServerGiftEnabled = Boolean(next.openServerGiftEnabled);
+    next.plantingStrategy = String(next.plantingStrategy || 'preferred').trim() || 'preferred';
+    next.preferredSeedId = Math.max(0, clampInt(next.preferredSeedId, 0, 9999999, 0));
     return next;
 }
 
@@ -93,6 +133,7 @@ function buildDefaultRuntimeSettings() {
     return {
         bark: defaultBarkSettings(),
         account: defaultAccountRuntimeSettings(),
+        qrLogin: defaultQrLoginSettings(),
     };
 }
 
@@ -112,6 +153,11 @@ function updateRuntimeAccountSettings(patch = {}) {
     return getRuntimeSettings();
 }
 
+function updateRuntimeQrLoginSettings(patch = {}) {
+    runtimeSettings.qrLogin = mergeQrLoginSettings(runtimeSettings.qrLogin, patch);
+    return getRuntimeSettings();
+}
+
 function setRuntimeSettings(next = {}) {
     runtimeSettings = buildDefaultRuntimeSettings();
     if (next.bark) {
@@ -119,6 +165,9 @@ function setRuntimeSettings(next = {}) {
     }
     if (next.account) {
         runtimeSettings.account = mergeAccountRuntimeSettings(runtimeSettings.account, next.account);
+    }
+    if (next.qrLogin) {
+        runtimeSettings.qrLogin = mergeQrLoginSettings(runtimeSettings.qrLogin, next.qrLogin);
     }
     return getRuntimeSettings();
 }
@@ -135,6 +184,7 @@ function loadRuntimeSettingsFromLocalFile(filePath = '') {
             filePath: pickedPath,
             barkApplied: false,
             accountApplied: false,
+            qrLoginApplied: false,
             reason: 'not_found',
         };
     }
@@ -144,6 +194,7 @@ function loadRuntimeSettingsFromLocalFile(filePath = '') {
         const parsed = JSON.parse(raw);
         let barkApplied = false;
         let accountApplied = false;
+        let qrLoginApplied = false;
 
         if (parsed && typeof parsed === 'object') {
             if (parsed.bark && typeof parsed.bark === 'object') {
@@ -154,6 +205,10 @@ function loadRuntimeSettingsFromLocalFile(filePath = '') {
                 runtimeSettings.account = mergeAccountRuntimeSettings(runtimeSettings.account, parsed.account);
                 accountApplied = true;
             }
+            if (parsed.qrLogin && typeof parsed.qrLogin === 'object') {
+                runtimeSettings.qrLogin = mergeQrLoginSettings(runtimeSettings.qrLogin, parsed.qrLogin);
+                qrLoginApplied = true;
+            }
         }
 
         return {
@@ -161,6 +216,7 @@ function loadRuntimeSettingsFromLocalFile(filePath = '') {
             filePath: pickedPath,
             barkApplied,
             accountApplied,
+            qrLoginApplied,
             reason: '',
         };
     } catch (e) {
@@ -169,6 +225,7 @@ function loadRuntimeSettingsFromLocalFile(filePath = '') {
             filePath: pickedPath,
             barkApplied: false,
             accountApplied: false,
+            qrLoginApplied: false,
             reason: e && e.message ? e.message : String(e),
         };
     }
@@ -177,9 +234,11 @@ function loadRuntimeSettingsFromLocalFile(filePath = '') {
 module.exports = {
     defaultBarkSettings,
     defaultAccountRuntimeSettings,
+    defaultQrLoginSettings,
     getRuntimeSettings,
     updateRuntimeBarkSettings,
     updateRuntimeAccountSettings,
+    updateRuntimeQrLoginSettings,
     setRuntimeSettings,
     resetRuntimeSettingsForTest,
     loadRuntimeSettingsFromLocalFile,

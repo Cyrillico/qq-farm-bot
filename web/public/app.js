@@ -14,28 +14,22 @@ const CROP_ICON_FILES = Object.freeze({
   melon: '/assets/crops/melon.svg',
   sprout: '/assets/crops/sprout.svg',
 });
-const VIEW_META = {
-  'account-home': { title: '账号总览', hint: '查看账号分布、实时信息与最佳作物建议' },
-  'account-lands': { title: '土地详情', hint: '查看每块土地作物、生长阶段与需处理状态' },
-  'account-settings': { title: '账号设置', hint: '配置账号、平台、模式、QQ扫码并启动/停止会话' },
-  'account-friends': { title: '好友操作', hint: '执行好友列表操作与高风险开关配置' },
-  'account-bark': { title: 'Bark 通知', hint: '配置 Bark 链接、分类开关和测试推送' },
-  'account-logs': { title: '账号日志', hint: '按条件筛选日志并加载历史记录' },
-};
-const VIEW_ALIASES = {
-  dashboard: 'account-home',
-  overview: 'account-home',
-  lands: 'account-lands',
-  control: 'account-settings',
-  settings: 'account-settings',
-  status: 'account-home',
-  home: 'account-home',
-  friends: 'account-friends',
-  bark: 'account-bark',
-  logs: 'account-logs',
-};
-const DEFAULT_VIEW = 'account-home';
-const VALID_VIEWS = new Set(Object.keys(VIEW_META));
+const UI_META = (typeof window !== 'undefined' && window.QQFarmUiMeta) || {};
+const VIEW_META = UI_META.VIEW_META || {};
+const VIEW_ALIASES = UI_META.VIEW_ALIASES || {};
+const DEFAULT_VIEW = UI_META.DEFAULT_VIEW || 'account-home';
+const VALID_VIEWS = UI_META.VALID_VIEWS || new Set(Object.keys(VIEW_META));
+const getViewMeta = typeof UI_META.getViewMeta === 'function'
+  ? UI_META.getViewMeta
+  : (view) => VIEW_META[view] || VIEW_META[DEFAULT_VIEW] || {
+    key: DEFAULT_VIEW,
+    title: '账号总览',
+    hint: '查看账号运营情况',
+    group: 'overview',
+    primaryAction: { label: '刷新当前视图', targetId: '' },
+    emptyState: '暂无数据',
+    loadingState: '正在加载...',
+  };
 const DEFAULT_ACCOUNT_SETTINGS = Object.freeze({
   farmEnabled: true,
   friendEnabled: true,
@@ -50,6 +44,13 @@ const DEFAULT_ACCOUNT_SETTINGS = Object.freeze({
   autoUpgradeLands: true,
   autoFertilize: true,
   autoBuyFertilizer: true,
+  friendStealEnabled: true,
+  friendHelpEnabled: true,
+  vipGiftEnabled: true,
+  monthCardEnabled: true,
+  openServerGiftEnabled: true,
+  plantingStrategy: 'preferred',
+  preferredSeedId: 0,
 });
 const SESSION_LIFECYCLE_STATUSES = new Set([
   'idle',
@@ -79,10 +80,20 @@ const state = {
     zoom: 1.5,
   },
   bark: null,
+  qrLogin: { apiDomain: 'q.qq.com' },
   accountSettings: {},
   lands: {},
+  bag: {},
+  dailyGifts: {},
+  analytics: {
+    sort: 'exp',
+    items: [],
+    loadedAt: 0,
+  },
+  seeds: [],
   startPayloads: {},
   ui: {
+    sidebarOpen: false,
     friendOps: {
       allowBadOps: true,
       confirmDangerous: true,
@@ -107,9 +118,17 @@ const state = {
 const els = {
   serverMeta: document.getElementById('serverMeta'),
   consoleShell: document.getElementById('consoleShell'),
+  sidebarBackdrop: document.getElementById('sidebarBackdrop'),
+  sidebarDrawerToggle: document.getElementById('sidebarDrawerToggle'),
   sideNav: document.getElementById('sideNav'),
   viewTitle: document.getElementById('viewTitle'),
   viewHint: document.getElementById('viewHint'),
+  workbenchAccountName: document.getElementById('workbenchAccountName'),
+  workbenchAccountStatus: document.getElementById('workbenchAccountStatus'),
+  workbenchAccountMeta: document.getElementById('workbenchAccountMeta'),
+  workbenchLastSync: document.getElementById('workbenchLastSync'),
+  viewPrimaryAction: document.getElementById('viewPrimaryAction'),
+  viewLogsShortcut: document.getElementById('viewLogsShortcut'),
   sidebarAccountList: document.getElementById('sidebarAccountList'),
   themeToggleBtn: document.getElementById('themeToggleBtn'),
   viewPanels: Array.from(document.querySelectorAll('.view-panel')),
@@ -118,6 +137,11 @@ const els = {
   overviewRunning: document.getElementById('overviewRunning'),
   overviewError: document.getElementById('overviewError'),
   overviewStopped: document.getElementById('overviewStopped'),
+  overviewAlertCount: document.getElementById('overviewAlertCount'),
+  overviewKickoutCount: document.getElementById('overviewKickoutCount'),
+  overviewWsCloseCount: document.getElementById('overviewWsCloseCount'),
+  overviewWarnErrorCount: document.getElementById('overviewWarnErrorCount'),
+  overviewAlertSummary: document.getElementById('overviewAlertSummary'),
   authPanel: document.getElementById('authPanel'),
   authUsername: document.getElementById('authUsername'),
   authPassword: document.getElementById('authPassword'),
@@ -153,6 +177,11 @@ const els = {
   featureTaskActiveEnabled: document.getElementById('featureTaskActiveEnabled'),
   featureGiftEnabled: document.getElementById('featureGiftEnabled'),
   featureSellEnabled: document.getElementById('featureSellEnabled'),
+  featureFriendStealEnabled: document.getElementById('featureFriendStealEnabled'),
+  featureFriendHelpEnabled: document.getElementById('featureFriendHelpEnabled'),
+  featureVipGiftEnabled: document.getElementById('featureVipGiftEnabled'),
+  featureMonthCardEnabled: document.getElementById('featureMonthCardEnabled'),
+  featureOpenServerGiftEnabled: document.getElementById('featureOpenServerGiftEnabled'),
   featureForceLowestLevelCrop: document.getElementById('featureForceLowestLevelCrop'),
   featureHelpOnlyWithExp: document.getElementById('featureHelpOnlyWithExp'),
   featureEnablePutBadThings: document.getElementById('featureEnablePutBadThings'),
@@ -160,8 +189,13 @@ const els = {
   featureAutoUpgradeLands: document.getElementById('featureAutoUpgradeLands'),
   featureAutoFertilize: document.getElementById('featureAutoFertilize'),
   featureAutoBuyFertilizer: document.getElementById('featureAutoBuyFertilizer'),
+  featurePlantingStrategy: document.getElementById('featurePlantingStrategy'),
+  featurePreferredSeedId: document.getElementById('featurePreferredSeedId'),
   saveAccountSettingsBtn: document.getElementById('saveAccountSettingsBtn'),
   accountSettingsStatus: document.getElementById('accountSettingsStatus'),
+  qrLoginApiDomain: document.getElementById('qrLoginApiDomain'),
+  saveQrLoginSettingsBtn: document.getElementById('saveQrLoginSettingsBtn'),
+  qrLoginSettingsStatus: document.getElementById('qrLoginSettingsStatus'),
   sessionStatus: document.getElementById('sessionStatus'),
   metricPlatform: document.getElementById('metricPlatform'),
   metricName: document.getElementById('metricName'),
@@ -226,6 +260,22 @@ const els = {
   landsStatus: document.getElementById('landsStatus'),
   landsSummary: document.getElementById('landsSummary'),
   landsList: document.getElementById('landsList'),
+  refreshBagBtn: document.getElementById('refreshBagBtn'),
+  bagStatus: document.getElementById('bagStatus'),
+  bagFilters: document.getElementById('bagFilters'),
+  bagSummary: document.getElementById('bagSummary'),
+  bagList: document.getElementById('bagList'),
+  refreshDailyGiftsBtn: document.getElementById('refreshDailyGiftsBtn'),
+  claimAllDailyGiftsBtn: document.getElementById('claimAllDailyGiftsBtn'),
+  dailyGiftsStatus: document.getElementById('dailyGiftsStatus'),
+  dailyGiftsInsight: document.getElementById('dailyGiftsInsight'),
+  dailyGiftsSummary: document.getElementById('dailyGiftsSummary'),
+  dailyGiftsList: document.getElementById('dailyGiftsList'),
+  analyticsSort: document.getElementById('analyticsSort'),
+  refreshAnalyticsBtn: document.getElementById('refreshAnalyticsBtn'),
+  analyticsStatus: document.getElementById('analyticsStatus'),
+  analyticsInsight: document.getElementById('analyticsInsight'),
+  analyticsList: document.getElementById('analyticsList'),
   logLevel: document.getElementById('logLevel'),
   logTag: document.getElementById('logTag'),
   logKeyword: document.getElementById('logKeyword'),
@@ -245,8 +295,46 @@ function setText(el, text) {
   el.textContent = text;
 }
 
+function setButtonIconLabel(el, label, iconName = 'icon-dashboard') {
+  if (!el) return;
+  el.innerHTML = `<svg class="ui-icon" aria-hidden="true"><use href="#${iconName}"></use></svg><span>${label}</span>`;
+}
+
+function resolvePrimaryActionIcon(targetId) {
+  const key = String(targetId || '');
+  if (key.includes('Bark') || key.includes('bark')) return 'icon-bell';
+  if (key.includes('DailyGifts') || key.includes('gift')) return 'icon-gift';
+  if (key.includes('Analytics') || key.includes('analytics')) return 'icon-analytics';
+  if (key.includes('Bag') || key.includes('bag')) return 'icon-bag';
+  if (key.includes('Lands') || key.includes('lands')) return 'icon-lands';
+  if (key.includes('Logs') || key.includes('log')) return 'icon-log';
+  if (key.includes('Settings') || key.includes('Account') || key.includes('newAccount')) return 'icon-settings';
+  return 'icon-dashboard';
+}
+
 function setConsoleVisible(visible) {
   els.consoleShell.classList.toggle('hidden', !visible);
+}
+
+function setChipState(el, label, tone = 'muted') {
+  if (!el) return;
+  el.className = `status-chip tone-${tone}`;
+  el.textContent = label;
+}
+
+function setSidebarOpen(open) {
+  state.ui.sidebarOpen = Boolean(open);
+  if (els.consoleShell) {
+    els.consoleShell.classList.toggle('sidebar-open', state.ui.sidebarOpen);
+  }
+}
+
+function closeSidebarDrawer() {
+  setSidebarOpen(false);
+}
+
+function toggleSidebarDrawer() {
+  setSidebarOpen(!state.ui.sidebarOpen);
 }
 
 function normalizeTheme(raw) {
@@ -262,7 +350,7 @@ function applyTheme(theme) {
     localStorage.setItem(THEME_STORAGE_KEY, next);
   } catch (e) {
   }
-  setText(els.themeToggleBtn, next === 'dark' ? '切换浅色' : '切换深色');
+  setButtonIconLabel(els.themeToggleBtn, next === 'dark' ? '切换浅色' : '切换深色', 'icon-sun');
 }
 
 function loadThemeFromStorage() {
@@ -337,6 +425,85 @@ function normalizeViewKey(raw) {
   return DEFAULT_VIEW;
 }
 
+function buildEmptyState(message, detail = '') {
+  const safeMessage = escapeHtml(message || '暂无数据');
+  const safeDetail = detail ? `<p>${escapeHtml(detail)}</p>` : '';
+  return `<div class="empty-state"><strong>${safeMessage}</strong>${safeDetail}</div>`;
+}
+
+function getViewLatestSyncTs(view, accountId = state.selectedAccountId) {
+  const id = normalizeAccountId(accountId);
+  const current = ensureSession(id);
+  const lastLogTs = (state.logView.items || []).length
+    ? Number((state.logView.items[state.logView.items.length - 1] || {}).ts || 0)
+    : 0;
+  if (view === 'account-home') return Number(state.stats.ts || current.status?.ts || lastLogTs || 0);
+  if (view === 'account-bag') return Number((state.bag[id] && state.bag[id].ts) || lastLogTs || 0);
+  if (view === 'account-daily-gifts') return Number((state.dailyGifts[id] && state.dailyGifts[id].ts) || lastLogTs || 0);
+  if (view === 'account-analytics') return Number((state.analytics && state.analytics.loadedAt) || lastLogTs || 0);
+  if (view === 'account-logs') return Number(lastLogTs || 0);
+  if (view === 'account-lands') return Number((state.lands[id] && state.lands[id].ts) || lastLogTs || 0);
+  return Number(current.status?.ts || current.session?.updatedAt || lastLogTs || state.stats.ts || 0);
+}
+
+function getSessionStatePresentation(session) {
+  const type = getSessionStateType(session || {});
+  if (type === 'running') return { label: '运行中', tone: 'success' };
+  if (type === 'error') return { label: '异常', tone: 'danger' };
+  return { label: '未运行', tone: 'muted' };
+}
+
+// 统一更新工作台顶栏，避免每个页面各自拼接账号摘要。
+function renderWorkbenchHeader() {
+  const meta = getViewMeta(state.currentView);
+  const current = getCurrentSession();
+  const session = current.session || {};
+  const profile = current.status || {};
+  const sessionState = getSessionStatePresentation(session);
+  const accountName = profile.name
+    ? `${state.selectedAccountId} · ${profile.name}`
+    : normalizeAccountId(state.selectedAccountId);
+  const level = Number.isFinite(profile.level) ? profile.level : '-';
+  const platform = String(profile.platform || session.platform || '-').toUpperCase();
+  const syncTs = getViewLatestSyncTs(state.currentView);
+  setText(els.workbenchAccountName, accountName);
+  setChipState(els.workbenchAccountStatus, sessionState.label, sessionState.tone);
+  setText(els.workbenchAccountMeta, `${platform} · Lv${level}`);
+  setText(els.workbenchLastSync, `最近同步：${syncTs ? formatDateTime(syncTs) : '-'}`);
+  if (els.viewPrimaryAction) {
+    els.viewPrimaryAction.disabled = false;
+    const primaryAction = meta.primaryAction || {};
+    setButtonIconLabel(
+      els.viewPrimaryAction,
+      primaryAction.label || '刷新当前视图',
+      resolvePrimaryActionIcon(primaryAction.targetId),
+    );
+  }
+  if (els.viewLogsShortcut) {
+    setButtonIconLabel(els.viewLogsShortcut, '查看日志', 'icon-log');
+  }
+}
+
+function triggerViewPrimaryAction() {
+  const meta = getViewMeta(state.currentView);
+  const primaryAction = meta.primaryAction || {};
+  const targetId = String(primaryAction.targetId || '').trim();
+  const target = targetId ? document.getElementById(targetId) : null;
+  const targetPanel = target ? target.closest('.view-panel') : null;
+  const targetView = targetPanel ? normalizeViewKey(targetPanel.dataset.view || '') : '';
+  if (target && !target.disabled && targetView === state.currentView && !target.classList.contains('hidden')) {
+    target.click();
+    return;
+  }
+  if (primaryAction.fallbackView) {
+    setCurrentView(primaryAction.fallbackView);
+    return;
+  }
+  if (target && !target.disabled) {
+    target.click();
+  }
+}
+
 function parseHashState() {
   const hash = String(window.location.hash || '').replace(/^#/, '');
   if (!hash) {
@@ -397,9 +564,14 @@ function renderView() {
     btn.classList.toggle('active', normalizeViewKey(btn.dataset.viewNav) === view);
   }
 
-  const meta = VIEW_META[view] || VIEW_META[DEFAULT_VIEW];
-  setText(els.viewTitle, meta.title);
-  setText(els.viewHint, meta.hint);
+  const meta = getViewMeta(view);
+  setText(els.viewTitle, meta.title || '账号总览');
+  setText(els.viewHint, meta.hint || '通过左侧菜单切换页面');
+  const groups = Array.from(document.querySelectorAll('.side-group'));
+  for (const group of groups) {
+    group.classList.toggle('active', Boolean(group.querySelector('[data-view-nav].active')));
+  }
+  renderWorkbenchHeader();
 }
 
 function setCurrentView(view, replace = false) {
@@ -409,18 +581,29 @@ function setCurrentView(view, replace = false) {
   if (replace) {
     syncHashState(true);
     renderView();
-    return;
-  }
-  syncHashState(false);
-  if (!changed) {
-    renderView();
+  } else {
+    syncHashState(false);
+    if (!changed) {
+      renderView();
+    }
   }
   if (nextView === 'account-lands') {
     loadLands(state.selectedAccountId);
   }
+  if (nextView === 'account-bag') {
+    loadBag(state.selectedAccountId);
+  }
+  if (nextView === 'account-daily-gifts') {
+    loadDailyGifts(state.selectedAccountId);
+  }
+  if (nextView === 'account-analytics') {
+    loadAnalytics((els.analyticsSort && els.analyticsSort.value) || (state.analytics && state.analytics.sort) || 'exp');
+  }
   if (nextView === 'account-settings') {
     loadAccountSettings(state.selectedAccountId);
+    loadQrLoginSettings();
   }
+  closeSidebarDrawer();
 }
 
 function applyAuthState(auth) {
@@ -763,7 +946,10 @@ function renderSidebarAccountList() {
 function renderSession() {
   const current = getCurrentSession();
   const s = current.session || {};
+  const sessionState = getSessionStatePresentation(s);
   setText(els.sessionStatus, `当前账号：${state.selectedAccountId} | 状态：${s.status || 'idle'} | PID: ${s.pid || '-'} | 模式: ${s.mode || '-'}`);
+  setChipState(els.sessionStatus, `${state.selectedAccountId} · ${sessionState.label} · PID ${s.pid || '-'}`, sessionState.tone);
+  renderWorkbenchHeader();
 }
 
 function renderOverview() {
@@ -791,6 +977,31 @@ function renderOverview() {
   setText(els.overviewRunning, String(running));
   setText(els.overviewError, String(error));
   setText(els.overviewStopped, String(stopped));
+
+  const { stats: accountStats, summary } = getCurrentStats();
+  const counts = (accountStats && accountStats.counts) || {};
+  const kickout = Number(counts.kickout || 0);
+  const wsClose = Number(counts.wsClose || 0);
+  const warn = Number(counts.warn || 0);
+  const errorCount = Number(counts.error || 0);
+  const totalAlerts = kickout + wsClose + warn + errorCount;
+  const summaryErrorAccounts = Number((summary && summary.errorAccounts) || 0);
+
+  if (els.overviewAlertCount) {
+    setChipState(els.overviewAlertCount, `告警 ${totalAlerts}`, totalAlerts > 0 ? 'danger' : 'success');
+  }
+  setText(els.overviewKickoutCount, String(kickout));
+  setText(els.overviewWsCloseCount, String(wsClose));
+  setText(els.overviewWarnErrorCount, `${warn} / ${errorCount}`);
+
+  let alertSummary = '当前账号运行稳定，可继续观察经验效率和礼包状态。';
+  if (totalAlerts > 0) {
+    alertSummary = `当前账号今日出现 ${kickout} 次被踢、${wsClose} 次断连，Warn/Error 为 ${warn}/${errorCount}，建议优先查看账号日志。`;
+  } else if (summaryErrorAccounts > 0) {
+    alertSummary = `当前账号稳定，但全局仍有 ${summaryErrorAccounts} 个异常账号，建议切换处理。`;
+  }
+  setText(els.overviewAlertSummary, alertSummary);
+  renderWorkbenchHeader();
 }
 
 function renderStatus() {
@@ -807,6 +1018,7 @@ function renderStatus() {
     setText(els.metricExpToNext, '升级还差：-');
   }
   setText(els.metricGold, `金币：${s.gold ?? '-'}`);
+  renderWorkbenchHeader();
 }
 
 function renderBestCrop() {
@@ -1140,6 +1352,7 @@ function renderLogsStatus() {
   const cursorText = state.logView.cursor ? '可继续加载历史' : '已到最早日志';
   setText(els.logsStatus, `当前显示 ${total} 条，${cursorText}`);
   els.loadMoreLogsBtn.disabled = !state.logView.cursor || state.logView.loading;
+  renderWorkbenchHeader();
 }
 
 function renderUiSettings() {
@@ -1156,6 +1369,11 @@ function renderAccountSettings() {
   els.featureTaskActiveEnabled.checked = Boolean(account.taskActiveEnabled);
   els.featureGiftEnabled.checked = Boolean(account.giftEnabled);
   els.featureSellEnabled.checked = Boolean(account.sellEnabled);
+  els.featureFriendStealEnabled.checked = Boolean(account.friendStealEnabled);
+  els.featureFriendHelpEnabled.checked = Boolean(account.friendHelpEnabled);
+  els.featureVipGiftEnabled.checked = Boolean(account.vipGiftEnabled);
+  els.featureMonthCardEnabled.checked = Boolean(account.monthCardEnabled);
+  els.featureOpenServerGiftEnabled.checked = Boolean(account.openServerGiftEnabled);
   els.featureForceLowestLevelCrop.checked = Boolean(account.forceLowestLevelCrop);
   els.featureHelpOnlyWithExp.checked = Boolean(account.helpOnlyWithExp);
   els.featureEnablePutBadThings.checked = Boolean(account.enablePutBadThings);
@@ -1163,6 +1381,32 @@ function renderAccountSettings() {
   els.featureAutoUpgradeLands.checked = Boolean(account.autoUpgradeLands);
   els.featureAutoFertilize.checked = Boolean(account.autoFertilize);
   els.featureAutoBuyFertilizer.checked = Boolean(account.autoBuyFertilizer);
+  if (els.featurePlantingStrategy) {
+    els.featurePlantingStrategy.value = account.plantingStrategy || 'preferred';
+  }
+  renderSeedOptions();
+  if (els.featurePreferredSeedId) {
+    els.featurePreferredSeedId.value = String(Number(account.preferredSeedId || 0));
+  }
+}
+
+function renderQrLoginSettings() {
+  const qrLogin = state.qrLogin || { apiDomain: 'q.qq.com' };
+  if (els.qrLoginApiDomain) {
+    els.qrLoginApiDomain.value = qrLogin.apiDomain || 'q.qq.com';
+  }
+}
+
+function renderSeedOptions() {
+  if (!els.featurePreferredSeedId) return;
+  const current = String((getAccountSettingsFor(state.selectedAccountId).preferredSeedId || 0));
+  const seeds = Array.isArray(state.seeds) ? state.seeds : [];
+  const options = [
+    '<option value="0">不指定（按策略自动选）</option>',
+    ...seeds.map((item) => `<option value="${item.seedId}">${escapeHtml(item.label || item.name || String(item.seedId))}</option>`),
+  ];
+  els.featurePreferredSeedId.innerHTML = options.join('');
+  els.featurePreferredSeedId.value = current;
 }
 
 function collectAccountSettingsPayload() {
@@ -1173,6 +1417,11 @@ function collectAccountSettingsPayload() {
     taskActiveEnabled: els.featureTaskActiveEnabled.checked,
     giftEnabled: els.featureGiftEnabled.checked,
     sellEnabled: els.featureSellEnabled.checked,
+    friendStealEnabled: els.featureFriendStealEnabled.checked,
+    friendHelpEnabled: els.featureFriendHelpEnabled.checked,
+    vipGiftEnabled: els.featureVipGiftEnabled.checked,
+    monthCardEnabled: els.featureMonthCardEnabled.checked,
+    openServerGiftEnabled: els.featureOpenServerGiftEnabled.checked,
     forceLowestLevelCrop: els.featureForceLowestLevelCrop.checked,
     helpOnlyWithExp: els.featureHelpOnlyWithExp.checked,
     enablePutBadThings: els.featureEnablePutBadThings.checked,
@@ -1180,6 +1429,14 @@ function collectAccountSettingsPayload() {
     autoUpgradeLands: els.featureAutoUpgradeLands.checked,
     autoFertilize: els.featureAutoFertilize.checked,
     autoBuyFertilizer: els.featureAutoBuyFertilizer.checked,
+    plantingStrategy: els.featurePlantingStrategy ? els.featurePlantingStrategy.value : 'preferred',
+    preferredSeedId: Number.parseInt(els.featurePreferredSeedId ? els.featurePreferredSeedId.value : '0', 10) || 0,
+  };
+}
+
+function collectQrLoginSettingsPayload() {
+  return {
+    apiDomain: els.qrLoginApiDomain ? els.qrLoginApiDomain.value.trim() : 'q.qq.com',
   };
 }
 
@@ -1314,9 +1571,191 @@ function renderLands() {
   els.landsList.innerHTML = html;
 }
 
+function formatDateTime(ts) {
+  const value = Number(ts || 0);
+  if (!Number.isFinite(value) || value <= 0) return '-';
+  try {
+    return new Date(value).toLocaleString('zh-CN', { hour12: false });
+  } catch (e) {
+    return '-';
+  }
+}
+
+function renderBag() {
+  const accountId = normalizeAccountId(state.selectedAccountId);
+  const data = state.bag[accountId] || null;
+  if (!data || !Array.isArray(data.items) || data.items.length === 0) {
+    if (els.bagSummary) els.bagSummary.innerHTML = '';
+    if (els.bagFilters) {
+      els.bagFilters.innerHTML = '<span class="status-chip tone-muted">暂无背包数据</span>';
+    }
+    if (els.bagList) {
+      els.bagList.innerHTML = buildEmptyState('暂无背包数据', getViewMeta('account-bag').emptyState || '点击“刷新背包”加载');
+    }
+    renderWorkbenchHeader();
+    return;
+  }
+
+  const summary = data.summary || {};
+  if (els.bagFilters) {
+    els.bagFilters.innerHTML = `
+      <span class="status-chip tone-info">物品种类 ${summary.totalKinds ?? '-'}</span>
+      <span class="status-chip tone-success">可售种类 ${summary.sellableKinds ?? '-'}</span>
+      <span class="status-chip tone-muted">更新时间 ${escapeHtml(formatDateTime(data.ts))}</span>
+    `;
+  }
+  if (els.bagSummary) {
+    els.bagSummary.innerHTML = `
+      <div class="cards lands-summary-cards">
+        <article class="card metric-card"><h3>物品种类</h3><p>${summary.totalKinds ?? '-'}</p></article>
+        <article class="card metric-card"><h3>物品总数</h3><p>${summary.totalCount ?? '-'}</p></article>
+        <article class="card metric-card metric-card-success"><h3>可售种类</h3><p>${summary.sellableKinds ?? '-'}</p></article>
+      </div>
+    `;
+  }
+
+  if (els.bagList) {
+    els.bagList.innerHTML = data.items.map((item) => `
+      <article class="land-item inventory-item ${item.sellable ? 'inventory-item-sellable' : ''}">
+        <div class="land-head">
+          <div>
+            <h3>${escapeHtml(item.name || `物品#${item.id}`)}</h3>
+            <p class="land-meta mono-text">ID:${item.id} | UID:${item.uid || 0}</p>
+          </div>
+          <span class="status-chip ${item.sellable ? 'tone-success' : 'tone-muted'}">${item.sellable ? '可出售' : '库存项'}</span>
+        </div>
+        <div class="inventory-metrics">
+          <p class="land-meta">数量：<strong class="mono-text">${item.count}</strong></p>
+          <p class="land-meta">类型：${escapeHtml(item.category || item.type || '-')}</p>
+          <p class="land-meta">参考价格：<strong class="mono-text">${item.price || 0}</strong></p>
+        </div>
+      </article>
+    `).join('');
+  }
+  renderWorkbenchHeader();
+}
+
+function getDailyGiftActionLabel(gift) {
+  const key = String((gift && gift.key) || '');
+  if (key === 'task_claim') return '手动领任务';
+  if (key === 'task_active') return '手动领活跃';
+  if (key === 'bag_gifts') return '手动开礼包';
+  if (key === 'vip_daily_gift') return '手动领 VIP';
+  if (key === 'month_card_gift') return '手动领月卡';
+  if (key === 'open_server_gift') return '手动领开服红包';
+  return '立即执行';
+}
+
+function renderDailyGifts() {
+  const accountId = normalizeAccountId(state.selectedAccountId);
+  const data = state.dailyGifts[accountId] || null;
+  if (!data || !Array.isArray(data.gifts) || data.gifts.length === 0) {
+    if (els.dailyGiftsSummary) els.dailyGiftsSummary.innerHTML = '';
+    if (els.dailyGiftsInsight) {
+      els.dailyGiftsInsight.textContent = getViewMeta('account-daily-gifts').emptyState || '暂无礼包数据';
+    }
+    if (els.dailyGiftsList) {
+      els.dailyGiftsList.innerHTML = buildEmptyState('暂无礼包数据', '点击“刷新礼包状态”加载');
+    }
+    renderWorkbenchHeader();
+    return;
+  }
+
+  const summary = data.summary || {};
+  if (els.dailyGiftsInsight) {
+    els.dailyGiftsInsight.textContent = `启用 ${summary.enabledCount ?? '-'} 项，当前待处理 ${summary.totalPending ?? '-'} 项，更新时间 ${formatDateTime(data.ts)}`;
+  }
+  if (els.dailyGiftsSummary) {
+    els.dailyGiftsSummary.innerHTML = `
+      <div class="cards lands-summary-cards">
+        <article class="card metric-card"><h3>启用项</h3><p>${summary.enabledCount ?? '-'}</p></article>
+        <article class="card metric-card metric-card-warning"><h3>待处理总数</h3><p>${summary.totalPending ?? '-'}</p></article>
+        <article class="card metric-card"><h3>更新时间</h3><p>${escapeHtml(formatDateTime(data.ts))}</p></article>
+      </div>
+    `;
+  }
+
+  if (els.dailyGiftsList) {
+    els.dailyGiftsList.innerHTML = data.gifts.map((gift) => {
+      const pending = Number(gift.pendingCount || 0);
+      const canManual = Boolean(gift.enabled);
+      const disabled = canManual ? '' : ' disabled';
+      const actionState = pending > 0 ? 'tone-warning' : (gift.doneToday ? 'tone-success' : 'tone-muted');
+      return `
+        <article class="land-item gift-item">
+          <div class="land-head">
+            <div>
+              <h3>${escapeHtml(gift.label || gift.key)}</h3>
+              <p class="land-meta mono-text">Key: ${escapeHtml(gift.key || '-')}</p>
+            </div>
+            <span class="status-chip ${actionState}">待处理 ${pending}</span>
+          </div>
+          <div class="gift-meta-grid">
+            <p class="land-meta">开关：${gift.enabled ? '开启' : '关闭'}</p>
+            <p class="land-meta">今日已完成：${gift.doneToday ? '是' : '否'}</p>
+            <p class="land-meta">可领取：${gift.canClaim || gift.hasClaimable ? '是' : '否'}</p>
+            <p class="land-meta">最近领取：${escapeHtml(formatDateTime(gift.lastClaimAt))}</p>
+          </div>
+          <p class="land-meta">最近结果：${escapeHtml(gift.result || '-')}</p>
+          <div class="actions">
+            <button class="btn" type="button" data-daily-gift-key="${escapeHtml(gift.key || '')}"${disabled}>${getDailyGiftActionLabel(gift)}</button>
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+  renderWorkbenchHeader();
+}
+
+function renderAnalytics() {
+  const analytics = state.analytics || { items: [] };
+  const items = Array.isArray(analytics.items) ? analytics.items : [];
+  if (els.analyticsSort) {
+    els.analyticsSort.value = analytics.sort || 'exp';
+  }
+  if (!items.length) {
+    if (els.analyticsInsight) {
+      els.analyticsInsight.textContent = getViewMeta('account-analytics').emptyState || '暂无分析数据';
+    }
+    if (els.analyticsList) {
+      els.analyticsList.innerHTML = buildEmptyState('暂无分析数据', '点击“刷新分析”加载');
+    }
+    renderWorkbenchHeader();
+    return;
+  }
+  if (els.analyticsInsight) {
+    els.analyticsInsight.textContent = `当前排序：${analytics.sort || 'exp'}，展示前 ${Math.min(items.length, 50)} 条记录，最近刷新 ${formatDateTime(analytics.loadedAt)}`;
+  }
+  if (els.analyticsList) {
+    els.analyticsList.innerHTML = items.slice(0, 50).map((item, idx) => `
+      <article class="land-item analytics-item">
+        <div class="land-head">
+          <div>
+            <h3>#${idx + 1} ${escapeHtml(item.name || `种子#${item.seedId}`)}</h3>
+            <p class="land-meta mono-text">Seed:${item.seedId} | 地块等级:${item.level ?? '-'}</p>
+          </div>
+          <span class="status-chip tone-info">${Number(item.expPerHour || 0).toFixed(2)} exp/h</span>
+        </div>
+        <div class="analytics-metrics-grid">
+          <p class="land-meta">生长：${escapeHtml(item.growTimeStr || '-')}</p>
+          <p class="land-meta">收益/小时：<strong class="mono-text">${Number(item.goldPerHour || 0).toFixed(2)}</strong></p>
+          <p class="land-meta">经验/小时：<strong class="mono-text">${Number(item.expPerHour || 0).toFixed(2)}</strong></p>
+          <p class="land-meta">利润/小时：<strong class="mono-text">${Number(item.profitPerHour || 0).toFixed(2)}</strong></p>
+          <p class="land-meta">施肥经验/小时：<strong class="mono-text">${Number(item.normalFertilizerExpPerHour || 0).toFixed(2)}</strong></p>
+          <p class="land-meta">施肥利润/小时：<strong class="mono-text">${Number(item.normalFertilizerProfitPerHour || 0).toFixed(2)}</strong></p>
+        </div>
+      </article>
+    `).join('');
+  }
+  renderWorkbenchHeader();
+}
+
 function renderBarkSettings() {
   const bark = state.bark;
-  if (!bark) return;
+  if (!bark) {
+    renderWorkbenchHeader();
+    return;
+  }
   els.barkEnabled.checked = Boolean(bark.enabled);
   els.barkPushUrl.value = bark.pushUrl || '';
   els.barkGroup.value = bark.group || '';
@@ -1324,6 +1763,7 @@ function renderBarkSettings() {
   els.catFatal.checked = Boolean(bark.categories && bark.categories.fatal);
   els.catNetwork.checked = Boolean(bark.categories && bark.categories.network);
   els.catBusiness.checked = Boolean(bark.categories && bark.categories.business);
+  renderWorkbenchHeader();
 }
 
 function refreshAccountDependentData(accountId) {
@@ -1331,15 +1771,23 @@ function refreshAccountDependentData(accountId) {
   resetLogView();
   queryLogsFromApi({ append: false });
   if (shouldLoadFriends(accountId)) {
-    loadFriends();
+    loadFriends(accountId);
     loadLands(accountId);
+    loadBag(accountId);
+    loadDailyGifts(accountId);
   } else {
     state.friends[accountId] = [];
     state.lands[accountId] = null;
+    state.bag[accountId] = null;
+    state.dailyGifts[accountId] = null;
     renderFriendList();
     renderLands();
+    renderBag();
+    renderDailyGifts();
     setText(els.friendUiStatus, '账号未进入运行状态，登录成功后再刷新好友');
     setText(els.landsStatus, '账号未运行，无法获取土地详情');
+    setText(els.bagStatus, '账号未运行，无法获取背包');
+    setText(els.dailyGiftsStatus, '账号未运行，无法获取礼包状态');
   }
 }
 
@@ -1370,6 +1818,7 @@ function refreshPanels() {
   renderSidebarAccountList();
   renderSession();
   renderAccountSettings();
+  renderQrLoginSettings();
   renderStatus();
   renderBestCrop();
   renderStats();
@@ -1377,6 +1826,10 @@ function refreshPanels() {
   renderUiSettings();
   renderFriendList();
   renderLands();
+  renderBag();
+  renderDailyGifts();
+  renderAnalytics();
+  renderBarkSettings();
   renderLogs();
   renderLogsStatus();
 }
@@ -1614,6 +2067,13 @@ async function bootstrap() {
   syncHashState(true);
 
   state.bark = initial.settings && initial.settings.bark ? initial.settings.bark : null;
+  state.qrLogin = initial.settings && initial.settings.qrLogin ? initial.settings.qrLogin : { apiDomain: 'q.qq.com' };
+  state.startPayloads = initial.settings && initial.settings.accounts && typeof initial.settings.accounts === 'object'
+    ? { ...initial.settings.accounts }
+    : {};
+  Object.keys(state.startPayloads).forEach((accountId) => {
+    ensureSession(accountId);
+  });
   state.stats = initial.stats && typeof initial.stats === 'object'
     ? {
       ts: initial.stats.ts || 0,
@@ -1627,6 +2087,8 @@ async function bootstrap() {
   renderUiSettings();
   setAccountEditorOpen(false);
   await loadBarkSettings();
+  await loadQrLoginSettings();
+  await loadSeedOptions();
   await loadAccountSettings(state.selectedAccountId);
   refreshPanels();
   resetLogView();
@@ -1635,12 +2097,28 @@ async function bootstrap() {
     await Promise.all([
       loadFriends(state.selectedAccountId),
       loadLands(state.selectedAccountId),
+      loadBag(state.selectedAccountId),
+      loadDailyGifts(state.selectedAccountId),
     ]);
   } else {
     state.friends[state.selectedAccountId] = [];
     state.lands[state.selectedAccountId] = null;
+    state.bag[state.selectedAccountId] = null;
+    state.dailyGifts[state.selectedAccountId] = null;
     setText(els.friendUiStatus, '账号未进入运行状态，登录成功后再刷新好友');
     setText(els.landsStatus, '账号未运行，无法获取土地详情');
+    setText(els.bagStatus, '账号未运行，无法获取背包');
+    setText(els.dailyGiftsStatus, '账号未运行，无法获取礼包状态');
+  }
+
+  if (state.currentView === 'account-analytics') {
+    await loadAnalytics((els.analyticsSort && els.analyticsSort.value) || 'exp');
+  }
+  if (state.currentView === 'account-bag') {
+    await loadBag(state.selectedAccountId);
+  }
+  if (state.currentView === 'account-daily-gifts') {
+    await loadDailyGifts(state.selectedAccountId);
   }
 
   setText(els.serverMeta, `服务监听：${initial.meta.host}:${initial.meta.port}`);
@@ -1766,6 +2244,7 @@ function connectEvents() {
             [accountId]: payload.accountStats,
           };
         }
+        renderOverview();
         renderStats();
         return;
       }
@@ -1776,10 +2255,32 @@ function connectEvents() {
         return;
       }
 
+      if (type === 'settings' && payload.scope === 'qrLogin' && payload.qrLogin) {
+        state.qrLogin = payload.qrLogin;
+        renderQrLoginSettings();
+        if (els.qrLoginSettingsStatus) {
+          setText(els.qrLoginSettingsStatus, '二维码设置已同步');
+        }
+        return;
+      }
+
       if (type === 'settings' && payload.scope === 'ui' && payload.ui) {
         state.ui = payload.ui;
         renderUiSettings();
         renderFriendList();
+        return;
+      }
+
+      if (type === 'settings' && payload.scope === 'accounts' && payload.accounts && typeof payload.accounts === 'object') {
+        state.startPayloads = { ...payload.accounts };
+        Object.keys(state.startPayloads).forEach((id) => {
+          ensureSession(id);
+        });
+        renderSessionList();
+        renderSidebarAccountList();
+        if (state.selectedAccountId && state.startPayloads[state.selectedAccountId]) {
+          applyStartPayloadToEditor(state.selectedAccountId, { silent: true });
+        }
         return;
       }
 
@@ -1816,6 +2317,8 @@ function connectEvents() {
           delete state.sessions[deletedId];
           delete state.friends[deletedId];
           delete state.lands[deletedId];
+          delete state.bag[deletedId];
+          delete state.dailyGifts[deletedId];
           delete state.accountSettings[deletedId];
           delete state.startPayloads[deletedId];
           delete state.pendingAutoHomeOnLogin[deletedId];
@@ -1981,6 +2484,92 @@ async function onSaveAccountSettings() {
   }
 }
 
+async function loadQrLoginSettings() {
+  try {
+    const ret = await fetchJson('/api/settings/qr-login');
+    state.qrLogin = ret && ret.qrLogin ? ret.qrLogin : { apiDomain: 'q.qq.com' };
+    renderQrLoginSettings();
+    setText(els.qrLoginSettingsStatus, '');
+  } catch (e) {
+    setText(els.qrLoginSettingsStatus, `加载二维码设置失败：${e.message}`);
+  }
+}
+
+async function loadSeedOptions() {
+  try {
+    const ret = await fetchJson('/api/seeds');
+    state.seeds = Array.isArray(ret && ret.data) ? ret.data : [];
+    renderSeedOptions();
+  } catch (e) {
+    state.seeds = [];
+    renderSeedOptions();
+  }
+}
+
+async function loadBag(accountId = state.selectedAccountId) {
+  const id = normalizeAccountId(accountId);
+  if (!shouldLoadFriends(id)) {
+    state.bag[id] = null;
+    if (id === state.selectedAccountId) {
+      renderBag();
+      setText(els.bagStatus, '账号未运行，无法获取背包');
+    }
+    return;
+  }
+  try {
+    const ret = await fetchJson(`/api/bag?accountId=${encodeURIComponent(id)}`);
+    state.bag[id] = ret && ret.data ? ret.data : null;
+    if (id === state.selectedAccountId) {
+      renderBag();
+      setText(els.bagStatus, '背包数据已刷新');
+    }
+  } catch (e) {
+    if (id === state.selectedAccountId) {
+      setText(els.bagStatus, `加载背包失败：${e.message}`);
+    }
+  }
+}
+
+async function loadDailyGifts(accountId = state.selectedAccountId) {
+  const id = normalizeAccountId(accountId);
+  if (!shouldLoadFriends(id)) {
+    state.dailyGifts[id] = null;
+    if (id === state.selectedAccountId) {
+      renderDailyGifts();
+      setText(els.dailyGiftsStatus, '账号未运行，无法获取礼包状态');
+    }
+    return;
+  }
+  try {
+    const ret = await fetchJson(`/api/daily-gifts?accountId=${encodeURIComponent(id)}`);
+    state.dailyGifts[id] = ret && ret.data ? ret.data : null;
+    if (id === state.selectedAccountId) {
+      renderDailyGifts();
+      setText(els.dailyGiftsStatus, '礼包状态已刷新');
+    }
+  } catch (e) {
+    if (id === state.selectedAccountId) {
+      setText(els.dailyGiftsStatus, `加载礼包状态失败：${e.message}`);
+    }
+  }
+}
+
+async function loadAnalytics(sortBy = (state.analytics && state.analytics.sort) || 'exp') {
+  const safeSort = String(sortBy || 'exp').trim() || 'exp';
+  try {
+    const ret = await fetchJson(`/api/analytics?sort=${encodeURIComponent(safeSort)}`);
+    state.analytics = {
+      sort: safeSort,
+      items: Array.isArray(ret && ret.data) ? ret.data : [],
+      loadedAt: Date.now(),
+    };
+    renderAnalytics();
+    setText(els.analyticsStatus, `分析数据已刷新（排序：${safeSort}）`);
+  } catch (e) {
+    setText(els.analyticsStatus, `加载分析失败：${e.message}`);
+  }
+}
+
 async function loadLands(accountId = state.selectedAccountId) {
   const id = normalizeAccountId(accountId);
   if (!shouldLoadFriends(id)) {
@@ -2130,6 +2719,38 @@ async function runFriendAction(gid, action) {
   }
 }
 
+async function onManualDailyGiftAction(key) {
+  const accountId = normalizeAccountId(state.selectedAccountId);
+  try {
+    setText(els.dailyGiftsStatus, `执行中：${key}`);
+    const ret = await fetchJson('/api/daily-gifts/claim', {
+      method: 'POST',
+      body: JSON.stringify({ accountId, key }),
+    });
+    const data = (ret && ret.data) || {};
+    if (data && data.overview) {
+      state.dailyGifts[accountId] = data.overview;
+      renderDailyGifts();
+    } else {
+      await loadDailyGifts(accountId);
+    }
+    if (key === 'bag_gifts') {
+      await loadBag(accountId);
+    }
+    setText(els.dailyGiftsStatus, `执行完成：${key}`);
+  } catch (e) {
+    setText(els.dailyGiftsStatus, `执行失败：${e.message}`);
+  }
+}
+
+function onDailyGiftsListClick(event) {
+  const btn = event.target.closest('button[data-daily-gift-key]');
+  if (!btn) return;
+  const key = String(btn.dataset.dailyGiftKey || '').trim();
+  if (!key) return;
+  onManualDailyGiftAction(key);
+}
+
 async function onSaveFriendUi() {
   try {
     const payload = {
@@ -2163,6 +2784,21 @@ async function onSaveBark() {
     setText(els.barkStatus, 'Bark 设置已保存并立即生效');
   } catch (e) {
     setText(els.barkStatus, `保存失败：${e.message}`);
+  }
+}
+
+async function onSaveQrLoginSettings() {
+  try {
+    const payload = collectQrLoginSettingsPayload();
+    const ret = await fetchJson('/api/settings/qr-login', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    state.qrLogin = ret.qrLogin || state.qrLogin;
+    renderQrLoginSettings();
+    setText(els.qrLoginSettingsStatus, '二维码接口域名已保存并立即生效');
+  } catch (e) {
+    setText(els.qrLoginSettingsStatus, `保存失败：${e.message}`);
   }
 }
 
@@ -2261,12 +2897,19 @@ function bindEvents() {
       setCurrentView(btn.dataset.viewNav);
     });
   }
+  if (els.sidebarDrawerToggle) {
+    els.sidebarDrawerToggle.addEventListener('click', toggleSidebarDrawer);
+  }
+  if (els.sidebarBackdrop) {
+    els.sidebarBackdrop.addEventListener('click', closeSidebarDrawer);
+  }
   if (els.sidebarAccountList) {
     els.sidebarAccountList.addEventListener('click', (event) => {
       const btn = event.target.closest('[data-sidebar-account-id]');
       if (!btn) return;
       const accountId = normalizeAccountId(btn.dataset.sidebarAccountId);
       setSelectedAccount(accountId, { syncHash: true, loadData: true });
+      closeSidebarDrawer();
     });
   }
   if (els.themeToggleBtn) {
@@ -2274,6 +2917,12 @@ function bindEvents() {
       const next = state.theme === 'dark' ? 'light' : 'dark';
       applyTheme(next);
     });
+  }
+  if (els.viewPrimaryAction) {
+    els.viewPrimaryAction.addEventListener('click', triggerViewPrimaryAction);
+  }
+  if (els.viewLogsShortcut) {
+    els.viewLogsShortcut.addEventListener('click', () => setCurrentView('account-logs'));
   }
   if (els.statsRange) {
     els.statsRange.addEventListener('change', () => {
@@ -2315,16 +2964,37 @@ function bindEvents() {
   els.stopBtn.addEventListener('click', onStop);
   els.clearLogsBtn.addEventListener('click', onClearLogs);
   els.saveAccountSettingsBtn.addEventListener('click', onSaveAccountSettings);
+  if (els.saveQrLoginSettingsBtn) {
+    els.saveQrLoginSettingsBtn.addEventListener('click', onSaveQrLoginSettings);
+  }
   els.saveBarkBtn.addEventListener('click', onSaveBark);
   els.testBarkBtn.addEventListener('click', onTestBark);
   els.saveFriendUiBtn.addEventListener('click', onSaveFriendUi);
   els.refreshFriendsBtn.addEventListener('click', () => loadFriends(state.selectedAccountId));
   els.refreshLandsBtn.addEventListener('click', () => loadLands(state.selectedAccountId));
+  if (els.refreshBagBtn) {
+    els.refreshBagBtn.addEventListener('click', () => loadBag(state.selectedAccountId));
+  }
+  if (els.refreshDailyGiftsBtn) {
+    els.refreshDailyGiftsBtn.addEventListener('click', () => loadDailyGifts(state.selectedAccountId));
+  }
+  if (els.claimAllDailyGiftsBtn) {
+    els.claimAllDailyGiftsBtn.addEventListener('click', () => onManualDailyGiftAction('all'));
+  }
+  if (els.refreshAnalyticsBtn) {
+    els.refreshAnalyticsBtn.addEventListener('click', () => loadAnalytics((els.analyticsSort && els.analyticsSort.value) || 'exp'));
+  }
+  if (els.analyticsSort) {
+    els.analyticsSort.addEventListener('change', () => loadAnalytics(els.analyticsSort.value));
+  }
   els.refreshQrBtn.addEventListener('click', onRefreshQr);
   els.switchQrBtn.addEventListener('click', onSwitchQr);
   els.applyLogFiltersBtn.addEventListener('click', onApplyLogFilters);
   els.loadMoreLogsBtn.addEventListener('click', onLoadMoreLogs);
   els.friendList.addEventListener('click', onFriendListClick);
+  if (els.dailyGiftsList) {
+    els.dailyGiftsList.addEventListener('click', onDailyGiftsListClick);
+  }
   els.logLevel.addEventListener('change', onApplyLogFilters);
   els.logAction.addEventListener('change', onApplyLogFilters);
   els.accountId.addEventListener('change', () => {
@@ -2361,8 +3031,18 @@ function onHashChange() {
   if (ret.viewChanged && state.currentView === 'account-lands') {
     loadLands(state.selectedAccountId);
   }
+  if (ret.viewChanged && state.currentView === 'account-bag') {
+    loadBag(state.selectedAccountId);
+  }
+  if (ret.viewChanged && state.currentView === 'account-daily-gifts') {
+    loadDailyGifts(state.selectedAccountId);
+  }
+  if (ret.viewChanged && state.currentView === 'account-analytics') {
+    loadAnalytics((els.analyticsSort && els.analyticsSort.value) || 'exp');
+  }
   if (ret.viewChanged && state.currentView === 'account-settings') {
     loadAccountSettings(state.selectedAccountId);
+    loadQrLoginSettings();
   }
 }
 

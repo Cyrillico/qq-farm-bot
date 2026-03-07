@@ -10,22 +10,43 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
+  <svg class="svg-sprite" aria-hidden="true" focusable="false">
+    <symbol id="icon-dashboard" viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" fill="currentColor"/></symbol>
+    <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M12 8.75A3.25 3.25 0 1 0 12 15.25A3.25 3.25 0 1 0 12 8.75ZM19.43 12.98l1.36-1.05l-1.4-2.42l-1.68.37a6.64 6.64 0 0 0-1.08-.62l-.25-1.69h-2.8l-.25 1.69c-.38.15-.74.35-1.08.59l-1.67-.34l-1.4 2.42l1.33 1.04c-.03.2-.04.4-.04.61c0 .23.02.46.06.68l-1.35 1.04l1.4 2.42l1.67-.36c.34.24.7.44 1.08.59l.25 1.73h2.8l.25-1.73c.38-.15.74-.35 1.08-.59l1.68.36l1.4-2.42l-1.36-1.05c.04-.22.06-.45.06-.68c0-.22-.02-.44-.05-.64Z" fill="currentColor"/></symbol>
+    <symbol id="icon-lands" viewBox="0 0 24 24"><path d="M4 19h16v2H4zM6 11l4-4l3 3l5-5l2 2l-7 7l-3-3l-2 2z" fill="currentColor"/></symbol>
+    <symbol id="icon-bag" viewBox="0 0 24 24"><path d="M8 7V6a4 4 0 1 1 8 0v1h3v12H5V7zm2 0h4V6a2 2 0 1 0-4 0z" fill="currentColor"/></symbol>
+    <symbol id="icon-friends" viewBox="0 0 24 24"><path d="M9 11a3 3 0 1 0 0-6a3 3 0 1 0 0 6Zm6 1a2.5 2.5 0 1 0 0-5a2.5 2.5 0 1 0 0 5ZM4 19a5 5 0 0 1 10 0v1H4zm10 1v-1c0-.92-.22-1.78-.6-2.55A4.5 4.5 0 0 1 20 20z" fill="currentColor"/></symbol>
+    <symbol id="icon-gift" viewBox="0 0 24 24"><path d="M20 8h-2.18A3 3 0 0 0 12 4.5A3 3 0 0 0 6.18 8H4v4h1v8h14v-8h1zm-8-1.5A1.5 1.5 0 1 1 13.5 8H12zm-3 0H7.5A1.5 1.5 0 1 1 9 6.5ZM10 10v10H7v-8H6v-2zm7 10h-5V10h5v2h-1z" fill="currentColor"/></symbol>
+    <symbol id="icon-analytics" viewBox="0 0 24 24"><path d="M5 19h14v2H5zM7 10h2v7H7zm4-4h2v11h-2zm4 2h2v9h-2z" fill="currentColor"/></symbol>
+    <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-4H5l1.5-2v-4a5.5 5.5 0 1 1 11 0v4z" fill="currentColor"/></symbol>
+    <symbol id="icon-log" viewBox="0 0 24 24"><path d="M6 4h9l5 5v11H6zm8 1.5V10h4.5M9 13h6v1.5H9zm0 3h6v1.5H9z" fill="currentColor"/></symbol>
+    <symbol id="icon-alert" viewBox="0 0 24 24"><path d="M12 3l9 16H3zm0 5.5l-.75 5h1.5zm0 9a1 1 0 1 0 0 2a1 1 0 1 0 0-2Z" fill="currentColor"/></symbol>
+    <symbol id="icon-sun" viewBox="0 0 24 24"><path d="M12 5a1 1 0 0 1 1 1v1.2a1 1 0 1 1-2 0V6a1 1 0 0 1 1-1Zm0 10a3 3 0 1 0 0-6a3 3 0 1 0 0 6Zm7-4a1 1 0 0 1 0 2h-1.2a1 1 0 0 1 0-2zM7.2 12a1 1 0 0 1-1 1H5a1 1 0 1 1 0-2h1.2a1 1 0 0 1 1 1Zm8.39-4.99a1 1 0 0 1 1.41 0l.85.85a1 1 0 1 1-1.41 1.41l-.85-.85a1 1 0 0 1 0-1.41ZM7 15.59a1 1 0 0 1 1.41 0l.85.85a1 1 0 1 1-1.41 1.41L7 17a1 1 0 0 1 0-1.41Zm10.85.85a1 1 0 1 1-1.41 1.41l-.85-.85A1 1 0 1 1 17 15.59ZM8.41 7a1 1 0 0 1 0 1.41l-.85.85a1 1 0 1 1-1.41-1.41L7 7A1 1 0 0 1 8.41 7Z" fill="currentColor"/></symbol>
+  </svg>
   <div class="bg-glow bg-glow-a"></div>
   <div class="bg-glow bg-glow-b"></div>
   <main class="page">
-    <header class="hero">
+    <header class="hero hero-dashboard">
       <div class="hero-row">
-        <h1>QQ 农场 Web 控制台</h1>
+        <div>
+          <p class="hero-kicker">Farm Ops Console</p>
+          <h1>QQ 农场 Web 控制台</h1>
+          <p class="hero-subcopy">多账号运营面板：账号状态、自动化策略、礼包分析、Bark 告警与审计日志一体化管理。</p>
+        </div>
         <div class="hero-actions">
-          <button id="themeToggleBtn" class="btn" type="button">切换浅色</button>
-          <button id="logoutBtn" class="btn hidden" type="button">退出登录</button>
+          <button id="themeToggleBtn" class="btn" type="button"><svg class="ui-icon" aria-hidden="true"><use href="#icon-sun"></use></svg><span>切换浅色</span></button>
+          <button id="logoutBtn" class="btn hidden" type="button"><svg class="ui-icon" aria-hidden="true"><use href="#icon-log"></use></svg><span>退出登录</span></button>
         </div>
       </div>
-      <p>侧边栏菜单管理模式（Phase A）</p>
     </header>
 
     <section id="authPanel" class="panel auth-panel hidden">
-      <h2>控制台登录</h2>
+      <div class="section-toolbar compact-toolbar">
+        <div>
+          <p class="section-eyebrow">访问控制</p>
+          <h2>控制台登录</h2>
+        </div>
+      </div>
       <div class="grid two">
         <label>
           账号
@@ -43,188 +64,382 @@
     </section>
 
     <div id="consoleShell" class="console-shell hidden">
-      <aside class="sidebar">
+      <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+      <aside class="sidebar" aria-label="控制台导航">
         <div class="sidebar-brand">
-          <h2>菜单</h2>
+          <button id="sidebarDrawerToggle" class="btn btn-ghost nav-toggle" type="button" aria-label="切换导航菜单"><svg class="ui-icon" aria-hidden="true"><use href="#icon-dashboard"></use></svg><span>菜单</span></button>
+          <div>
+            <p class="sidebar-kicker">Control Center</p>
+            <h2>运营面板</h2>
+          </div>
         </div>
+
         <nav id="sideNav" class="side-nav">
-          <button class="side-item active" type="button" data-view-nav="account-home">账号总览</button>
-          <button class="side-item" type="button" data-view-nav="account-lands">土地详情</button>
-          <button class="side-item" type="button" data-view-nav="account-settings">账号设置</button>
-          <button class="side-item" type="button" data-view-nav="account-friends">好友操作</button>
-          <button class="side-item" type="button" data-view-nav="account-bark">Bark 通知</button>
-          <button class="side-item" type="button" data-view-nav="account-logs">账号日志</button>
+          <section class="side-group" data-nav-group="overview">
+            <p class="side-group-title">总览</p>
+            <button class="side-item active" type="button" data-view-nav="account-home"><svg class="ui-icon" aria-hidden="true"><use href="#icon-dashboard"></use></svg><span>账号总览</span></button>
+          </section>
+
+          <section class="side-group" data-nav-group="operations">
+            <p class="side-group-title">账号运营</p>
+            <button class="side-item" type="button" data-view-nav="account-settings"><svg class="ui-icon" aria-hidden="true"><use href="#icon-settings"></use></svg><span>账号设置</span></button>
+            <button class="side-item" type="button" data-view-nav="account-lands"><svg class="ui-icon" aria-hidden="true"><use href="#icon-lands"></use></svg><span>土地详情</span></button>
+            <button class="side-item" type="button" data-view-nav="account-bag"><svg class="ui-icon" aria-hidden="true"><use href="#icon-bag"></use></svg><span>背包页</span></button>
+            <button class="side-item" type="button" data-view-nav="account-friends"><svg class="ui-icon" aria-hidden="true"><use href="#icon-friends"></use></svg><span>好友操作</span></button>
+          </section>
+
+          <section class="side-group" data-nav-group="automation">
+            <p class="side-group-title">自动化策略</p>
+            <button class="side-item" type="button" data-view-nav="account-daily-gifts"><svg class="ui-icon" aria-hidden="true"><use href="#icon-gift"></use></svg><span>每日礼包</span></button>
+            <button class="side-item" type="button" data-view-nav="account-analytics"><svg class="ui-icon" aria-hidden="true"><use href="#icon-analytics"></use></svg><span>数据分析</span></button>
+          </section>
+
+          <section class="side-group" data-nav-group="alerts">
+            <p class="side-group-title">通知告警</p>
+            <button class="side-item" type="button" data-view-nav="account-bark"><svg class="ui-icon" aria-hidden="true"><use href="#icon-bell"></use></svg><span>Bark 通知</span></button>
+          </section>
+
+          <section class="side-group" data-nav-group="audit">
+            <p class="side-group-title">审计日志</p>
+            <button class="side-item" type="button" data-view-nav="account-logs"><svg class="ui-icon" aria-hidden="true"><use href="#icon-log"></use></svg><span>账号日志</span></button>
+          </section>
         </nav>
+
         <section class="sidebar-accounts">
-          <h3>账号列表</h3>
+          <div class="sidebar-section-head">
+            <h3>账号切换器</h3>
+            <span class="status-chip tone-info">运行 / 异常 / 未启动</span>
+          </div>
           <div id="sidebarAccountList" class="sidebar-account-list"></div>
         </section>
+
         <div class="sidebar-meta">
           <p id="serverMeta">准备连接...</p>
         </div>
       </aside>
 
       <section class="console-main">
-        <header class="console-topbar panel">
-          <div>
-            <h2 id="viewTitle">控制台总览</h2>
-            <p id="viewHint" class="status-line">通过左侧菜单切换页面</p>
+        <header class="console-topbar panel workbench-topbar">
+          <div class="workbench-main">
+            <div class="view-heading">
+              <p class="section-eyebrow">当前工作区</p>
+              <h2 id="viewTitle">控制台总览</h2>
+              <p id="viewHint" class="status-line">通过左侧菜单切换页面</p>
+            </div>
+            <div class="workbench-account-card">
+              <p class="section-eyebrow">当前账号</p>
+              <div class="workbench-account-head">
+                <strong id="workbenchAccountName">default</strong>
+                <span id="workbenchAccountStatus" class="status-chip tone-muted">未运行</span>
+              </div>
+              <div class="workbench-account-meta">
+                <span id="workbenchAccountMeta" class="meta-pill">平台 - · Lv-</span>
+                <span id="workbenchLastSync" class="meta-pill">最近同步：-</span>
+              </div>
+            </div>
+          </div>
+          <div class="workbench-actions">
+            <button id="viewPrimaryAction" class="btn btn-primary" type="button"><svg class="ui-icon" aria-hidden="true"><use href="#icon-dashboard"></use></svg><span>刷新当前视图</span></button>
+            <button id="viewLogsShortcut" class="btn" type="button"><svg class="ui-icon" aria-hidden="true"><use href="#icon-log"></use></svg><span>查看日志</span></button>
           </div>
         </header>
 
         <section class="panel overview-panel view-panel" data-view="account-home">
-          <h2>账号总览</h2>
-          <div class="cards overview-cards">
-            <article class="card">
+          <div class="section-toolbar">
+            <div>
+              <p class="section-eyebrow">Dashboard</p>
+              <h2>账号总览</h2>
+            </div>
+            <div class="action-row">
+              <span class="status-chip tone-success">多账号运营</span>
+              <span class="status-chip tone-info">重点关注异常与效率</span>
+            </div>
+          </div>
+          <div class="cards overview-cards metric-grid">
+            <article class="card metric-card">
               <h3>账号总数</h3>
               <p id="overviewTotal">0</p>
             </article>
-            <article class="card">
+            <article class="card metric-card">
               <h3>运行中</h3>
               <p id="overviewRunning">0</p>
             </article>
-            <article class="card">
+            <article class="card metric-card metric-card-danger">
               <h3>异常</h3>
               <p id="overviewError">0</p>
             </article>
-            <article class="card">
+            <article class="card metric-card">
               <h3>未运行</h3>
               <p id="overviewStopped">0</p>
             </article>
           </div>
-          <p class="status-line">建议流程：先在“启动控制”启动账号，再到“账号状态/日志中心”查看运行信息。</p>
+          <div class="cards overview-alert-grid">
+            <article class="card alert-card">
+              <div class="alert-card-head">
+                <div class="alert-card-title-wrap">
+                  <svg class="ui-icon ui-icon-alert" aria-hidden="true"><use href="#icon-alert"></use></svg>
+                  <div>
+                    <h3>异常监控</h3>
+                    <p class="section-note">基于当前账号今日统计，优先关注踢下线、断连与 Warn/Error。</p>
+                  </div>
+                </div>
+                <span id="overviewAlertCount" class="status-chip tone-muted">0</span>
+              </div>
+              <div class="alert-kpi-grid">
+                <article class="alert-kpi">
+                  <span class="alert-kpi-label">被踢下线</span>
+                  <strong id="overviewKickoutCount">0</strong>
+                </article>
+                <article class="alert-kpi">
+                  <span class="alert-kpi-label">断连次数</span>
+                  <strong id="overviewWsCloseCount">0</strong>
+                </article>
+                <article class="alert-kpi">
+                  <span class="alert-kpi-label">Warn / Error</span>
+                  <strong id="overviewWarnErrorCount">0 / 0</strong>
+                </article>
+              </div>
+              <p id="overviewAlertSummary" class="section-note">当前账号运行稳定，可继续观察经验效率和礼包状态。</p>
+            </article>
+            <div class="info-banner warning-banner">
+              <strong>建议动作：</strong>
+              先在“账号设置”确认启动参数，再关注“运行统计”和“账号日志”中的踢下线、断连、Warn/Error 指标。
+            </div>
+          </div>
         </section>
 
         <section class="panel control-panel view-panel" data-view="account-settings">
-          <h2>账号设置</h2>
-          <div class="actions">
-            <button id="newAccountBtn" class="btn btn-primary" type="button">新增账号</button>
-            <button id="editAccountBtn" class="btn" type="button">编辑当前账号</button>
+          <div class="section-toolbar">
+            <div>
+              <p class="section-eyebrow">Account Ops</p>
+              <h2>账号设置</h2>
+            </div>
+            <div class="action-row">
+              <button id="newAccountBtn" class="btn btn-primary" type="button">新增账号</button>
+              <button id="editAccountBtn" class="btn" type="button">编辑当前账号</button>
+            </div>
           </div>
-          <p id="accountEditorHint" class="status-line">点击“新增账号”后配置并启动。启动后会自动收起编辑区。</p>
-          <p id="sessionStatus" class="status-line">状态：idle</p>
-          <div id="sessionList" class="session-list"></div>
-          <p class="status-line">提示：点击账号卡片可快速切换，绿点=运行中，红点=未运行/异常</p>
 
-          <div id="accountEditor" class="stack feature-settings hidden">
-            <div class="grid two">
-              <label>
-                账号标识（accountId）
-                <input id="accountId" type="text" placeholder="例如 qq-main / wx-1" />
-              </label>
-              <label>
-                日志视图
-                <select id="logScope">
-                  <option value="selected">仅当前账号</option>
-                  <option value="all">全部账号</option>
-                </select>
-              </label>
-            </div>
-            <div class="grid two">
-              <label>
-                模式
-                <select id="mode">
-                  <option value="run">运行</option>
-                  <option value="verify">验证 proto</option>
-                  <option value="decode">PB 解码</option>
-                </select>
-              </label>
-              <label>
-                平台
-                <select id="platform">
-                  <option value="qq">QQ</option>
-                  <option value="wx">微信</option>
-                </select>
-              </label>
-            </div>
-
-            <div id="runFields" class="stack">
-              <div class="grid two">
-                <label>
-                  code
-                  <input id="code" type="text" placeholder="可留空并勾选QQ扫码" />
-                </label>
-                <label class="checkbox">
-                  <input id="useQr" type="checkbox" />
-                  <span>QQ 扫码登录（无 code 时）</span>
-                </label>
-              </div>
-              <div class="grid two">
-                <label>
-                  农场间隔（秒）
-                  <input id="interval" type="number" min="1" step="1" placeholder="例如 10" />
-                </label>
-                <label>
-                  好友间隔（秒）
-                  <input id="friendInterval" type="number" min="1" step="1" placeholder="例如 2" />
-                </label>
-              </div>
-            </div>
-
-            <div id="decodeFields" class="stack hidden">
-              <label>
-                decode 数据
-                <textarea id="decodeData" rows="3" placeholder="输入 base64 或 hex"></textarea>
-              </label>
-              <div class="grid three">
-                <label class="checkbox"><input id="decodeHex" type="checkbox" /><span>--hex</span></label>
-                <label class="checkbox"><input id="decodeGate" type="checkbox" /><span>--gate</span></label>
-                <label>
-                  type
-                  <input id="decodeType" type="text" placeholder="可选，例如 gatepb.Message" />
-                </label>
-              </div>
-            </div>
-
-            <div class="actions">
-              <button id="startBtn" class="btn btn-primary">启动</button>
-              <button id="stopBtn" class="btn btn-danger">停止</button>
-              <button id="clearLogsBtn" class="btn">清空日志</button>
-              <button id="cancelAccountEditBtn" class="btn" type="button">收起编辑区</button>
-            </div>
-            <div class="cards">
-              <article class="card">
-                <h3>QQ 扫码</h3>
-                <p id="qrPhase">状态：-</p>
-                <img id="qrImage" class="qr-image hidden" alt="QQ扫码二维码" />
-                <a id="qrLink" class="hidden" target="_blank" rel="noreferrer">打开扫码链接</a>
-                <div class="actions">
-                  <button id="refreshQrBtn" class="btn" type="button">刷新二维码</button>
-                  <button id="switchQrBtn" class="btn hidden" type="button">切换备用二维码</button>
+          <div class="settings-shell">
+            <section class="settings-group settings-group-wide">
+              <div class="section-toolbar compact-toolbar">
+                <div>
+                  <p class="section-eyebrow">Session Hub</p>
+                  <h3>账号与会话</h3>
                 </div>
-                <div id="qrAltLinks" class="qr-alt-links"></div>
-                <p id="qrMessage"></p>
-              </article>
-            </div>
-            <div class="stack feature-settings">
-              <p class="mini-title">运行功能开关（立即生效）</p>
-              <div class="grid two">
-                <label class="checkbox"><input id="featureFarmEnabled" type="checkbox" /><span>自动巡田</span></label>
-                <label class="checkbox"><input id="featureFriendEnabled" type="checkbox" /><span>自动好友巡查</span></label>
-                <label class="checkbox"><input id="featureTaskEnabled" type="checkbox" /><span>自动任务领取</span></label>
-                <label class="checkbox"><input id="featureTaskActiveEnabled" type="checkbox" /><span>自动领取活跃礼包</span></label>
-                <label class="checkbox"><input id="featureGiftEnabled" type="checkbox" /><span>自动开启礼包道具</span></label>
-                <label class="checkbox"><input id="featureSellEnabled" type="checkbox" /><span>自动仓库出售</span></label>
-                <label class="checkbox"><input id="featureForceLowestLevelCrop" type="checkbox" /><span>固定最低等级作物</span></label>
-                <label class="checkbox"><input id="featureHelpOnlyWithExp" type="checkbox" /><span>仅有经验时帮好友</span></label>
-                <label class="checkbox"><input id="featureEnablePutBadThings" type="checkbox" /><span>允许放虫放草捣乱</span></label>
-                <label class="checkbox"><input id="featureAutoUnlockLands" type="checkbox" /><span>自动解锁土地</span></label>
-                <label class="checkbox"><input id="featureAutoUpgradeLands" type="checkbox" /><span>自动升级土地</span></label>
-                <label class="checkbox"><input id="featureAutoFertilize" type="checkbox" /><span>自动施肥</span></label>
-                <label class="checkbox"><input id="featureAutoBuyFertilizer" type="checkbox" /><span>自动补充肥料</span></label>
+                <span id="sessionStatus" class="status-chip tone-muted">状态：idle</span>
               </div>
-              <div class="actions">
-                <button id="saveAccountSettingsBtn" class="btn">保存账号功能设置</button>
-              </div>
-              <p id="accountSettingsStatus" class="status-line"></p>
+              <p id="accountEditorHint" class="status-line">点击“新增账号”后配置并启动。启动后会自动收起编辑区。</p>
+              <div id="sessionList" class="session-list"></div>
+              <p class="section-note">点击账号卡片可快速切换，绿点=运行中，红点=未运行/异常。</p>
+            </section>
+
+            <div id="accountEditor" class="stack feature-settings hidden settings-editor">
+              <section class="settings-group">
+                <div class="section-toolbar compact-toolbar">
+                  <div>
+                    <p class="section-eyebrow">Launch Setup</p>
+                    <h3>账号与启动</h3>
+                  </div>
+                </div>
+                <div class="grid two">
+                  <label>
+                    账号标识（accountId）
+                    <input id="accountId" type="text" placeholder="例如 qq-main / wx-1" />
+                  </label>
+                  <label>
+                    日志视图
+                    <select id="logScope">
+                      <option value="selected">仅当前账号</option>
+                      <option value="all">全部账号</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="grid two">
+                  <label>
+                    模式
+                    <select id="mode">
+                      <option value="run">运行</option>
+                      <option value="verify">验证 proto</option>
+                      <option value="decode">PB 解码</option>
+                    </select>
+                  </label>
+                  <label>
+                    平台
+                    <select id="platform">
+                      <option value="qq">QQ</option>
+                      <option value="wx">微信</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div id="runFields" class="stack">
+                  <div class="grid two">
+                    <label>
+                      code
+                      <input id="code" type="text" placeholder="可留空并勾选QQ扫码" />
+                    </label>
+                    <label class="checkbox">
+                      <input id="useQr" type="checkbox" />
+                      <span>QQ 扫码登录（无 code 时）</span>
+                    </label>
+                  </div>
+                  <div class="grid two">
+                    <label>
+                      农场间隔（秒）
+                      <input id="interval" type="number" min="1" step="1" placeholder="例如 10" />
+                    </label>
+                    <label>
+                      好友间隔（秒）
+                      <input id="friendInterval" type="number" min="1" step="1" placeholder="例如 2" />
+                    </label>
+                  </div>
+                </div>
+
+                <div id="decodeFields" class="stack hidden">
+                  <label>
+                    decode 数据
+                    <textarea id="decodeData" rows="3" placeholder="输入 base64 或 hex"></textarea>
+                  </label>
+                  <div class="grid three">
+                    <label class="checkbox"><input id="decodeHex" type="checkbox" /><span>--hex</span></label>
+                    <label class="checkbox"><input id="decodeGate" type="checkbox" /><span>--gate</span></label>
+                    <label>
+                      type
+                      <input id="decodeType" type="text" placeholder="可选，例如 gatepb.Message" />
+                    </label>
+                  </div>
+                </div>
+
+                <div class="actions sticky-actions">
+                  <button id="startBtn" class="btn btn-primary">启动</button>
+                  <button id="stopBtn" class="btn btn-danger">停止</button>
+                  <button id="clearLogsBtn" class="btn">清空日志</button>
+                  <button id="cancelAccountEditBtn" class="btn" type="button">收起编辑区</button>
+                </div>
+              </section>
+
+              <section class="settings-group">
+                <div class="section-toolbar compact-toolbar">
+                  <div>
+                    <p class="section-eyebrow">QR Login</p>
+                    <h3>二维码 / 重登录</h3>
+                  </div>
+                  <span class="status-chip tone-info">扫码优先</span>
+                </div>
+                <div class="cards single-card-grid">
+                  <article class="card config-card qr-card-shell">
+                    <h3>QQ 扫码</h3>
+                    <p id="qrPhase" class="status-line">状态：-</p>
+                    <img id="qrImage" class="qr-image hidden" alt="QQ扫码二维码" />
+                    <a id="qrLink" class="hidden" target="_blank" rel="noreferrer">打开扫码链接</a>
+                    <div class="actions">
+                      <button id="refreshQrBtn" class="btn" type="button">刷新二维码</button>
+                      <button id="switchQrBtn" class="btn hidden" type="button">切换备用二维码</button>
+                    </div>
+                    <div id="qrAltLinks" class="qr-alt-links"></div>
+                    <p id="qrMessage" class="section-note"></p>
+                  </article>
+                </div>
+                <div class="grid two">
+                  <label>
+                    二维码接口域名
+                    <input id="qrLoginApiDomain" type="text" placeholder="默认 q.qq.com" />
+                  </label>
+                  <div class="actions align-end">
+                    <button id="saveQrLoginSettingsBtn" class="btn" type="button">保存二维码设置</button>
+                  </div>
+                </div>
+                <p id="qrLoginSettingsStatus" class="status-line"></p>
+              </section>
+
+              <section class="settings-group">
+                <div class="section-toolbar compact-toolbar">
+                  <div>
+                    <p class="section-eyebrow">Automation</p>
+                    <h3>运行功能开关</h3>
+                  </div>
+                  <span class="status-chip tone-success">保存后立即生效</span>
+                </div>
+                <div class="grid two">
+                  <label class="checkbox"><input id="featureFarmEnabled" type="checkbox" /><span>自动巡田</span></label>
+                  <label class="checkbox"><input id="featureFriendEnabled" type="checkbox" /><span>自动好友巡查</span></label>
+                  <label class="checkbox"><input id="featureTaskEnabled" type="checkbox" /><span>自动任务领取</span></label>
+                  <label class="checkbox"><input id="featureTaskActiveEnabled" type="checkbox" /><span>自动领取活跃礼包</span></label>
+                  <label class="checkbox"><input id="featureGiftEnabled" type="checkbox" /><span>自动开启礼包道具</span></label>
+                  <label class="checkbox"><input id="featureSellEnabled" type="checkbox" /><span>自动仓库出售</span></label>
+                  <label class="checkbox"><input id="featureVipGiftEnabled" type="checkbox" /><span>自动领 VIP 礼包</span></label>
+                  <label class="checkbox"><input id="featureMonthCardEnabled" type="checkbox" /><span>自动领月卡礼包</span></label>
+                  <label class="checkbox"><input id="featureOpenServerGiftEnabled" type="checkbox" /><span>自动领开服红包</span></label>
+                  <label class="checkbox"><input id="featureAutoUnlockLands" type="checkbox" /><span>自动解锁土地</span></label>
+                  <label class="checkbox"><input id="featureAutoUpgradeLands" type="checkbox" /><span>自动升级土地</span></label>
+                  <label class="checkbox"><input id="featureAutoFertilize" type="checkbox" /><span>自动施肥</span></label>
+                  <label class="checkbox"><input id="featureAutoBuyFertilizer" type="checkbox" /><span>自动补充肥料</span></label>
+                  <label class="checkbox"><input id="featureForceLowestLevelCrop" type="checkbox" /><span>固定最低等级作物</span></label>
+                </div>
+              </section>
+
+              <section class="settings-group">
+                <div class="section-toolbar compact-toolbar">
+                  <div>
+                    <p class="section-eyebrow">Planting</p>
+                    <h3>种植策略</h3>
+                  </div>
+                </div>
+                <div class="grid two">
+                  <label>
+                    种植策略
+                    <select id="featurePlantingStrategy">
+                      <option value="preferred">首选种子优先</option>
+                      <option value="level">最高等级优先</option>
+                      <option value="max_exp">经验/小时最高</option>
+                      <option value="max_fert_exp">施肥经验/小时最高</option>
+                      <option value="max_profit">利润/小时最高</option>
+                      <option value="max_fert_profit">施肥利润/小时最高</option>
+                    </select>
+                  </label>
+                  <label>
+                    首选种子 ID
+                    <select id="featurePreferredSeedId"></select>
+                  </label>
+                </div>
+                <div class="grid two">
+                  <label class="checkbox"><input id="featureFriendStealEnabled" type="checkbox" /><span>自动偷菜</span></label>
+                  <label class="checkbox"><input id="featureFriendHelpEnabled" type="checkbox" /><span>自动帮忙</span></label>
+                </div>
+              </section>
+
+              <section class="settings-group">
+                <div class="section-toolbar compact-toolbar">
+                  <div>
+                    <p class="section-eyebrow">Friends</p>
+                    <h3>好友策略</h3>
+                  </div>
+                  <span class="status-chip tone-warning">高风险项请谨慎</span>
+                </div>
+                <div class="grid two">
+                  <label class="checkbox"><input id="featureHelpOnlyWithExp" type="checkbox" /><span>仅有经验时帮好友</span></label>
+                  <label class="checkbox"><input id="featureEnablePutBadThings" type="checkbox" /><span>允许放虫放草捣乱</span></label>
+                </div>
+                <div class="actions sticky-actions">
+                  <button id="saveAccountSettingsBtn" class="btn">保存账号功能设置</button>
+                </div>
+                <p id="accountSettingsStatus" class="status-line"></p>
+              </section>
             </div>
           </div>
         </section>
 
         <section class="panel metrics view-panel" data-view="account-home">
-          <h2>实时账号信息</h2>
-          <div class="cards">
-            <article class="card">
+          <div class="section-toolbar compact-toolbar">
+            <div>
+              <p class="section-eyebrow">Live Snapshot</p>
+              <h2>当前账号快照</h2>
+            </div>
+            <span class="status-chip tone-info">账号实时信息 + 当前选种建议</span>
+          </div>
+          <div class="cards dashboard-dual-grid">
+            <article class="card config-card">
               <h3>实时信息</h3>
               <p id="metricPlatform">平台：-</p>
               <p id="metricName">昵称：-</p>
@@ -233,7 +448,7 @@
               <p id="metricExpToNext">升级还差：-</p>
               <p id="metricGold">金币：-</p>
             </article>
-            <article class="card">
+            <article class="card config-card">
               <h3>最佳作物</h3>
               <p id="bestCropName">当前选种：-</p>
               <p id="bestCropCurrent">当前等级最优：-</p>
@@ -245,28 +460,33 @@
         </section>
 
         <section class="panel stats-panel view-panel" data-view="account-home">
-          <h2>运行统计（V2）</h2>
-          <div class="stats-toolbar">
-            <label>
-              趋势范围
-              <select id="statsRange">
-                <option value="1h">近 1 小时</option>
-                <option value="6h" selected>近 6 小时</option>
-                <option value="24h">近 24 小时</option>
-                <option value="all">全部</option>
-              </select>
-            </label>
-            <label>
-              图表缩放
-              <select id="statsZoom">
-                <option value="1">1x</option>
-                <option value="1.5" selected>1.5x</option>
-                <option value="2">2x</option>
-              </select>
-            </label>
+          <div class="section-toolbar compact-toolbar">
+            <div>
+              <p class="section-eyebrow">Performance</p>
+              <h2>运行统计（V2）</h2>
+            </div>
+            <div class="stats-toolbar section-toolbar-controls">
+              <label>
+                趋势范围
+                <select id="statsRange">
+                  <option value="1h">近 1 小时</option>
+                  <option value="6h" selected>近 6 小时</option>
+                  <option value="24h">近 24 小时</option>
+                  <option value="all">全部</option>
+                </select>
+              </label>
+              <label>
+                图表缩放
+                <select id="statsZoom">
+                  <option value="1">1x</option>
+                  <option value="1.5" selected>1.5x</option>
+                  <option value="2">2x</option>
+                </select>
+              </label>
+            </div>
           </div>
           <div class="cards stats-cards">
-            <article class="card">
+            <article class="card metric-card">
               <h3>当前账号今日增量</h3>
               <p id="statsExpDelta">经验增量：-</p>
               <p id="statsGoldDelta">金币增量：-</p>
@@ -274,14 +494,14 @@
               <p id="statsGoldRate">金币效率：-</p>
               <p id="statsBarkCurrent">Bark：-</p>
             </article>
-            <article class="card">
+            <article class="card metric-card metric-card-warning">
               <h3>当前账号稳定性</h3>
               <p id="statsRunningTime">运行时长：-</p>
               <p id="statsKickout">被踢次数：-</p>
               <p id="statsWsClose">断连次数：-</p>
               <p id="statsWarnError">Warn/Error：-</p>
             </article>
-            <article class="card">
+            <article class="card metric-card">
               <h3>当前账号行为计数</h3>
               <p id="statsHarvest">收获总数：-</p>
               <p id="statsPlant">种植总数：-</p>
@@ -304,7 +524,7 @@
             </article>
           </div>
           <div class="cards stats-summary-cards">
-            <article class="card">
+            <article class="card config-card">
               <h3>全账号汇总</h3>
               <p id="statsSummaryAccounts">账号：-</p>
               <p id="statsSummaryDelta">今日增量：-</p>
@@ -312,16 +532,25 @@
               <p id="statsSummaryCounts">事件计数：-</p>
               <p id="statsSummaryBark">Bark：-</p>
             </article>
-            <article class="card">
+            <article class="card config-card">
               <h3>效率排行（exp/h）</h3>
               <div id="statsRanking" class="stats-ranking-list">暂无统计数据</div>
             </article>
           </div>
-          <p class="status-line">说明：第二版统计会写入本地 JSON 文件，Web 服务重启后保留当天统计；图表支持范围切换和缩放。</p>
+          <p class="section-note">说明：第二版统计会写入本地 JSON 文件，Web 服务重启后保留当天统计；图表支持范围切换和缩放。</p>
         </section>
 
         <section class="panel friend-panel view-panel" data-view="account-friends">
-          <h2>好友操作</h2>
+          <div class="section-toolbar">
+            <div>
+              <p class="section-eyebrow">Friends Ops</p>
+              <h2>好友操作</h2>
+            </div>
+            <div class="action-row">
+              <button id="saveFriendUiBtn" class="btn">保存好友设置</button>
+              <button id="refreshFriendsBtn" class="btn btn-primary">刷新好友列表</button>
+            </div>
+          </div>
           <div class="grid two">
             <label class="checkbox">
               <input id="allowBadOps" type="checkbox" />
@@ -332,100 +561,189 @@
               <span>高风险操作二次确认</span>
             </label>
           </div>
-          <div class="actions">
-            <button id="saveFriendUiBtn" class="btn">保存好友设置</button>
-            <button id="refreshFriendsBtn" class="btn btn-primary">刷新好友列表</button>
-          </div>
           <p id="friendUiStatus" class="status-line"></p>
           <div id="friendList" class="friend-list"></div>
         </section>
 
         <section class="panel lands-panel view-panel" data-view="account-lands">
-          <h2>土地详情</h2>
-          <div class="actions">
-            <button id="refreshLandsBtn" class="btn btn-primary" type="button">刷新土地详情</button>
+          <div class="section-toolbar">
+            <div>
+              <p class="section-eyebrow">Farm State</p>
+              <h2>土地详情</h2>
+            </div>
+            <div class="action-row">
+              <button id="refreshLandsBtn" class="btn btn-primary" type="button">刷新土地详情</button>
+            </div>
           </div>
           <p id="landsStatus" class="status-line"></p>
           <div id="landsSummary" class="lands-summary"></div>
           <div id="landsList" class="lands-list"></div>
         </section>
 
-        <section class="panel bark-panel view-panel" data-view="account-bark">
-          <h2>Bark 设置</h2>
-          <div class="grid two">
-            <label class="checkbox">
-              <input id="barkEnabled" type="checkbox" />
-              <span>启用 Bark 推送</span>
-            </label>
-            <label>
-              通知分组
-              <input id="barkGroup" type="text" />
-            </label>
-          </div>
-          <label>
-            Bark 链接
-            <input id="barkPushUrl" type="text" placeholder="仅在此输入 Bark 链接（不会写入源码）" />
-          </label>
-          <div class="grid two">
-            <label>
-              去重秒数（0-3600）
-              <input id="barkDedupSeconds" type="number" min="0" max="3600" step="1" />
-            </label>
+        <section class="panel bag-panel view-panel" data-view="account-bag">
+          <div class="section-toolbar">
             <div>
-              <p class="mini-title">通知分类</p>
-              <div class="grid three">
-                <label class="checkbox"><input id="catFatal" type="checkbox" /><span>fatal</span></label>
-                <label class="checkbox"><input id="catNetwork" type="checkbox" /><span>network</span></label>
-                <label class="checkbox"><input id="catBusiness" type="checkbox" /><span>business</span></label>
-              </div>
+              <p class="section-eyebrow">Inventory</p>
+              <h2>背包页</h2>
+            </div>
+            <div class="action-row">
+              <button id="refreshBagBtn" class="btn btn-primary" type="button">刷新背包</button>
             </div>
           </div>
-          <div class="actions">
-            <button id="saveBarkBtn" class="btn btn-primary">保存 Bark 设置</button>
-            <button id="testBarkBtn" class="btn">测试推送</button>
+          <div id="bagFilters" class="filters-bar">
+            <span class="status-chip tone-info">聚焦数量、价格、可售状态</span>
+            <span class="status-chip tone-muted">按账号实时数据展示</span>
           </div>
-          <p id="barkStatus" class="status-line"></p>
+          <p id="bagStatus" class="status-line"></p>
+          <div id="bagSummary" class="lands-summary"></div>
+          <div id="bagList" class="lands-list inventory-list"></div>
+        </section>
+
+        <section class="panel daily-gifts-panel view-panel" data-view="account-daily-gifts">
+          <div class="section-toolbar">
+            <div>
+              <p class="section-eyebrow">Daily Automation</p>
+              <h2>每日礼包</h2>
+            </div>
+            <div class="action-row">
+              <button id="refreshDailyGiftsBtn" class="btn btn-primary" type="button">刷新礼包状态</button>
+              <button id="claimAllDailyGiftsBtn" class="btn" type="button">一键全部执行</button>
+            </div>
+          </div>
+          <div id="dailyGiftsInsight" class="info-banner info-banner-compact">
+            当前页用于处理任务、背包礼包、VIP、月卡与开服红包；优先显示“待处理数”和“最近结果”。
+          </div>
+          <p id="dailyGiftsStatus" class="status-line"></p>
+          <div id="dailyGiftsSummary" class="lands-summary"></div>
+          <div id="dailyGiftsList" class="lands-list daily-gifts-list"></div>
+        </section>
+
+        <section class="panel analytics-panel view-panel" data-view="account-analytics">
+          <div class="section-toolbar">
+            <div>
+              <p class="section-eyebrow">Crop Insights</p>
+              <h2>数据分析</h2>
+            </div>
+            <div class="action-row analytics-toolbar">
+              <label>
+                排序方式
+                <select id="analyticsSort">
+                  <option value="exp">经验/小时</option>
+                  <option value="fert">施肥经验/小时</option>
+                  <option value="gold">收入/小时</option>
+                  <option value="profit">利润/小时</option>
+                  <option value="fert_profit">施肥利润/小时</option>
+                  <option value="level">土地等级</option>
+                </select>
+              </label>
+              <button id="refreshAnalyticsBtn" class="btn btn-primary" type="button">刷新分析</button>
+            </div>
+          </div>
+          <div id="analyticsInsight" class="info-banner info-banner-compact">
+            显示 Top 50 作物效率榜；可按经验、收益、利润和施肥收益切换排序视角。
+          </div>
+          <p id="analyticsStatus" class="status-line"></p>
+          <div id="analyticsList" class="lands-list analytics-list"></div>
+        </section>
+
+        <section class="panel bark-panel view-panel" data-view="account-bark">
+          <div class="section-toolbar">
+            <div>
+              <p class="section-eyebrow">Alerts</p>
+              <h2>Bark 通知</h2>
+            </div>
+            <div class="action-row">
+              <span class="status-chip tone-info">离线提醒 / 重登录二维码 / 分类告警</span>
+            </div>
+          </div>
+          <div class="settings-shell bark-shell">
+            <section class="settings-group">
+              <div class="grid two">
+                <label class="checkbox">
+                  <input id="barkEnabled" type="checkbox" />
+                  <span>启用 Bark 推送</span>
+                </label>
+                <label>
+                  通知分组
+                  <input id="barkGroup" type="text" />
+                </label>
+              </div>
+              <label>
+                Bark 链接
+                <input id="barkPushUrl" type="text" placeholder="仅在此输入 Bark 链接（不会写入源码）" />
+              </label>
+            </section>
+            <section class="settings-group">
+              <div class="grid two">
+                <label>
+                  去重秒数（0-3600）
+                  <input id="barkDedupSeconds" type="number" min="0" max="3600" step="1" />
+                </label>
+                <div>
+                  <p class="mini-title">通知分类</p>
+                  <div class="grid three">
+                    <label class="checkbox"><input id="catFatal" type="checkbox" /><span>fatal</span></label>
+                    <label class="checkbox"><input id="catNetwork" type="checkbox" /><span>network</span></label>
+                    <label class="checkbox"><input id="catBusiness" type="checkbox" /><span>business</span></label>
+                  </div>
+                </div>
+              </div>
+              <div class="actions sticky-actions">
+                <button id="saveBarkBtn" class="btn btn-primary">保存 Bark 设置</button>
+                <button id="testBarkBtn" class="btn">测试推送</button>
+              </div>
+              <p id="barkStatus" class="status-line"></p>
+            </section>
+          </div>
         </section>
 
         <section class="panel logs-panel view-panel" data-view="account-logs">
-          <h2>实时日志</h2>
-          <div class="grid four">
-            <label>
-              级别
-              <select id="logLevel">
-                <option value="all">all</option>
-                <option value="info">info</option>
-                <option value="warn">warn</option>
-                <option value="error">error</option>
-              </select>
-            </label>
-            <label>
-              标签
-              <input id="logTag" type="text" placeholder="例如 好友/WS" />
-            </label>
-            <label>
-              关键字
-              <input id="logKeyword" type="text" placeholder="支持模糊匹配" />
-            </label>
-            <label>
-              动作
-              <select id="logAction">
-                <option value="">全部</option>
-                <option value="friend_manual">friend_manual</option>
-              </select>
-            </label>
+          <div class="section-toolbar logs-toolbar-head">
+            <div>
+              <p class="section-eyebrow">Audit Console</p>
+              <h2>实时日志</h2>
+            </div>
+            <div class="action-row">
+              <button id="applyLogFiltersBtn" class="btn btn-primary">应用筛选</button>
+              <button id="loadMoreLogsBtn" class="btn">加载更多</button>
+            </div>
           </div>
-          <div class="actions">
-            <button id="applyLogFiltersBtn" class="btn btn-primary">应用筛选</button>
-            <button id="loadMoreLogsBtn" class="btn">加载更多</button>
+          <div class="section-toolbar compact-toolbar sticky-filter-bar">
+            <div class="grid four">
+              <label>
+                级别
+                <select id="logLevel">
+                  <option value="all">all</option>
+                  <option value="info">info</option>
+                  <option value="warn">warn</option>
+                  <option value="error">error</option>
+                </select>
+              </label>
+              <label>
+                标签
+                <input id="logTag" type="text" placeholder="例如 好友/WS" />
+              </label>
+              <label>
+                关键字
+                <input id="logKeyword" type="text" placeholder="支持模糊匹配" />
+              </label>
+              <label>
+                动作
+                <select id="logAction">
+                  <option value="">全部</option>
+                  <option value="friend_manual">friend_manual</option>
+                </select>
+              </label>
+            </div>
           </div>
           <p id="logsStatus" class="status-line"></p>
-          <pre id="logs"></pre>
+          <div id="logs" class="logs-console"></div>
         </section>
       </section>
     </div>
   </main>
 
+  <script src="/ui-meta.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

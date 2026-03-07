@@ -9,6 +9,7 @@ const {
     getRuntimeSettings,
     updateRuntimeBarkSettings,
     updateRuntimeAccountSettings,
+    updateRuntimeQrLoginSettings,
     loadRuntimeSettingsFromLocalFile,
 } = require('../src/runtimeSettings');
 
@@ -109,3 +110,20 @@ test('runtime account settings can be updated partially', () => {
     assert.equal(current.account.autoBuyFertilizer, true);
     assert.equal(current.account.taskActiveEnabled, true);
 });
+
+test('runtime qr login settings can be updated and loaded', () => {
+    resetRuntimeSettingsForTest();
+    updateRuntimeQrLoginSettings({ apiDomain: 'q.qq.com' });
+    assert.equal(getRuntimeSettings().qrLogin.apiDomain, 'q.qq.com');
+
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qq-farm-runtime-qr-'));
+    const settingsPath = path.join(dir, '.qq-farm-ui-settings.json');
+    fs.writeFileSync(settingsPath, JSON.stringify({
+        qrLogin: { apiDomain: 'q.qq.com' },
+    }), 'utf8');
+
+    const loaded = loadRuntimeSettingsFromLocalFile(settingsPath);
+    assert.equal(loaded.loaded, true);
+    assert.equal(getRuntimeSettings().qrLogin.apiDomain, 'q.qq.com');
+});
+

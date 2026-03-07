@@ -4,7 +4,7 @@
 
 const CONFIG = {
     serverUrl: 'wss://gate-obt.nqf.qq.com/prod/ws',
-    clientVersion: '1.6.0.14_20251224',
+    clientVersion: '1.6.1.16_20251224',
     platform: 'qq',              // 平台: qq 或 wx (可通过 --wx 切换为微信)
     os: 'iOS',
     heartbeatInterval: 25000,    // 心跳间隔 25秒
@@ -15,7 +15,7 @@ const CONFIG = {
     barkDedupSeconds: 60,         // 同类错误推送去重时间窗口（秒）
     barkGroup: 'qq-farm-bot',
     device_info: {
-        client_version: "1.6.0.14_20251224",
+        client_version: '1.6.1.16_20251224',
         sys_software: 'iOS 26.2.1',
         network: 'wifi',
         memory: '7672',

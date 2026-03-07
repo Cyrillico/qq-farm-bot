@@ -102,9 +102,14 @@ async function pushBarkDetailed(title, body, dedupeKey, opts = {}) {
     dedupeCache.set(key, now);
 
     const pushUrl = `${baseUrl}${encodeURIComponent(safeTitle)}/${encodeURIComponent(safeBody)}`;
+    const actionUrl = String(opts.actionUrl || '').trim();
+    const params = { group: barkSettings.group || 'qq-farm-bot' };
+    if (actionUrl) {
+        params.url = actionUrl;
+    }
     try {
         await axios.get(pushUrl, {
-            params: { group: barkSettings.group || 'qq-farm-bot' },
+            params,
             timeout: 6000,
         });
         setLastPushResult(true, 'ok', '', { category, force });

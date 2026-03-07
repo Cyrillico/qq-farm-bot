@@ -47,6 +47,8 @@ const BAD_ACTION_LIMIT_IDS = {
 const DEFAULT_FRIEND_RUNTIME_SETTINGS = {
     helpOnlyWithExp: true,
     enablePutBadThings: false,
+    friendStealEnabled: true,
+    friendHelpEnabled: true,
 };
 let friendRuntimeSettings = { ...DEFAULT_FRIEND_RUNTIME_SETTINGS };
 
@@ -57,6 +59,8 @@ function updateFriendRuntimeSettings(patch = {}) {
     };
     friendRuntimeSettings.helpOnlyWithExp = Boolean(friendRuntimeSettings.helpOnlyWithExp);
     friendRuntimeSettings.enablePutBadThings = Boolean(friendRuntimeSettings.enablePutBadThings);
+    friendRuntimeSettings.friendStealEnabled = Boolean(friendRuntimeSettings.friendStealEnabled);
+    friendRuntimeSettings.friendHelpEnabled = Boolean(friendRuntimeSettings.friendHelpEnabled);
     return { ...friendRuntimeSettings };
 }
 
@@ -800,8 +804,8 @@ async function visitFriend(friend, totalActions, myGid) {
     // 执行操作
     const actions = [];
 
-    // 帮助操作: 只在有经验时执行（运行时可配置）
-    if (status.needWeed.length > 0) {
+    // 帮助操作: 只在开启帮忙时执行，且可选受经验限制
+    if (friendRuntimeSettings.friendHelpEnabled && status.needWeed.length > 0) {
         const shouldHelp = !friendRuntimeSettings.helpOnlyWithExp || canGetExp(10005);  // 10005=除草
         if (shouldHelp) {
             markExpCheck(10005);
@@ -814,7 +818,7 @@ async function visitFriend(friend, totalActions, myGid) {
         }
     }
 
-    if (status.needBug.length > 0) {
+    if (friendRuntimeSettings.friendHelpEnabled && status.needBug.length > 0) {
         const shouldHelp = !friendRuntimeSettings.helpOnlyWithExp || canGetExp(10006);  // 10006=除虫
         if (shouldHelp) {
             markExpCheck(10006);
@@ -827,7 +831,7 @@ async function visitFriend(friend, totalActions, myGid) {
         }
     }
 
-    if (status.needWater.length > 0) {
+    if (friendRuntimeSettings.friendHelpEnabled && status.needWater.length > 0) {
         const shouldHelp = !friendRuntimeSettings.helpOnlyWithExp || canGetExp(10007);  // 10007=浇水
         if (shouldHelp) {
             markExpCheck(10007);
@@ -840,8 +844,8 @@ async function visitFriend(friend, totalActions, myGid) {
         }
     }
 
-    // 偷菜: 始终执行
-    if (status.stealable.length > 0) {
+    // 偷菜: 受独立开关控制
+    if (friendRuntimeSettings.friendStealEnabled && status.stealable.length > 0) {
         let ok = 0;
         const stolenPlants = [];
         for (let i = 0; i < status.stealable.length; i++) {
@@ -912,7 +916,8 @@ async function checkFriendsCore() {
         if (friends.length === 0) { log('好友', '没有好友'); return; }
 
         // 检查帮助经验是否还有
-        const canHelpWithExp = !friendRuntimeSettings.helpOnlyWithExp || canGetExp(10005) || canGetExp(10006) || canGetExp(10007);
+        const canHelpWithExp = friendRuntimeSettings.friendHelpEnabled
+            && (!friendRuntimeSettings.helpOnlyWithExp || canGetExp(10005) || canGetExp(10006) || canGetExp(10007));
         // 检查是否还有捣乱次数 (放虫/放草)
         const canPutBugOrWeed = canOperateAny(BAD_ACTION_LIMIT_IDS.putBug)
             || canOperateAny(BAD_ACTION_LIMIT_IDS.putWeed);
@@ -943,8 +948,8 @@ async function checkFriendsCore() {
                 console.log(`[调试] 好友列表预览 [${name}]: steal=${stealNum} dry=${dryNum} weed=${weedNum} insect=${insectNum}`);
             }
 
-            if (hasSteal) {
-                // 有可偷的，始终加入
+            if (hasSteal && friendRuntimeSettings.friendStealEnabled) {
+                // 有可偷的，且偷菜开关开启
                 priorityFriends.push({ gid, name, level: toNum(f.level), hasSteal: true, hasHelp });
                 visitedGids.add(gid);
             } else if (hasHelp && canHelpWithExp) {

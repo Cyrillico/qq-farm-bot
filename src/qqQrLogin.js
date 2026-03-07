@@ -1,15 +1,27 @@
 const axios = require('axios');
 const qrcodeTerminal = require('qrcode-terminal');
 const { emitUiEvent } = require('./uiEvents');
+const { getRuntimeSettings } = require('./runtimeSettings');
 
 const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const QUA = 'V1_HT5_QDT_0.70.2209190_x64_0_DEV_D';
 const FARM_APP_ID = '1112386029';
 
-function getHeaders() {
+function getApiDomain() {
+    const runtime = getRuntimeSettings();
+    const domain = String(runtime && runtime.qrLogin && runtime.qrLogin.apiDomain || 'q.qq.com').trim();
+    return domain || 'q.qq.com';
+}
+
+function buildApiUrl(pathname, apiDomain = getApiDomain()) {
+    const safePath = String(pathname || '').startsWith('/') ? String(pathname) : `/${String(pathname || '')}`;
+    return `https://${apiDomain}${safePath}`;
+}
+
+function getHeaders(apiDomain = getApiDomain()) {
     return {
         qua: QUA,
-        host: 'q.qq.com',
+        host: apiDomain,
         accept: 'application/json',
         'content-type': 'application/json',
         'user-agent': CHROME_UA,
@@ -22,19 +34,20 @@ function normalizeUrl(value) {
     return text;
 }
 
-function buildFallbackUrls(loginCode) {
+function buildFallbackUrls(loginCode, apiDomain = getApiDomain()) {
     const code = encodeURIComponent(String(loginCode || '').trim());
     if (!code) return [];
     return [
         `https://h5.qzone.qq.com/qqq/code/${code}?_proxy=1&from=ide`,
-        `https://q.qq.com/qqq/code/${code}?_proxy=1&from=ide`,
-        `https://q.qq.com/qqq/code/${code}?from=ide`,
+        `https://${apiDomain}/qqq/code/${code}?_proxy=1&from=ide`,
+        `https://${apiDomain}/qqq/code/${code}?from=ide`,
     ];
 }
 
-function resolveQrUrls(data, loginCode) {
+function resolveQrUrls(data, loginCode, options = {}) {
+    const apiDomain = String(options.apiDomain || getApiDomain()).trim() || 'q.qq.com';
     const candidates = [
-        ...buildFallbackUrls(loginCode),
+        ...buildFallbackUrls(loginCode, apiDomain),
         data && data.url,
         data && data.login_url,
         data && data.qr_url,
@@ -59,8 +72,9 @@ function resolveQrUrls(data, loginCode) {
 }
 
 async function requestLoginCode() {
-    const response = await axios.get('https://q.qq.com/ide/devtoolAuth/GetLoginCode', {
-        headers: getHeaders(),
+    const apiDomain = getApiDomain();
+    const response = await axios.get(buildApiUrl('/ide/devtoolAuth/GetLoginCode', apiDomain), {
+        headers: getHeaders(apiDomain),
     });
 
     const { code, data } = response.data || {};
@@ -68,7 +82,7 @@ async function requestLoginCode() {
         throw new Error('获取QQ扫码登录码失败');
     }
 
-    const { primaryUrl, backupUrls } = resolveQrUrls(data, data.code);
+    const { primaryUrl, backupUrls } = resolveQrUrls(data, data.code, { apiDomain });
     if (!primaryUrl) {
         throw new Error('获取到登录码但未解析出扫码链接');
     }
@@ -81,9 +95,10 @@ async function requestLoginCode() {
 }
 
 async function queryScanStatus(loginCode) {
+    const apiDomain = getApiDomain();
     const response = await axios.get(
-        `https://q.qq.com/ide/devtoolAuth/syncScanSateGetTicket?code=${encodeURIComponent(loginCode)}`,
-        { headers: getHeaders() }
+        `${buildApiUrl('/ide/devtoolAuth/syncScanSateGetTicket', apiDomain)}?code=${encodeURIComponent(loginCode)}`,
+        { headers: getHeaders(apiDomain) }
     );
 
     if (response.status !== 200) return { status: 'Error' };
@@ -98,10 +113,11 @@ async function queryScanStatus(loginCode) {
 }
 
 async function getAuthCode(ticket) {
+    const apiDomain = getApiDomain();
     const response = await axios.post(
-        'https://q.qq.com/ide/login',
+        buildApiUrl('/ide/login', apiDomain),
         { appid: FARM_APP_ID, ticket },
-        { headers: getHeaders() }
+        { headers: getHeaders(apiDomain) }
     );
 
     if (response.status !== 200 || !response.data || !response.data.code) {
@@ -111,13 +127,21 @@ async function getAuthCode(ticket) {
     return response.data.code;
 }
 
-function printQr(url, backupUrls = []) {
+function emitQrState(payload, emitQrEvent = emitUiEvent) {
+    emitQrEvent('qr', payload || {});
+}
+
+function printQr(url, backupUrls = [], options = {}) {
+    const header = String(options.header || '[扫码登录] 请用 QQ 扫描下方二维码确认登录:').trim();
+    const linkLabel = String(options.linkLabel || '[扫码登录] 打开链接扫码:').trim();
+    const backupLabel = String(options.backupLabel || '[扫码登录] 若出现 404，可尝试以下备用链接:').trim();
+
     console.log('');
-    console.log('[扫码登录] 请用 QQ 扫描下方二维码确认登录:');
+    console.log(header);
     qrcodeTerminal.generate(url, { small: true });
-    console.log(`[扫码登录] 打开链接扫码: ${url}`);
+    console.log(`${linkLabel} ${url}`);
     if (backupUrls.length > 0) {
-        console.log('[扫码登录] 若出现 404，可尝试以下备用链接:');
+        console.log(backupLabel);
         for (const alt of backupUrls.slice(0, 3)) {
             console.log(`  - ${alt}`);
         }
@@ -125,55 +149,127 @@ function printQr(url, backupUrls = []) {
     console.log('');
 }
 
-async function getQQFarmCodeByScan(options = {}) {
+async function waitForLoginCodeResult(options = {}) {
+    const loginCode = String(options.loginCode || '').trim();
+    const url = String(options.url || '').trim();
+    const backupUrls = Array.isArray(options.backupUrls) ? options.backupUrls : [];
     const pollIntervalMs = Number(options.pollIntervalMs) > 0 ? Number(options.pollIntervalMs) : 2000;
     const timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : 180000;
+    const waitingNoticeIntervalMs = Number(options.waitingNoticeIntervalMs) >= 0
+        ? Number(options.waitingNoticeIntervalMs)
+        : 15000;
+    const queryStatus = typeof options.queryStatus === 'function' ? options.queryStatus : queryScanStatus;
+    const exchangeTicket = typeof options.exchangeTicket === 'function' ? options.exchangeTicket : getAuthCode;
+    const emitQrEvent = typeof options.emitQrEvent === 'function' ? options.emitQrEvent : emitUiEvent;
+    const sleep = typeof options.sleep === 'function'
+        ? options.sleep
+        : (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const now = typeof options.now === 'function' ? options.now : () => Date.now();
+    const waitingTemplate = String(options.waitingMessage || '').trim();
 
-    const { loginCode, url, backupUrls } = await requestLoginCode();
-    printQr(url, backupUrls);
-    emitUiEvent('qr', {
-        phase: 'waiting',
-        qrUrl: url,
-        backupUrls,
-        message: backupUrls.length > 0 ? '若扫码跳 404，请尝试备用链接' : '',
-    });
+    if (!loginCode) {
+        throw new Error('loginCode is required');
+    }
 
-    const start = Date.now();
-    let lastWaitingNoticeTs = 0;
-    while (Date.now() - start < timeoutMs) {
-        const status = await queryScanStatus(loginCode);
+    const start = now();
+    let lastWaitingNoticeTs = start;
+    while (now() - start < timeoutMs) {
+        const status = await queryStatus(loginCode);
         if (status.status === 'OK') {
-            const authCode = await getAuthCode(status.ticket);
-            emitUiEvent('qr', { phase: 'confirmed', qrUrl: url, backupUrls });
+            const authCode = await exchangeTicket(status.ticket);
+            emitQrState({ phase: 'confirmed', qrUrl: url, backupUrls }, emitQrEvent);
             return authCode;
         }
         if (status.status === 'Used') {
-            emitUiEvent('qr', { phase: 'expired', qrUrl: url, backupUrls, message: '二维码已失效，请重试' });
+            emitQrState({ phase: 'expired', qrUrl: url, backupUrls, message: '二维码已失效，请重试' }, emitQrEvent);
             throw new Error('二维码已失效，请重试');
         }
         if (status.status === 'Error') {
-            emitUiEvent('qr', { phase: 'error', qrUrl: url, backupUrls, message: '扫码状态查询失败，请重试' });
+            emitQrState({ phase: 'error', qrUrl: url, backupUrls, message: '扫码状态查询失败，请重试' }, emitQrEvent);
             throw new Error('扫码状态查询失败，请重试');
         }
-        const now = Date.now();
-        if (now - lastWaitingNoticeTs >= 15000) {
-            lastWaitingNoticeTs = now;
-            const elapsedSec = Math.floor((now - start) / 1000);
-            emitUiEvent('qr', {
+
+        const ts = now();
+        if (ts - lastWaitingNoticeTs >= waitingNoticeIntervalMs) {
+            lastWaitingNoticeTs = ts;
+            const elapsedSec = Math.floor((ts - start) / 1000);
+            emitQrState({
                 phase: 'waiting',
                 qrUrl: url,
                 backupUrls,
-                message: `等待扫码中（${elapsedSec}s）`,
-            });
+                message: waitingTemplate || `等待扫码中（${elapsedSec}s）`,
+            }, emitQrEvent);
         }
-        await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+        await sleep(pollIntervalMs);
     }
 
-    emitUiEvent('qr', { phase: 'timeout', qrUrl: url, backupUrls, message: '扫码超时，请重试' });
+    emitQrState({ phase: 'timeout', qrUrl: url, backupUrls, message: '扫码超时，请重试' }, emitQrEvent);
     throw new Error('扫码超时，请重试');
+}
+
+async function getQQFarmCodeByScan(options = {}) {
+    const pollIntervalMs = Number(options.pollIntervalMs) > 0 ? Number(options.pollIntervalMs) : 2000;
+    const timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : 180000;
+    const relogin = Boolean(options.relogin);
+    const requestLoginCodeFn = typeof options.requestLoginCode === 'function'
+        ? options.requestLoginCode
+        : requestLoginCode;
+    const printQrFn = typeof options.printQrFn === 'function'
+        ? options.printQrFn
+        : printQr;
+    const onCodeReady = typeof options.onCodeReady === 'function'
+        ? options.onCodeReady
+        : null;
+
+    const { loginCode, url, backupUrls } = await requestLoginCodeFn();
+    if (onCodeReady) {
+        await onCodeReady({
+            loginCode,
+            url,
+            backupUrls,
+            relogin,
+        });
+    }
+    printQrFn(url, backupUrls, {
+        header: relogin
+            ? '[重登录] 账号已下线，请用 QQ 扫描下方二维码重新登录:'
+            : '[扫码登录] 请用 QQ 扫描下方二维码确认登录:',
+        linkLabel: relogin
+            ? '[重登录] 打开链接扫码:'
+            : '[扫码登录] 打开链接扫码:',
+        backupLabel: relogin
+            ? '[重登录] 若出现 404，可尝试以下备用链接:'
+            : '[扫码登录] 若出现 404，可尝试以下备用链接:',
+    });
+
+    emitQrState({
+        phase: 'waiting',
+        qrUrl: url,
+        backupUrls,
+        message: String(options.waitingMessage || '').trim()
+            || (relogin ? '账号已下线，请扫码重新登录' : (backupUrls.length > 0 ? '若扫码跳 404，请尝试备用链接' : '')),
+    }, typeof options.emitQrEvent === 'function' ? options.emitQrEvent : emitUiEvent);
+
+    return waitForLoginCodeResult({
+        loginCode,
+        url,
+        backupUrls,
+        pollIntervalMs,
+        timeoutMs,
+        waitingMessage: String(options.waitingMessage || '').trim(),
+        emitQrEvent: options.emitQrEvent,
+        sleep: options.sleep,
+        now: options.now,
+        queryStatus: options.queryStatus,
+        exchangeTicket: options.exchangeTicket,
+    });
 }
 
 module.exports = {
     getQQFarmCodeByScan,
     resolveQrUrls,
+    requestLoginCode,
+    queryScanStatus,
+    getAuthCode,
+    waitForLoginCodeResult,
 };

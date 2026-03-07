@@ -107,6 +107,25 @@ class SessionManager extends EventEmitter {
         return runner.applyAccountSettings(accountSettings || {});
     }
 
+    applyQrLoginSettings(accountId, qrLoginSettings) {
+        const id = normalizeAccountId(accountId);
+        const runner = this.runners.get(id);
+        if (!runner) return false;
+        if (typeof runner.applyQrLoginSettings !== 'function') return false;
+        return runner.applyQrLoginSettings(qrLoginSettings || {});
+    }
+
+    applyQrLoginSettingsToAll(qrLoginSettings) {
+        let applied = 0;
+        for (const runner of this.runners.values()) {
+            if (typeof runner.applyQrLoginSettings !== 'function') continue;
+            if (runner.applyQrLoginSettings(qrLoginSettings || {})) {
+                applied++;
+            }
+        }
+        return applied;
+    }
+
     async listFriends(accountId) {
         const id = normalizeAccountId(accountId);
         const runner = this.runners.get(id);
@@ -141,6 +160,42 @@ class SessionManager extends EventEmitter {
             throw new Error('runner rpc unavailable');
         }
         return runner.callRpc('farm.lands', {}, 10000);
+    }
+
+    async getBag(accountId) {
+        const id = normalizeAccountId(accountId);
+        const runner = this.runners.get(id);
+        if (!runner || !runner.isRunning()) {
+            throw new Error('session not running');
+        }
+        if (typeof runner.callRpc !== 'function') {
+            throw new Error('runner rpc unavailable');
+        }
+        return runner.callRpc('bag.items', {}, 10000);
+    }
+
+    async getDailyGifts(accountId) {
+        const id = normalizeAccountId(accountId);
+        const runner = this.runners.get(id);
+        if (!runner || !runner.isRunning()) {
+            throw new Error('session not running');
+        }
+        if (typeof runner.callRpc !== 'function') {
+            throw new Error('runner rpc unavailable');
+        }
+        return runner.callRpc('task.dailyGifts', {}, 12000);
+    }
+
+    async claimDailyGift(accountId, payload = {}) {
+        const id = normalizeAccountId(accountId);
+        const runner = this.runners.get(id);
+        if (!runner || !runner.isRunning()) {
+            throw new Error('session not running');
+        }
+        if (typeof runner.callRpc !== 'function') {
+            throw new Error('runner rpc unavailable');
+        }
+        return runner.callRpc('task.dailyGifts.claim', payload || {}, 20000);
     }
 
     #bindRunner(accountId, runner) {

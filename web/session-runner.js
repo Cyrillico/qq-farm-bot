@@ -187,6 +187,21 @@ class SessionRunner extends EventEmitter {
         }
     }
 
+    applyQrLoginSettings(qrLoginSettings) {
+        if (!this.isRunning() || !this.child || !this.child.connected) {
+            return false;
+        }
+        try {
+            this.child.send({
+                type: 'settings:qrLogin',
+                payload: qrLoginSettings || {},
+            });
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
     callRpc(method, payload = {}, timeoutMs = 8000) {
         const child = this.child;
         if (!this.isRunning() || !child || !child.connected) {

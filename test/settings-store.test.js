@@ -11,8 +11,10 @@ const {
     validateBarkSettings,
     validateUiSettings,
     validateAccountFeatureSettings,
+    validateQrLoginSettings,
     loadSettings,
     saveSettings,
+    getPersistedAccounts,
 } = require('../web/settings-store');
 
 test('validateBarkSettings accepts complete valid bark config', () => {
@@ -172,3 +174,116 @@ test('validateAccountFeatureSettings supports full and partial checks', () => {
     });
     assert.equal(goodFull.ok, true);
 });
+
+
+test('default settings should include persisted accounts map', () => {
+    const defaults = getDefaultSettings();
+    assert.deepEqual(defaults.accounts, {});
+});
+
+test('saveSettings and loadSettings roundtrip persisted account payloads', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qq-farm-ui-settings-accounts-'));
+    const tempFile = path.join(tempDir, 'settings.json');
+    const defaults = getDefaultSettings();
+    const next = {
+        ...defaults,
+        accounts: {
+            'qq-main': {
+                mode: 'run',
+                platform: 'qq',
+                code: 'abc123',
+                useQr: true,
+                interval: '5',
+                friendInterval: '2',
+                autoStart: true,
+            },
+        },
+    };
+
+    saveSettings(tempFile, next);
+    const loaded = loadSettings(tempFile);
+    const accounts = getPersistedAccounts(loaded);
+    assert.equal(accounts['qq-main'].platform, 'qq');
+    assert.equal(accounts['qq-main'].code, 'abc123');
+    assert.equal(accounts['qq-main'].useQr, true);
+    assert.equal(accounts['qq-main'].interval, '5');
+    assert.equal(accounts['qq-main'].friendInterval, '2');
+    assert.equal(accounts['qq-main'].autoStart, true);
+});
+
+test('validateAccountFeatureSettings supports extended strategy fields', () => {
+    const good = validateAccountFeatureSettings({
+        farmEnabled: true,
+        friendEnabled: true,
+        taskEnabled: true,
+        sellEnabled: true,
+        forceLowestLevelCrop: false,
+        helpOnlyWithExp: true,
+        enablePutBadThings: false,
+        autoUnlockLands: true,
+        autoUpgradeLands: true,
+        autoFertilize: true,
+        autoBuyFertilizer: true,
+        taskActiveEnabled: true,
+        giftEnabled: true,
+        friendStealEnabled: true,
+        friendHelpEnabled: true,
+        vipGiftEnabled: true,
+        monthCardEnabled: true,
+        openServerGiftEnabled: true,
+        plantingStrategy: 'preferred',
+        preferredSeedId: 20003,
+    });
+    assert.equal(good.ok, true);
+
+    const bad = validateAccountFeatureSettings({
+        plantingStrategy: 'weird',
+        preferredSeedId: 'x',
+        friendStealEnabled: 'yes',
+    }, { allowPartial: true });
+    assert.equal(bad.ok, false);
+    assert.ok(bad.errors.some((e) => e.includes('plantingStrategy')));
+    assert.ok(bad.errors.some((e) => e.includes('preferredSeedId')));
+    assert.ok(bad.errors.some((e) => e.includes('friendStealEnabled')));
+});
+
+test('saveSettings and loadSettings roundtrip qr login config', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qq-farm-ui-settings-qr-'));
+    const tempFile = path.join(tempDir, 'settings.json');
+    const defaults = getDefaultSettings();
+    const next = {
+        ...defaults,
+        qrLogin: {
+            apiDomain: 'q.qq.com',
+        },
+        accountFeatures: {
+            'qq-main': {
+                ...defaultAccountFeatureSettings(),
+                plantingStrategy: 'preferred',
+                preferredSeedId: 20003,
+                friendStealEnabled: false,
+                friendHelpEnabled: true,
+                vipGiftEnabled: false,
+                monthCardEnabled: false,
+                openServerGiftEnabled: true,
+            },
+        },
+    };
+
+    saveSettings(tempFile, next);
+    const loaded = loadSettings(tempFile);
+    assert.equal(loaded.qrLogin.apiDomain, 'q.qq.com');
+    const account = getAccountFeatureSettings(loaded, 'qq-main');
+    assert.equal(account.plantingStrategy, 'preferred');
+    assert.equal(account.preferredSeedId, 20003);
+    assert.equal(account.friendStealEnabled, false);
+    assert.equal(account.vipGiftEnabled, false);
+});
+
+test('validateQrLoginSettings checks apiDomain shape', () => {
+    const good = validateQrLoginSettings({ apiDomain: 'q.qq.com' });
+    assert.equal(good.ok, true);
+    const bad = validateQrLoginSettings({ apiDomain: '' });
+    assert.equal(bad.ok, false);
+});
+

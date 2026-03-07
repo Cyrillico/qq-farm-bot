@@ -19,6 +19,11 @@ let serverSeq = 0;
 let heartbeatTimer = null;
 let pendingCallbacks = new Map();
 let manualClose = false;
+let reconnectTimer = null;
+let savedLoginCallback = null;
+let savedCode = '';
+
+const AUTO_RECONNECT_DELAY_MS = 5000;
 
 // ============ 用户状态 (登录后设置) ============
 const userState = {
@@ -30,6 +35,29 @@ const userState = {
 };
 
 function getUserState() { return userState; }
+
+function clearReconnectTimer() {
+    if (!reconnectTimer) return;
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+}
+
+function canAutoReconnect() {
+    return !manualClose && Boolean(savedCode) && typeof savedLoginCallback === 'function';
+}
+
+function scheduleReconnect(reason = 'unknown') {
+    if (!canAutoReconnect()) return false;
+    if (reconnectTimer) return true;
+    networkEvents.emit('reconnecting', { reason, delayMs: AUTO_RECONNECT_DELAY_MS });
+    reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        if (manualClose) return;
+        log('系统', '[WS] 尝试自动重连...');
+        reconnect();
+    }, AUTO_RECONNECT_DELAY_MS);
+    return true;
+}
 
 // ============ 消息编解码 ============
 function encodeMsg(serviceName, methodName, bodyBytes) {
@@ -377,6 +405,7 @@ let heartbeatMissCount = 0;
 
 function startHeartbeat() {
     if (heartbeatTimer) clearInterval(heartbeatTimer);
+    clearReconnectTimer();
     lastHeartbeatResponse = Date.now();
     heartbeatMissCount = 0;
     
@@ -395,6 +424,7 @@ function startHeartbeat() {
                     try { cb(new Error('连接超时，已清理')); } catch (e) {}
                 });
                 pendingCallbacks.clear();
+                scheduleReconnect('heartbeat_timeout');
             }
         }
         
@@ -416,7 +446,11 @@ function startHeartbeat() {
 
 // ============ WebSocket 连接 ============
 function connect(code, onLoginSuccess) {
-    const url = `${CONFIG.serverUrl}?platform=${CONFIG.platform}&os=${CONFIG.os}&ver=${CONFIG.clientVersion}&code=${code}&openID=`;
+    savedLoginCallback = onLoginSuccess;
+    if (code) savedCode = String(code);
+    clearReconnectTimer();
+    const loginCode = savedCode || String(code || '');
+    const url = `${CONFIG.serverUrl}?platform=${CONFIG.platform}&os=${CONFIG.os}&ver=${CONFIG.clientVersion}&code=${loginCode}&openID=`;
     manualClose = false;
 
     ws = new WebSocket(url, {
@@ -450,6 +484,9 @@ function connect(code, onLoginSuccess) {
             manual: manualClose,
         });
         cleanup();
+        if (!manualClose) {
+            scheduleReconnect('ws_closed');
+        }
     });
 
     ws.on('error', (err) => {
@@ -459,6 +496,21 @@ function connect(code, onLoginSuccess) {
             manual: manualClose,
         });
     });
+}
+
+function reconnect(newCode) {
+    const nextCode = String(newCode || savedCode || '').trim();
+    if (!nextCode) return false;
+    clearReconnectTimer();
+    cleanup();
+    if (ws) {
+        try { ws.removeAllListeners(); } catch (e) { }
+        try { ws.close(); } catch (e) { }
+        ws = null;
+    }
+    userState.gid = 0;
+    connect(nextCode, savedLoginCallback);
+    return true;
 }
 
 function cleanup() {
@@ -474,10 +526,13 @@ function cleanup() {
 }
 
 function getWs() { return ws; }
-function markManualClose() { manualClose = true; }
+function markManualClose() {
+    manualClose = true;
+    clearReconnectTimer();
+}
 
 module.exports = {
-    connect, cleanup, getWs,
+    connect, reconnect, cleanup, getWs,
     sendMsg, sendMsgAsync,
     getUserState,
     networkEvents,

@@ -7,10 +7,16 @@ const { types } = require('./proto');
 const { sendMsgAsync, networkEvents } = require('./network');
 const { toLong, toNum, log, logWarn, sleep } = require('./utils');
 const { getItemName } = require('./gameConfig');
+const { performDailyVipGift, getVipDailyState, peekVipDailyGiftState } = require('./qqvip');
+const { performDailyMonthCardGift, getMonthCardDailyState, peekMonthCardState } = require('./monthcard');
+const { performDailyOpenServerGift, getOpenServerDailyState, peekOpenServerState } = require('./openserver');
 
 const DEFAULT_TASK_RUNTIME_SETTINGS = {
     taskActiveEnabled: true,
     giftEnabled: true,
+    vipGiftEnabled: true,
+    monthCardEnabled: true,
+    openServerGiftEnabled: true,
 };
 let taskRuntimeSettings = { ...DEFAULT_TASK_RUNTIME_SETTINGS };
 let activeClaimSupport = 'unknown';
@@ -27,6 +33,9 @@ function updateTaskRuntimeSettings(patch = {}) {
     };
     taskRuntimeSettings.taskActiveEnabled = Boolean(taskRuntimeSettings.taskActiveEnabled);
     taskRuntimeSettings.giftEnabled = Boolean(taskRuntimeSettings.giftEnabled);
+    taskRuntimeSettings.vipGiftEnabled = Boolean(taskRuntimeSettings.vipGiftEnabled);
+    taskRuntimeSettings.monthCardEnabled = Boolean(taskRuntimeSettings.monthCardEnabled);
+    taskRuntimeSettings.openServerGiftEnabled = Boolean(taskRuntimeSettings.openServerGiftEnabled);
     return { ...taskRuntimeSettings };
 }
 
@@ -219,6 +228,241 @@ function getRewardSummary(items) {
     return summary.join('/');
 }
 
+function buildDailyGiftOverview(input = {}) {
+    const taskInfo = (input && input.taskInfo && typeof input.taskInfo === 'object') ? input.taskInfo : {};
+    const bagItems = Array.isArray(input && input.bagItems) ? input.bagItems : [];
+    const serviceStates = (input && input.serviceStates && typeof input.serviceStates === 'object') ? input.serviceStates : {};
+    const settings = {
+        taskEnabled: true,
+        taskActiveEnabled: true,
+        giftEnabled: true,
+        vipGiftEnabled: true,
+        monthCardEnabled: true,
+        openServerGiftEnabled: true,
+        ...((input && input.settings) || {}),
+    };
+
+    const allTasks = [
+        ...(Array.isArray(taskInfo.growth_tasks) ? taskInfo.growth_tasks : []),
+        ...(Array.isArray(taskInfo.daily_tasks) ? taskInfo.daily_tasks : []),
+        ...(Array.isArray(taskInfo.tasks) ? taskInfo.tasks : []),
+    ];
+    const normalizedBagItems = bagItems.map((item) => ({
+        id: toNum(item && item.id),
+        count: toNum(item && item.count),
+        name: String((item && item.name) || getItemName(toNum(item && item.id)) || ''),
+    }));
+
+    const claimableTasks = settings.taskEnabled ? analyzeTaskList(allTasks) : [];
+    const claimableActives = settings.taskActiveEnabled ? pickClaimableActives(taskInfo.actives || []) : [];
+    const bagGifts = settings.giftEnabled ? pickGiftItems(normalizedBagItems) : [];
+    const bagGiftCount = bagGifts.reduce((sum, item) => sum + Math.max(0, toNum(item.count)), 0);
+
+    const vip = { ...(serviceStates.vip || {}) };
+    const monthCard = { ...(serviceStates.monthCard || {}) };
+    const openServer = { ...(serviceStates.openServer || {}) };
+
+    const gifts = [
+        {
+            key: 'task_claim',
+            label: '任务奖励',
+            enabled: Boolean(settings.taskEnabled),
+            pendingCount: claimableTasks.length,
+            tasks: claimableTasks.map((task) => ({
+                id: toNum(task.id),
+                desc: String(task.desc || `任务#${toNum(task.id)}`),
+                shareMultiple: toNum(task.shareMultiple),
+            })),
+        },
+        {
+            key: 'task_active',
+            label: '活跃礼包',
+            enabled: Boolean(settings.taskActiveEnabled),
+            pendingCount: claimableActives.length,
+            activeIds: [...claimableActives],
+        },
+        {
+            key: 'bag_gifts',
+            label: '背包礼包',
+            enabled: Boolean(settings.giftEnabled),
+            pendingCount: bagGiftCount,
+            items: bagGifts,
+        },
+        {
+            key: 'vip_daily_gift',
+            label: 'VIP 日礼包',
+            enabled: Boolean(settings.vipGiftEnabled),
+            pendingCount: vip.canClaim ? 1 : 0,
+            canClaim: Boolean(vip.canClaim),
+            hasGift: Boolean(vip.hasGift),
+            doneToday: Boolean(vip.doneToday),
+            result: String(vip.result || ''),
+            lastClaimAt: Number(vip.lastClaimAt || 0),
+        },
+        {
+            key: 'month_card_gift',
+            label: '月卡礼包',
+            enabled: Boolean(settings.monthCardEnabled),
+            pendingCount: monthCard.hasClaimable ? 1 : 0,
+            hasCard: Boolean(monthCard.hasCard),
+            hasClaimable: Boolean(monthCard.hasClaimable),
+            doneToday: Boolean(monthCard.doneToday),
+            result: String(monthCard.result || ''),
+            lastClaimAt: Number(monthCard.lastClaimAt || 0),
+        },
+        {
+            key: 'open_server_gift',
+            label: '开服红包',
+            enabled: Boolean(settings.openServerGiftEnabled),
+            pendingCount: openServer.hasClaimable ? 1 : 0,
+            hasClaimable: Boolean(openServer.hasClaimable),
+            doneToday: Boolean(openServer.doneToday),
+            result: String(openServer.result || ''),
+            lastClaimAt: Number(openServer.lastClaimAt || 0),
+        },
+    ];
+
+    return {
+        ts: Date.now(),
+        gifts,
+        summary: {
+            totalPending: gifts.filter((item) => item.enabled).reduce((sum, item) => sum + Math.max(0, toNum(item.pendingCount)), 0),
+            enabledCount: gifts.filter((item) => item.enabled).length,
+        },
+    };
+}
+
+async function loadGiftServiceState(cachedStateFn, peekStateFn) {
+    const base = typeof cachedStateFn === 'function' ? cachedStateFn() : {};
+    if (typeof peekStateFn !== 'function') return { ...base };
+    try {
+        return {
+            ...base,
+            ...(await peekStateFn()),
+        };
+    } catch (e) {
+        return {
+            ...base,
+            error: e && e.message ? e.message : String(e),
+        };
+    }
+}
+
+async function getDailyGiftOverview() {
+    const reply = await getTaskInfo();
+    const taskInfo = (reply && reply.task_info) || {};
+    const bagReply = await getBag();
+    const bagItems = getBagItems(bagReply).map((item) => ({
+        id: toNum(item.id),
+        count: toNum(item.count),
+        uid: toNum(item.uid),
+        name: getItemName(toNum(item.id)),
+    }));
+    const settings = getTaskRuntimeSettings();
+    const serviceStates = {
+        vip: await loadGiftServiceState(getVipDailyState, settings.vipGiftEnabled ? peekVipDailyGiftState : null),
+        monthCard: await loadGiftServiceState(getMonthCardDailyState, settings.monthCardEnabled ? peekMonthCardState : null),
+        openServer: await loadGiftServiceState(getOpenServerDailyState, settings.openServerGiftEnabled ? peekOpenServerState : null),
+    };
+    return buildDailyGiftOverview({
+        taskInfo,
+        bagItems,
+        serviceStates,
+        settings,
+    });
+}
+
+async function runManualDailyGiftAction(key, context = {}) {
+    const giftKey = String(key || '').trim();
+    const taskInfo = (context && context.taskInfo) || {};
+    const settings = {
+        ...getTaskRuntimeSettings(),
+        ...((context && context.settings) || {}),
+    };
+    const bagItems = Array.isArray(context && context.bagItems) ? context.bagItems : [];
+    const doClaimTasksFromList = typeof context.claimTasksFromList === 'function' ? context.claimTasksFromList : claimTasksFromList;
+    const doClaimActiveRewards = typeof context.claimActiveRewards === 'function' ? context.claimActiveRewards : claimActiveRewards;
+    const doOpenGiftPacks = typeof context.openGiftPacks === 'function' ? context.openGiftPacks : openGiftPacks;
+    const doVip = typeof context.performDailyVipGift === 'function' ? context.performDailyVipGift : performDailyVipGift;
+    const doMonth = typeof context.performDailyMonthCardGift === 'function' ? context.performDailyMonthCardGift : performDailyMonthCardGift;
+    const doOpenServer = typeof context.performDailyOpenServerGift === 'function' ? context.performDailyOpenServerGift : performDailyOpenServerGift;
+    const buildOverview = typeof context.buildOverview === 'function'
+        ? context.buildOverview
+        : async () => getDailyGiftOverview();
+
+    async function executeSingle(actionKey) {
+        if (actionKey === 'task_claim') {
+            const allTasks = [
+                ...(Array.isArray(taskInfo.growth_tasks) ? taskInfo.growth_tasks : []),
+                ...(Array.isArray(taskInfo.daily_tasks) ? taskInfo.daily_tasks : []),
+                ...(Array.isArray(taskInfo.tasks) ? taskInfo.tasks : []),
+            ];
+            await doClaimTasksFromList(analyzeTaskList(allTasks));
+            return;
+        }
+        if (actionKey === 'task_active') {
+            await doClaimActiveRewards(taskInfo);
+            return;
+        }
+        if (actionKey === 'bag_gifts') {
+            await doOpenGiftPacks(bagItems);
+            return;
+        }
+        if (actionKey === 'vip_daily_gift') {
+            await doVip(true);
+            return;
+        }
+        if (actionKey === 'month_card_gift') {
+            await doMonth(true);
+            return;
+        }
+        if (actionKey === 'open_server_gift') {
+            await doOpenServer(true);
+            return;
+        }
+        throw new Error(`unsupported daily gift key: ${actionKey}`);
+    }
+
+    if (giftKey === 'all') {
+        const orderedKeys = [];
+        if (settings.taskEnabled) orderedKeys.push('task_claim');
+        if (settings.taskActiveEnabled) orderedKeys.push('task_active');
+        if (settings.giftEnabled) orderedKeys.push('bag_gifts');
+        if (settings.vipGiftEnabled) orderedKeys.push('vip_daily_gift');
+        if (settings.monthCardEnabled) orderedKeys.push('month_card_gift');
+        if (settings.openServerGiftEnabled) orderedKeys.push('open_server_gift');
+        for (const actionKey of orderedKeys) {
+            await executeSingle(actionKey);
+        }
+    } else {
+        await executeSingle(giftKey);
+    }
+
+    return {
+        ok: true,
+        key: giftKey,
+        overview: await buildOverview({ taskInfo, bagItems, settings }),
+    };
+}
+
+async function claimDailyGiftByKey(key) {
+    const reply = await getTaskInfo();
+    const taskInfo = (reply && reply.task_info) || {};
+    const bagReply = await getBag();
+    const bagItems = getBagItems(bagReply).map((item) => ({
+        id: toNum(item.id),
+        count: toNum(item.count),
+        uid: toNum(item.uid),
+        name: getItemName(toNum(item.id)),
+    }));
+    return runManualDailyGiftAction(key, {
+        taskInfo,
+        bagItems,
+        settings: getTaskRuntimeSettings(),
+        buildOverview: async () => getDailyGiftOverview(),
+    });
+}
+
 async function claimActiveRewards(taskInfo) {
     if (!taskRuntimeSettings.taskActiveEnabled) return;
     if (!taskInfo) return;
@@ -305,6 +549,15 @@ async function checkAndClaimTasks() {
             await claimActiveRewards(taskInfo);
         }
         await openGiftPacks();
+        if (taskRuntimeSettings.vipGiftEnabled) {
+            await performDailyVipGift();
+        }
+        if (taskRuntimeSettings.monthCardEnabled) {
+            await performDailyMonthCardGift();
+        }
+        if (taskRuntimeSettings.openServerGiftEnabled) {
+            await performDailyOpenServerGift();
+        }
     } catch (e) {
         logWarn('任务', `检查任务失败: ${e.message}`);
     } finally {
@@ -398,9 +651,13 @@ module.exports = {
     cleanupTaskSystem,
     updateTaskRuntimeSettings,
     getTaskRuntimeSettings,
+    getDailyGiftOverview,
+    claimDailyGiftByKey,
     __private: {
         analyzeTaskList,
         pickClaimableActives,
         pickGiftItems,
+        buildDailyGiftOverview,
+        runManualDailyGiftAction,
     },
 };

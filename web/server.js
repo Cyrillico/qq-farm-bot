@@ -14,7 +14,9 @@ const {
     validateBarkSettings,
     validateUiSettings,
     validateAccountFeatureSettings,
+    validateQrLoginSettings,
     getAccountFeatureSettings,
+    getPersistedAccounts,
     mergeSettings,
 } = require('./settings-store');
 const {
@@ -39,7 +41,9 @@ const {
     normalizeIp,
     maskBarkSettings,
 } = require('./security');
-const { updateRuntimeBarkSettings } = require('../src/runtimeSettings');
+const { updateRuntimeBarkSettings, updateRuntimeQrLoginSettings } = require('../src/runtimeSettings');
+const { getPlantRankings } = require('../src/analytics');
+const { getSeedOptions } = require('../src/seedsCatalog');
 const { pushBarkDetailed } = require('../src/bark');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -203,12 +207,15 @@ function startServer(options = {}) {
         windowMs: env.WEB_UI_LOGIN_RATE_LIMIT_WINDOW_MS,
     });
     const stateStore = createStateStore({ maxLogs: 5000 });
-    const sessionManager = new SessionManager({ rootDir: path.join(__dirname, '..') });
+    const sessionManager = typeof options.createSessionManager === 'function'
+        ? options.createSessionManager()
+        : new SessionManager({ rootDir: path.join(__dirname, '..') });
     let settings = loadSettings(settingsPath);
     if (!fs.existsSync(settingsPath)) {
         settings = saveSettings(settingsPath, settings);
     }
     updateRuntimeBarkSettings(settings.bark);
+    updateRuntimeQrLoginSettings(settings.qrLogin);
     let statsPersistTimer = null;
 
     function loadPersistedStats() {
@@ -258,6 +265,102 @@ function startServer(options = {}) {
     const persistedStatsRet = loadPersistedStats();
 
     const sseClients = new Set();
+
+    function getPersistedAccountsSnapshot() {
+        return getPersistedAccounts(settings);
+    }
+
+    function publishPersistedAccounts() {
+        publish('settings', { scope: 'accounts', accounts: getPersistedAccountsSnapshot() });
+    }
+
+    function persistRunAccount(accountId, payload = {}, options = {}) {
+        const id = normalizeAccountId(accountId);
+        if (!id) return null;
+        const currentAccounts = getPersistedAccountsSnapshot();
+        const current = currentAccounts[id] || null;
+        const next = {
+            ...(current || {}),
+            mode: 'run',
+            platform: payload.platform,
+            code: payload.code,
+            useQr: payload.useQr,
+            interval: payload.interval,
+            friendInterval: payload.friendInterval,
+            autoStart: Object.prototype.hasOwnProperty.call(options, 'autoStart')
+                ? Boolean(options.autoStart)
+                : (current ? Boolean(current.autoStart) : true),
+        };
+        settings = saveSettings(settingsPath, mergeSettings(settings, {
+            accounts: {
+                [id]: next,
+            },
+        }));
+        return getPersistedAccountsSnapshot()[id] || null;
+    }
+
+    function updatePersistedAccountAutoStart(accountId, autoStart) {
+        const id = normalizeAccountId(accountId);
+        if (!id) return null;
+        const currentAccounts = getPersistedAccountsSnapshot();
+        if (!currentAccounts[id]) return null;
+        settings = saveSettings(settingsPath, mergeSettings(settings, {
+            accounts: {
+                [id]: {
+                    ...currentAccounts[id],
+                    autoStart: Boolean(autoStart),
+                },
+            },
+        }));
+        return getPersistedAccountsSnapshot()[id] || null;
+    }
+
+    function deletePersistedAccount(accountId) {
+        const id = normalizeAccountId(accountId);
+        if (!id) return false;
+        const currentAccounts = getPersistedAccountsSnapshot();
+        const nextAccounts = { ...currentAccounts };
+        const hadAccount = Boolean(nextAccounts[id]);
+        delete nextAccounts[id];
+
+        const nextAccountFeatures = { ...((settings && settings.accountFeatures) || {}) };
+        delete nextAccountFeatures[id];
+
+        settings = saveSettings(settingsPath, {
+            ...settings,
+            accounts: nextAccounts,
+            accountFeatures: nextAccountFeatures,
+        });
+        return hadAccount;
+    }
+
+    function restorePersistedAccounts() {
+        const persistedAccounts = getPersistedAccountsSnapshot();
+        for (const accountId of Object.keys(persistedAccounts)) {
+            stateStore.ensureAccount(accountId);
+        }
+        for (const [accountId, payload] of Object.entries(persistedAccounts)) {
+            if (!payload || !payload.autoStart) continue;
+            try {
+                sessionManager.start(accountId, {
+                    accountId,
+                    mode: 'run',
+                    platform: payload.platform,
+                    code: payload.code,
+                    useQr: payload.useQr,
+                    interval: payload.interval,
+                    friendInterval: payload.friendInterval,
+                });
+            } catch (e) {
+                stateStore.setSession(accountId, {
+                    status: 'error',
+                    pid: null,
+                    stoppedAt: Date.now(),
+                    lastError: e && e.message ? e.message : String(e),
+                });
+            }
+        }
+    }
 
     function publish(type, payload, accountId) {
         const frame = {
@@ -315,6 +418,7 @@ function startServer(options = {}) {
         publish('process', stateStore.getAccountSnapshot(accountId).session, accountId);
         publishStats(accountId);
         sessionManager.applyBarkSettings(accountId, settings.bark);
+        sessionManager.applyQrLoginSettings(accountId, settings.qrLogin);
         sessionManager.applyAccountSettings(accountId, getAccountFeatureSettings(settings, accountId));
         appendLog(accountId, {
             level: 'info',
@@ -420,6 +524,8 @@ function startServer(options = {}) {
             action: '',
         });
     });
+
+    restorePersistedAccounts();
 
     function isSecureRequest(req) {
         if (req.socket && req.socket.encrypted) return true;
@@ -598,7 +704,12 @@ function startServer(options = {}) {
             return sendJson(res, 200, {
                 state: stateStore.getSnapshot(),
                 stats: stateStore.getStatsSnapshot(),
-                settings: { bark: maskBarkSettings(settings.bark), ui: settings.ui },
+                settings: {
+                    bark: maskBarkSettings(settings.bark),
+                    ui: settings.ui,
+                    accounts: getPersistedAccountsSnapshot(),
+                    qrLogin: settings.qrLogin,
+                },
                 meta: { host, port },
                 persistedStats: persistedStatsRet,
             });
@@ -643,6 +754,10 @@ function startServer(options = {}) {
                 const accountId = normalizeAccountId(body.accountId || 'default');
                 stateStore.ensureAccount(accountId);
                 const started = sessionManager.start(accountId, body || {});
+                if (String((body && body.mode) || 'run').trim() === 'run') {
+                    persistRunAccount(accountId, body || {}, { autoStart: true });
+                    publishPersistedAccounts();
+                }
                 return sendJson(res, 200, { ok: true, accountId, session: started });
             } catch (e) {
                 return sendJson(res, 400, { ok: false, error: e.message });
@@ -655,6 +770,9 @@ function startServer(options = {}) {
                 const accountId = body.accountId ? normalizeAccountId(body.accountId) : '';
                 if (accountId) {
                     const stopped = await sessionManager.stop(accountId);
+                    if (updatePersistedAccountAutoStart(accountId, false)) {
+                        publishPersistedAccounts();
+                    }
                     return sendJson(res, 200, { ok: true, accountId, stopped });
                 }
                 const result = await sessionManager.stopAll();
@@ -674,10 +792,12 @@ function startServer(options = {}) {
                 const accountId = normalizeAccountId(rawId);
                 await sessionManager.deleteAccount(accountId);
                 const removed = stateStore.deleteAccount(accountId);
+                deletePersistedAccount(accountId);
                 if (removed) {
                     publish('accountDeleted', { accountId }, accountId);
                     publishStats();
                 }
+                publishPersistedAccounts();
                 return sendJson(res, 200, { ok: true, accountId, removed });
             } catch (e) {
                 return sendJson(res, 500, { ok: false, error: e.message });
@@ -789,6 +909,77 @@ function startServer(options = {}) {
             }
         }
 
+        if (req.method === 'GET' && pathname === '/api/bag') {
+            const rawAccountId = String(reqUrl.searchParams.get('accountId') || '').trim();
+            if (!rawAccountId) {
+                return sendJson(res, 400, { ok: false, error: 'accountId is required' });
+            }
+            const accountId = normalizeAccountId(rawAccountId);
+            try {
+                const data = await sessionManager.getBag(accountId);
+                return sendJson(res, 200, { ok: true, data, accountId });
+            } catch (e) {
+                if (/session not running|runner rpc unavailable/i.test(String(e.message || ''))) {
+                    return sendJson(res, 409, { ok: false, error: e.message });
+                }
+                return sendJson(res, 500, { ok: false, error: e.message });
+            }
+        }
+
+        if (req.method === 'GET' && pathname === '/api/daily-gifts') {
+            const rawAccountId = String(reqUrl.searchParams.get('accountId') || '').trim();
+            if (!rawAccountId) {
+                return sendJson(res, 400, { ok: false, error: 'accountId is required' });
+            }
+            const accountId = normalizeAccountId(rawAccountId);
+            try {
+                const data = await sessionManager.getDailyGifts(accountId);
+                return sendJson(res, 200, { ok: true, data, accountId });
+            } catch (e) {
+                if (/session not running|runner rpc unavailable/i.test(String(e.message || ''))) {
+                    return sendJson(res, 409, { ok: false, error: e.message });
+                }
+                return sendJson(res, 500, { ok: false, error: e.message });
+            }
+        }
+
+        if (req.method === 'GET' && pathname === '/api/analytics') {
+            try {
+                const sortBy = String(reqUrl.searchParams.get('sort') || 'exp').trim() || 'exp';
+                const data = getPlantRankings(sortBy);
+                return sendJson(res, 200, { ok: true, data, sortBy });
+            } catch (e) {
+                return sendJson(res, 500, { ok: false, error: e.message });
+            }
+        }
+
+        if (req.method === 'GET' && pathname === '/api/seeds') {
+            try {
+                return sendJson(res, 200, { ok: true, data: getSeedOptions() });
+            } catch (e) {
+                return sendJson(res, 500, { ok: false, error: e.message });
+            }
+        }
+
+        if (req.method === 'POST' && pathname === '/api/daily-gifts/claim') {
+            try {
+                const body = await readJsonBody(req);
+                const rawAccountId = String(body.accountId || '').trim();
+                const key = String(body.key || '').trim();
+                if (!rawAccountId || !key) {
+                    return sendJson(res, 400, { ok: false, error: 'accountId and key are required' });
+                }
+                const accountId = normalizeAccountId(rawAccountId);
+                const data = await sessionManager.claimDailyGift(accountId, { key });
+                return sendJson(res, 200, { ok: true, data, accountId });
+            } catch (e) {
+                if (/session not running|runner rpc unavailable/i.test(String(e.message || ''))) {
+                    return sendJson(res, 409, { ok: false, error: e.message });
+                }
+                return sendJson(res, 500, { ok: false, error: e.message });
+            }
+        }
+
         if (req.method === 'GET' && pathname === '/api/settings/bark') {
             return sendJson(res, 200, { bark: settings.bark });
         }
@@ -849,6 +1040,28 @@ function startServer(options = {}) {
                     reason: result && result.reason ? result.reason : '',
                     detail: result && result.detail ? result.detail : '',
                 });
+            } catch (e) {
+                return sendJson(res, 500, { ok: false, error: e.message });
+            }
+        }
+
+        if (req.method === 'GET' && pathname === '/api/settings/qr-login') {
+            return sendJson(res, 200, { ok: true, qrLogin: settings.qrLogin });
+        }
+
+        if (req.method === 'PUT' && pathname === '/api/settings/qr-login') {
+            try {
+                const body = await readJsonBody(req);
+                const merged = mergeSettings(settings, { qrLogin: body || {} });
+                const check = validateQrLoginSettings(merged.qrLogin);
+                if (!check.ok) {
+                    return sendJson(res, 400, { ok: false, errors: check.errors });
+                }
+                settings = saveSettings(settingsPath, merged);
+                updateRuntimeQrLoginSettings(settings.qrLogin);
+                sessionManager.applyQrLoginSettingsToAll(settings.qrLogin);
+                publish('settings', { scope: 'qrLogin', qrLogin: settings.qrLogin });
+                return sendJson(res, 200, { ok: true, qrLogin: settings.qrLogin });
             } catch (e) {
                 return sendJson(res, 500, { ok: false, error: e.message });
             }

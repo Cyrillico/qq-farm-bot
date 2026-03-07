@@ -39,6 +39,15 @@ class RpcRunner extends EventEmitter {
         if (method === 'farm.lands') {
             return Promise.resolve({ lands: [{ id: 1, phaseName: '成熟' }] });
         }
+        if (method === 'bag.items') {
+            return Promise.resolve({ items: [{ id: 1001, name: '金币', count: 10 }] });
+        }
+        if (method === 'task.dailyGifts') {
+            return Promise.resolve({ gifts: [{ key: 'vip_daily_gift', doneToday: false }] });
+        }
+        if (method === 'task.dailyGifts.claim') {
+            return Promise.resolve({ ok: true, key: payload.key, overview: { gifts: [{ key: payload.key }] } });
+        }
         return Promise.reject(new Error('unsupported'));
     }
 }
@@ -60,6 +69,18 @@ test('session manager forwards friends.list and friends.op to runner rpc', async
     const lands = await manager.listLands('qq-main');
     assert.equal(Array.isArray(lands.lands), true);
     assert.equal(lands.lands[0].id, 1);
+
+    const bag = await manager.getBag('qq-main');
+    assert.equal(Array.isArray(bag.items), true);
+    assert.equal(bag.items[0].id, 1001);
+
+    const gifts = await manager.getDailyGifts('qq-main');
+    assert.equal(Array.isArray(gifts.gifts), true);
+    assert.equal(gifts.gifts[0].key, 'vip_daily_gift');
+
+    const claim = await manager.claimDailyGift('qq-main', { key: 'vip_daily_gift' });
+    assert.equal(claim.ok, true);
+    assert.equal(claim.key, 'vip_daily_gift');
 });
 
 test('session manager friend rpc throws when session is not running', async () => {
