@@ -195,16 +195,6 @@ async function getAuthCode(ticket, options = {}) {
     throw new Error('获取农场登录 code 失败');
 }
 
-function shouldRetryAuthCodeExchangeError(error) {
-    const message = error instanceof Error ? error.message : String(error || '');
-    const text = String(message || '').trim();
-    if (!text) return false;
-    const match = text.match(/(?:^|[\s:])code=(-?\d+)/i);
-    if (!match) return false;
-    const code = Number.parseInt(match[1], 10);
-    return Number.isFinite(code) && code <= 0;
-}
-
 function emitQrState(payload, emitQrEvent = emitUiEvent) {
     emitQrEvent('qr', payload || {});
 }
@@ -251,49 +241,20 @@ async function waitForLoginCodeResult(options = {}) {
 
     const start = now();
     let lastWaitingNoticeTs = start;
-    let confirmedTicket = '';
-
     while (now() - start < timeoutMs) {
-        if (!confirmedTicket) {
-            const status = await queryStatus(loginCode);
-            if (status.status === 'OK') {
-                confirmedTicket = String(status.ticket || '').trim();
-                if (!confirmedTicket) {
-                    emitQrState({ phase: 'error', qrUrl: url, backupUrls, message: '扫码已确认但未获取到 ticket，请重试' }, emitQrEvent);
-                    throw new Error('扫码已确认但未获取到 ticket，请重试');
-                }
-            } else if (status.status === 'Used') {
-                emitQrState({ phase: 'expired', qrUrl: url, backupUrls, message: '二维码已失效，请重试' }, emitQrEvent);
-                throw new Error('二维码已失效，请重试');
-            } else if (status.status === 'Error') {
-                emitQrState({ phase: 'error', qrUrl: url, backupUrls, message: '扫码状态查询失败，请重试' }, emitQrEvent);
-                throw new Error('扫码状态查询失败，请重试');
-            }
+        const status = await queryStatus(loginCode);
+        if (status.status === 'OK') {
+            const authCode = await exchangeTicket(status.ticket);
+            emitQrState({ phase: 'confirmed', qrUrl: url, backupUrls }, emitQrEvent);
+            return authCode;
         }
-
-        if (confirmedTicket) {
-            try {
-                const authCode = await exchangeTicket(confirmedTicket);
-                emitQrState({ phase: 'confirmed', qrUrl: url, backupUrls }, emitQrEvent);
-                return authCode;
-            } catch (error) {
-                if (!shouldRetryAuthCodeExchangeError(error)) {
-                    throw error;
-                }
-
-                const ts = now();
-                if (ts - lastWaitingNoticeTs >= waitingNoticeIntervalMs) {
-                    lastWaitingNoticeTs = ts;
-                    emitQrState({
-                        phase: 'waiting',
-                        qrUrl: url,
-                        backupUrls,
-                        message: '扫码已确认，正在获取登录 code，请稍候',
-                    }, emitQrEvent);
-                }
-                await sleep(pollIntervalMs);
-                continue;
-            }
+        if (status.status === 'Used') {
+            emitQrState({ phase: 'expired', qrUrl: url, backupUrls, message: '二维码已失效，请重试' }, emitQrEvent);
+            throw new Error('二维码已失效，请重试');
+        }
+        if (status.status === 'Error') {
+            emitQrState({ phase: 'error', qrUrl: url, backupUrls, message: '扫码状态查询失败，请重试' }, emitQrEvent);
+            throw new Error('扫码状态查询失败，请重试');
         }
 
         const ts = now();
@@ -308,11 +269,6 @@ async function waitForLoginCodeResult(options = {}) {
             }, emitQrEvent);
         }
         await sleep(pollIntervalMs);
-    }
-
-    if (confirmedTicket) {
-        emitQrState({ phase: 'timeout', qrUrl: url, backupUrls, message: '扫码已确认，但获取登录 code 超时，请重试' }, emitQrEvent);
-        throw new Error('扫码已确认，但获取登录 code 超时，请重试');
     }
 
     emitQrState({ phase: 'timeout', qrUrl: url, backupUrls, message: '扫码超时，请重试' }, emitQrEvent);

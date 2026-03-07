@@ -61,12 +61,11 @@ test('waitForLoginCodeResult should resolve auth code after scan confirmation', 
     assert.equal(frames.at(-1).qrUrl, 'https://example.test/qr');
 });
 
-test('waitForLoginCodeResult should keep retrying confirmed ticket when auth code exchange is transiently invalid', async () => {
-    const frames = [];
+test('waitForLoginCodeResult should fail fast when confirmed ticket exchange returns transient invalid code', async () => {
     let queryCount = 0;
     let exchangeCount = 0;
 
-    const authCode = await waitForLoginCodeResult({
+    await assert.rejects(() => waitForLoginCodeResult({
         loginCode: 'abc123',
         url: 'https://example.test/qr',
         backupUrls: ['https://example.test/alt'],
@@ -80,21 +79,14 @@ test('waitForLoginCodeResult should keep retrying confirmed ticket when auth cod
         exchangeTicket: async (ticket) => {
             exchangeCount += 1;
             assert.equal(ticket, 'ticket-keep');
-            if (exchangeCount < 3) {
-                throw new Error('获取农场登录 code 失败: code=-3000 校验失败');
-            }
-            return 'auth-code-final';
+            throw new Error('获取农场登录 code 失败: code=-3000 校验失败');
         },
-        emitQrEvent: (type, payload) => {
-            frames.push({ type, ...(payload || {}) });
-        },
+        emitQrEvent: () => {},
         sleep: async () => {},
-    });
+    }), /code=-3000/);
 
-    assert.equal(authCode, 'auth-code-final');
     assert.equal(queryCount, 1);
-    assert.equal(exchangeCount, 3);
-    assert.equal(frames.at(-1).phase, 'confirmed');
+    assert.equal(exchangeCount, 1);
 });
 
 test('waitForLoginCodeResult should still fail fast for non-transient auth code exchange errors', async () => {
